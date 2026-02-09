@@ -1529,7 +1529,10 @@
     </div>
 
     <script>
-        // Data
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        
         const countries = {
             // WC 2026 Hosts
             'Canada': { flag: '🇨🇦', color: '#FEE2E2' },
@@ -1570,7 +1573,7 @@
             'South Korea': { flag: '🇰🇷', color: '#FEE2E2' },
             'Uzbekistan': { flag: '🇺🇿', color: '#DBEAFE' },
             
-            // Africa - Qualified
+            // Africa
             'Cape Verde': { flag: '🇨🇻', color: '#DBEAFE' },
             'Morocco': { flag: '🇲🇦', color: '#FEE2E2' },
             'Nigeria': { flag: '🇳🇬', color: '#D1FAE5' },
@@ -1617,80 +1620,228 @@
             'South Africa': { flag: '🇿🇦', color: '#FEF3C7' }
         };
 
-        let matches = [
-            {
-                id: 1,
-                group: 'GROUP C',
-                home: 'Vietnam',
-                away: 'Brasil',
-                date: new Date(new Date().setHours(20, 0, 0, 0)),
-                status: 'open',
-                userPrediction: null,
-                actualScore: null
-            },
-            {
-                id: 2,
-                group: 'GROUP D',
-                home: 'Canada',
-                away: 'France',
-                date: new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
-                status: 'not-open',
-                userPrediction: null,
-                actualScore: null
-            },
-            {
-                id: 3,
-                group: 'GROUP E',
-                home: 'Germany',
-                away: 'Albania',
-                date: new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000),
-                status: 'not-open',
-                userPrediction: null,
-                actualScore: null
-            },
-            {
-                id: 4,
-                group: 'GROUP F',
-                home: 'Belgium',
-                away: 'Italy',
-                date: new Date(new Date().getTime() - 2 * 60 * 60 * 1000),
-                status: 'finished',
-                userPrediction: { homeScore: 2, awayScore: 0, minute: 84 },
-                actualScore: { homeScore: 2, awayScore: 0, minute: 82 },
-                points: { rank: 4, exactScore: 5, minute: 3 }
-            },
-            {
-                id: 5,
-                group: 'GROUP G',
-                home: 'Sweden',
-                away: 'Netherlands',
-                date: new Date(new Date().getTime() - 48 * 60 * 60 * 1000),
-                status: 'finished',
-                userPrediction: null,
-                actualScore: { homeScore: 2, awayScore: 3, minute: 92 }
-            }
-        ];
-
+        // Global state
+        let matches = [];
+        let myPredictions = {};
         let selectedMatch = null;
         let isEditMode = false;
+        let groupId = null;
+        let currentPlayer = null;
+        let favoriteTeamSettings = null;
+        let leaderboardData = [];
 
-        // Favorite Team Feature
-        let favoriteTeamSettings = {
-            isEnabled: true, // Admin bật/tắt
-            isLocked: false, // false = đã mở khóa, true = còn khóa
-            deadline: new Date('2026-06-21T00:00:00'), // Deadline chọn đội
-            selectedTeam: 'Argentina', // Đội user đã chọn (DEMO)
-            teamStatus: 'quarter', // 'active', 'round16', 'quarter', 'semi', 'final', 'champion', 'eliminated'
-            points: {
-                round16: 5,
-                quarter: 10,
-                semi: 15,
-                final: 25,
-                champion: 40
+        console.log('🚀 App initializing...');
+
+        // ============================================
+        // INIT APP
+        // ============================================
+        
+        async function initApp() {
+            console.log('📊 Loading app data...');
+            
+            try {
+                // Check if user is logged in
+                currentPlayer = await getCurrentUser();
+                
+                if (currentPlayer) {
+                    console.log('✅ User logged in:', currentPlayer.name);
+                    updateUIForLoggedInUser();
+                    
+                    // Load group
+                    const group = await getGroupByCode(DEMO_GROUP_CODE);
+                    if (!group) {
+                        console.error('❌ Group not found:', DEMO_GROUP_CODE);
+                        alert('Không tìm thấy nhóm! Vui lòng liên hệ admin.');
+                        return;
+                    }
+                    
+                    groupId = group.id;
+                    console.log('✅ Group loaded:', group.name);
+                    
+                    // Load data
+                    await Promise.all([
+                        loadMatches(),
+                        loadLeaderboard(),
+                        loadFavoriteTeamSettings()
+                    ]);
+                    
+                    console.log('✅ All data loaded');
+                } else {
+                    console.log('ℹ️ User not logged in - showing login prompt');
+                    updateUIForGuestUser();
+                }
+                
+                // Render UI
+                renderAllPages();
+                
+            } catch (error) {
+                console.error('❌ Init error:', error);
+                alert('Lỗi khi tải dữ liệu: ' + error.message);
             }
-        };
+        }
 
-        // Render functions
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        
+        async function loadMatches() {
+            console.log('📥 Loading matches...');
+            
+            try {
+                const dbMatches = await getMatches(groupId);
+                console.log('✅ Loaded', dbMatches.length, 'matches');
+                
+                // Convert database matches to app format
+                matches = dbMatches.map(m => ({
+                    id: m.id,
+                    group: m.match_group,
+                    home: m.home_team,
+                    away: m.away_team,
+                    date: new Date(m.match_date),
+                    status: m.status,
+                    actualScore: m.status === 'finished' ? {
+                        homeScore: m.home_score,
+                        awayScore: m.away_score,
+                        minute: m.minute
+                    } : null,
+                    userPrediction: null, // Will be loaded separately
+                    points: null
+                }));
+                
+                // Load user predictions for each match
+                if (currentPlayer) {
+                    await loadMyPredictions();
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading matches:', error);
+                throw error;
+            }
+        }
+
+        async function loadMyPredictions() {
+            console.log('📥 Loading my predictions...');
+            
+            try {
+                const predictions = await getPlayerPredictions(currentPlayer.id);
+                console.log('✅ Loaded', predictions.length, 'predictions');
+                
+                // Map predictions to matches
+                predictions.forEach(pred => {
+                    const match = matches.find(m => m.id === pred.match_id);
+                    if (match) {
+                        match.userPrediction = {
+                            homeScore: pred.home_score,
+                            awayScore: pred.away_score,
+                            minute: pred.minute
+                        };
+                        
+                        if (match.status === 'finished') {
+                            match.points = {
+                                rank: pred.points_rank || 0,
+                                exactScore: pred.points_exact_score || 0,
+                                minute: pred.points_minute || 0
+                            };
+                        }
+                    }
+                    
+                    myPredictions[pred.match_id] = pred;
+                });
+                
+            } catch (error) {
+                console.error('❌ Error loading predictions:', error);
+            }
+        }
+
+        async function loadLeaderboard() {
+            console.log('📥 Loading leaderboard...');
+            
+            try {
+                leaderboardData = await getLeaderboard(groupId);
+                console.log('✅ Loaded leaderboard:', leaderboardData.length, 'players');
+            } catch (error) {
+                console.error('❌ Error loading leaderboard:', error);
+            }
+        }
+
+        async function loadFavoriteTeamSettings() {
+            console.log('📥 Loading favorite team settings...');
+            
+            try {
+                const settings = await getFavoriteTeamSettings(groupId);
+                
+                favoriteTeamSettings = {
+                    isEnabled: settings.favorite_team_enabled,
+                    isLocked: settings.favorite_team_locked,
+                    deadline: settings.favorite_team_deadline ? new Date(settings.favorite_team_deadline) : null,
+                    selectedTeam: currentPlayer?.favorite_team || null,
+                    teamStatus: currentPlayer?.favorite_team_status || null,
+                    points: {
+                        round16: settings.points_round16,
+                        quarter: settings.points_quarter,
+                        semi: settings.points_semi,
+                        final: settings.points_final,
+                        champion: settings.points_champion
+                    }
+                };
+                
+                console.log('✅ Favorite team settings loaded');
+            } catch (error) {
+                console.error('❌ Error loading favorite team settings:', error);
+            }
+        }
+
+        // ============================================
+        // UI UPDATES
+        // ============================================
+        
+        function updateUIForLoggedInUser() {
+            // Update login button
+            const loginBtn = document.querySelector('.nav-login');
+            if (loginBtn) {
+                loginBtn.textContent = currentPlayer.name;
+                loginBtn.onclick = () => {
+                    if (confirm('Đăng xuất?')) {
+                        handleLogout();
+                    }
+                };
+            }
+        }
+
+        function updateUIForGuestUser() {
+            const loginBtn = document.querySelector('.nav-login');
+            if (loginBtn) {
+                loginBtn.textContent = 'Đăng nhập';
+                loginBtn.onclick = () => openLoginModal();
+            }
+        }
+
+        async function handleLogout() {
+            await logoutUser();
+            currentPlayer = null;
+            groupId = null;
+            matches = [];
+            myPredictions = {};
+            leaderboardData = [];
+            
+            updateUIForGuestUser();
+            renderAllPages();
+            
+            console.log('✅ Logged out');
+        }
+
+        function renderAllPages() {
+            renderUpcomingMatches();
+            renderScheduleMatches();
+            renderHistoryMatches();
+            renderLeaderboard();
+            renderStats();
+        }
+
+        // ============================================
+        // RENDER FUNCTIONS
+        // ============================================
+        
         function renderMatchCard(match) {
             const card = document.createElement('div');
             card.className = 'match-card';
@@ -1702,11 +1853,11 @@
             // Check if teams exist in countries database
             if (!countries[match.home]) {
                 console.error(`Team "${match.home}" not found in countries database`);
-                return card; // Return empty card
+                return card;
             }
             if (!countries[match.away]) {
                 console.error(`Team "${match.away}" not found in countries database`);
-                return card; // Return empty card
+                return card;
             }
 
             const homeData = countries[match.home];
@@ -1742,7 +1893,6 @@
 
             // Status/Score/Result
             if (match.status === 'finished' && match.actualScore) {
-                // Show actual score
                 const score = document.createElement('div');
                 score.className = 'match-score';
                 score.innerHTML = `
@@ -1752,7 +1902,6 @@
                 `;
                 card.appendChild(score);
 
-                // Show prediction result
                 const result = document.createElement('div');
                 result.className = 'match-result';
                 if (match.userPrediction) {
@@ -1773,7 +1922,6 @@
                 }
                 card.appendChild(result);
             } else {
-                // Show status
                 const status = document.createElement('div');
                 const now = new Date();
                 const matchStarted = now > match.date;
@@ -1798,7 +1946,12 @@
             }
 
             // Click handler
-            if (match.status === 'finished' && match.actualScore) {
+            if (!currentPlayer) {
+                card.onclick = () => {
+                    alert('Vui lòng đăng nhập để dự đoán!');
+                    openLoginModal();
+                };
+            } else if (match.status === 'finished' && match.actualScore) {
                 card.onclick = () => openResultsModal(match);
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
@@ -1808,11 +1961,11 @@
         }
 
         function renderFavoriteTeamCard() {
-            if (!favoriteTeamSettings.isEnabled) return null;
+            if (!favoriteTeamSettings || !favoriteTeamSettings.isEnabled) return null;
             
             const card = document.createElement('div');
             const now = new Date();
-            const isLocked = favoriteTeamSettings.isLocked || now > favoriteTeamSettings.deadline;
+            const isLocked = favoriteTeamSettings.isLocked || (favoriteTeamSettings.deadline && now > favoriteTeamSettings.deadline);
             
             card.className = isLocked ? 'favorite-team-card locked' : 'favorite-team-card';
             
@@ -1823,7 +1976,6 @@
             card.appendChild(badge);
             
             if (!favoriteTeamSettings.selectedTeam) {
-                // Chưa chọn đội
                 card.innerHTML += `
                     <div class="favorite-team-icon">⭐</div>
                     <div class="favorite-team-title">Chọn Đội Yêu Thích</div>
@@ -1832,17 +1984,20 @@
                     </div>
                 `;
                 
-                if (!isLocked) {
-                    const deadline = favoriteTeamSettings.deadline;
+                if (!isLocked && favoriteTeamSettings.deadline) {
                     card.innerHTML += `
                         <div class="favorite-team-deadline">
-                            ⏰ Hạn: ${deadline.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            ⏰ Hạn: ${favoriteTeamSettings.deadline.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </div>
                     `;
                 }
             } else {
-                // Đã chọn đội
                 const teamData = countries[favoriteTeamSettings.selectedTeam];
+                if (!teamData) {
+                    console.error('Team not found:', favoriteTeamSettings.selectedTeam);
+                    return null;
+                }
+                
                 const selected = document.createElement('div');
                 selected.className = 'favorite-team-selected';
                 selected.innerHTML = `
@@ -1850,18 +2005,14 @@
                     <div class="favorite-team-selected-name">${favoriteTeamSettings.selectedTeam}</div>
                 `;
                 
-                // Hiển thị điểm
                 let pointsText = '';
                 if (favoriteTeamSettings.teamStatus === 'eliminated') {
-                    // Đã bị loại - hiện điểm chính xác
                     const points = getTeamPoints(favoriteTeamSettings.teamStatus);
                     pointsText = `Đã nhận: ${points} điểm`;
                 } else if (favoriteTeamSettings.teamStatus === 'champion') {
-                    // Đã vô địch
                     const points = favoriteTeamSettings.points.champion;
                     pointsText = `🏆 Vô địch: ${points} điểm!`;
                 } else if (favoriteTeamSettings.teamStatus) {
-                    // Còn thi đấu - hiện điểm tối thiểu
                     const points = getTeamPoints(favoriteTeamSettings.teamStatus);
                     pointsText = `Tối thiểu: ${points} điểm`;
                 } else {
@@ -1872,15 +2023,20 @@
                 card.appendChild(selected);
             }
             
-            // Click handler
-            if (!isLocked) {
+            if (!isLocked && currentPlayer) {
                 card.onclick = () => openFavoriteTeamModal();
+            } else if (!currentPlayer) {
+                card.onclick = () => {
+                    alert('Vui lòng đăng nhập để chọn đội yêu thích!');
+                    openLoginModal();
+                };
             }
             
             return card;
         }
 
         function getTeamPoints(status) {
+            if (!favoriteTeamSettings) return 0;
             const pointsMap = {
                 'round16': favoriteTeamSettings.points.round16,
                 'quarter': favoriteTeamSettings.points.quarter,
@@ -1893,9 +2049,11 @@
 
         function renderUpcomingMatches() {
             const container = document.getElementById('upcomingMatches');
+            if (!container) return;
+            
             container.innerHTML = '';
             
-            // Thêm favorite team card ở đầu (trang chủ)
+            // Add favorite team card first
             const favoriteCard = renderFavoriteTeamCard();
             if (favoriteCard) {
                 container.appendChild(favoriteCard);
@@ -1909,9 +2067,9 @@
 
         function renderScheduleMatches() {
             const container = document.getElementById('scheduleMatches');
-            container.innerHTML = '';
+            if (!container) return;
             
-            // KHÔNG thêm favorite team card ở đây nữa
+            container.innerHTML = '';
             
             matches.forEach(match => {
                 container.appendChild(renderMatchCard(match));
@@ -1920,6 +2078,8 @@
 
         function renderHistoryMatches() {
             const container = document.getElementById('historyMatches');
+            if (!container) return;
+            
             container.innerHTML = '';
             
             const history = matches.filter(m => m.status === 'finished').slice(0, 5);
@@ -1932,21 +2092,16 @@
             const tbody = document.getElementById('leaderboardTable');
             const preview = document.getElementById('leaderboardPreview');
             
-            const players = [
-                { rank: 1, name: 'Na Bito', points: 12, top1: 4, exactScore: 0, exactMinute: 2 },
-                { rank: 2, name: 'Tuệ', points: 8, top1: 1, exactScore: 0, exactMinute: 3 },
-                { rank: 3, name: 'Vy', points: 6, top1: 0, exactScore: 0, exactMinute: 2 },
-                { rank: 4, name: 'Lan', points: 9, top1: 4, exactScore: 1, exactMinute: 0 },
-                { rank: 5, name: 'Hải', points: 7, top1: 2, exactScore: 0, exactMinute: 2 }
-            ];
-
             let html = '';
-            players.forEach(player => {
+            leaderboardData.forEach(player => {
                 const rankClass = player.rank <= 4 ? `rank-${player.rank}` : 'rank-other';
+                const isCurrentUser = currentPlayer && player.id === currentPlayer.id;
+                const rowClass = isCurrentUser ? 'style="background: #FEF3C7;"' : '';
+                
                 html += `
-                    <tr>
+                    <tr ${rowClass}>
                         <td><span class="rank-badge ${rankClass}">${player.rank}</span></td>
-                        <td><span class="player-name">${player.name}</span></td>
+                        <td><span class="player-name">${player.name}${isCurrentUser ? ' (Bạn)' : ''}</span></td>
                         <td><strong>${player.points}</strong></td>
                         <td>${player.top1}</td>
                         <td>${player.exactScore}</td>
@@ -1955,12 +2110,81 @@
                 `;
             });
 
-            if (tbody) tbody.innerHTML = html;
-            if (preview) preview.innerHTML = `<table class="leaderboard-table"><tbody>${html}</tbody></table>`;
+            if (tbody) tbody.innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</td></tr>';
+            if (preview) preview.innerHTML = html ? `<table class="leaderboard-table"><tbody>${html}</tbody></table>` : '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
         }
 
-        // Modal functions
+        function renderStats() {
+            const container = document.getElementById('statsFavoriteTeam');
+            if (!container) return;
+            
+            if (!currentPlayer || !favoriteTeamSettings || !favoriteTeamSettings.selectedTeam) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const teamData = countries[favoriteTeamSettings.selectedTeam];
+            if (!teamData) return;
+            
+            const status = favoriteTeamSettings.teamStatus;
+            
+            let statusText = '';
+            let pointsLabel = '';
+            let pointsValue = 0;
+            
+            if (status === 'champion') {
+                statusText = '🏆 Vô địch!';
+                pointsLabel = 'Điểm nhận được';
+                pointsValue = favoriteTeamSettings.points.champion;
+            } else if (status === 'eliminated' || status === 'round16' || status === 'quarter' || status === 'semi' || status === 'final') {
+                const points = getTeamPoints(status === 'eliminated' ? 'round16' : status);
+                statusText = status === 'eliminated' ? '❌ Đã bị loại' : `✓ Đã đạt ${getStatusName(status)}`;
+                pointsLabel = 'Điểm nhận được';
+                pointsValue = points;
+            } else {
+                statusText = '⚽ Đang thi đấu';
+                pointsLabel = 'Điểm tối thiểu';
+                pointsValue = favoriteTeamSettings.points.round16;
+            }
+            
+            container.innerHTML = `
+                <div class="stats-favorite-team">
+                    <div class="stats-favorite-team-header">
+                        <div class="stats-favorite-team-icon">${teamData.flag}</div>
+                        <div class="stats-favorite-team-info">
+                            <div class="stats-favorite-team-name">${favoriteTeamSettings.selectedTeam}</div>
+                            <div class="stats-favorite-team-status">${statusText}</div>
+                        </div>
+                    </div>
+                    <div class="stats-favorite-team-points">
+                        <div class="stats-favorite-team-points-label">${pointsLabel}</div>
+                        <div class="stats-favorite-team-points-value">+${pointsValue}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getStatusName(status) {
+            const names = {
+                'round16': 'Vòng 16',
+                'quarter': 'Tứ kết',
+                'semi': 'Bán kết',
+                'final': 'Chung kết'
+            };
+            return names[status] || status;
+        }
+
+        // ============================================
+        // MODAL FUNCTIONS
+        // ============================================
+        
         function openModal(match) {
+            if (!currentPlayer) {
+                alert('Vui lòng đăng nhập để dự đoán!');
+                openLoginModal();
+                return;
+            }
+            
             selectedMatch = match;
             isEditMode = !match.userPrediction;
 
@@ -1970,7 +2194,6 @@
             const homeName = document.getElementById('modalHomeName');
             const awayName = document.getElementById('modalAwayName');
 
-            // Check if teams exist in countries database
             if (!countries[match.home] || !countries[match.away]) {
                 console.error(`Team not found in countries database: ${match.home} or ${match.away}`);
                 alert('Lỗi: Không tìm thấy thông tin đội bóng. Vui lòng liên hệ admin.');
@@ -2019,29 +2242,11 @@
                 btnEdit.style.display = 'none';
             }
 
-            // Add validation listeners
-            const validateInputs = () => {
-                const home = parseInt(inputHome.value) || 0;
-                const away = parseInt(inputAway.value) || 0;
-                const minute = parseInt(inputMinute.value) || 0;
-                
-                if (home === 0 && away === 0 && minute !== 0) {
-                    warning.classList.add('show');
-                } else {
-                    warning.classList.remove('show');
-                }
-            };
-
-            inputHome.addEventListener('input', validateInputs);
-            inputAway.addEventListener('input', validateInputs);
-            inputMinute.addEventListener('input', validateInputs);
-
             modal.classList.add('active');
         }
 
         function closeModal() {
             document.getElementById('predictionModal').classList.remove('active');
-            selectedMatch = null;
         }
 
         function editPrediction() {
@@ -2054,122 +2259,78 @@
             inputHome.disabled = false;
             inputAway.disabled = false;
             inputMinute.disabled = false;
-
+            
             btnConfirm.style.display = 'block';
             btnEdit.style.display = 'none';
-
+            
             isEditMode = true;
         }
 
-        function confirmPrediction() {
+        async function confirmPrediction() {
             const homeScore = parseInt(document.getElementById('inputHomeScore').value);
             const awayScore = parseInt(document.getElementById('inputAwayScore').value);
             const minute = parseInt(document.getElementById('inputMinute').value);
-
-            // Validation
-            if (isNaN(homeScore) || isNaN(awayScore) || isNaN(minute)) {
-                alert('Vui lòng nhập đầy đủ thông tin!');
-                return;
-            }
-
+            
             if (homeScore === 0 && awayScore === 0 && minute !== 0) {
-                alert('Tỉ số 0-0 thì phút ghi bàn phải là 0!');
+                showValidationWarning();
                 return;
             }
-
-            if ((homeScore > 0 || awayScore > 0) && minute === 0) {
-                alert('Có bàn thắng thì phút ghi bàn không thể là 0!');
-                return;
-            }
-
-            // Save prediction
-            selectedMatch.userPrediction = { homeScore, awayScore, minute };
-
-            // Show success animation
-            const checkmark = document.getElementById('successCheckmark');
-            const actions = document.getElementById('modalActions');
-            actions.style.display = 'none';
-            checkmark.classList.add('show');
-
-            // Close modal after animation
-            setTimeout(() => {
-                closeModal();
-                actions.style.display = 'flex';
-                renderUpcomingMatches();
-                renderScheduleMatches();
-                renderHistoryMatches();
-            }, 1500);
-        }
-
-        // Page switching
-        function switchPage(pageId) {
-            document.querySelectorAll('.page-content').forEach(page => {
-                page.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            document.getElementById(pageId).classList.add('active');
             
-            // Update active tab
-            const tabs = document.querySelectorAll('.nav-tab');
-            if (pageId === 'homepage') {
-                tabs[0].classList.add('active'); // Logo
-            } else if (pageId === 'schedule') {
-                tabs[1].classList.add('active'); // Lịch thi đấu
-            } else if (pageId === 'leaderboard') {
-                tabs[2].classList.add('active'); // Bảng xếp hạng
-            }
-
-            if (pageId === 'schedule') {
-                renderScheduleMatches();
+            console.log('💾 Saving prediction...', { homeScore, awayScore, minute });
+            
+            try {
+                const result = await savePrediction(
+                    selectedMatch.id,
+                    currentPlayer.id,
+                    homeScore,
+                    awayScore,
+                    minute
+                );
+                
+                if (result.success) {
+                    console.log('✅ Prediction saved!');
+                    
+                    // Update local data
+                    selectedMatch.userPrediction = { homeScore, awayScore, minute };
+                    myPredictions[selectedMatch.id] = result.prediction;
+                    
+                    // Show success animation
+                    document.getElementById('inputHomeScore').disabled = true;
+                    document.getElementById('inputAwayScore').disabled = true;
+                    document.getElementById('inputMinute').disabled = true;
+                    document.getElementById('btnConfirm').style.display = 'none';
+                    document.getElementById('btnEdit').style.display = 'block';
+                    document.getElementById('successCheckmark').classList.add('show');
+                    
+                    setTimeout(() => {
+                        closeModal();
+                        renderAllPages();
+                    }, 1500);
+                } else {
+                    console.error('❌ Failed to save prediction:', result.error);
+                    alert('Lỗi khi lưu dự đoán: ' + result.error);
+                }
+            } catch (error) {
+                console.error('❌ Error saving prediction:', error);
+                alert('Lỗi khi lưu dự đoán: ' + error.message);
             }
         }
 
-        function scrollToPersonalStats() {
-            switchPage('leaderboard');
-            setTimeout(() => {
-                document.getElementById('personalStatsSection').scrollIntoView({ behavior: 'smooth' });
-            }, 100);
+        function showValidationWarning() {
+            const warning = document.getElementById('validationWarning');
+            warning.classList.add('show');
+            setTimeout(() => warning.classList.remove('show'), 3000);
         }
 
-        // Login Modal
-        function openLoginModal() {
-            document.getElementById('loginModal').classList.add('active');
-        }
-
-        function closeLoginModal() {
-            document.getElementById('loginModal').classList.remove('active');
-        }
-
-        function handleLogin(event) {
-            event.preventDefault();
-            
-            const name = document.getElementById('loginName').value;
-            const password = document.getElementById('loginPassword').value;
-            const groupCode = document.getElementById('loginGroupCode').value;
-            const remember = document.getElementById('rememberMe').checked;
-
-            // TODO: Implement actual login logic
-            console.log('Login attempt:', { name, password, groupCode, remember });
-            
-            alert(`Đăng nhập thành công!\nTên: ${name}\nMã nhóm: ${groupCode}`);
-            closeLoginModal();
-        }
-
-        // Results Detail Modal
         function openResultsModal(match) {
             const modal = document.getElementById('resultsModal');
             
-            // Check if teams exist in countries database
             if (!countries[match.home] || !countries[match.away]) {
                 console.error(`Team not found in countries database: ${match.home} or ${match.away}`);
                 alert('Lỗi: Không tìm thấy thông tin đội bóng. Vui lòng liên hệ admin.');
                 return;
             }
             
-            // Set team info
             document.getElementById('resultsHomeFlag').innerHTML = countries[match.home].flag;
             document.getElementById('resultsHomeFlag').style.background = countries[match.home].color;
             document.getElementById('resultsAwayFlag').innerHTML = countries[match.away].flag;
@@ -2177,137 +2338,40 @@
             document.getElementById('resultsHomeName').textContent = match.home;
             document.getElementById('resultsAwayName').textContent = match.away;
             
-            // Set scores
             document.getElementById('resultsHomeScore').textContent = match.actualScore.homeScore;
             document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
             document.getElementById('resultsMinute').textContent = `${match.actualScore.minute}'`;
             
-            // Mock data - danh sách người chơi với predictions
-            const playerPredictions = [
-                { 
-                    name: 'Na Bito', 
-                    prediction: { homeScore: 2, awayScore: 0, minute: 84 },
-                    timestamp: new Date('2026-01-15T19:00:00'),
-                    isCurrentUser: true
-                },
-                { 
-                    name: 'Tuệ', 
-                    prediction: { homeScore: 2, awayScore: 1, minute: 84 },
-                    timestamp: new Date('2026-01-15T19:05:00')
-                },
-                { 
-                    name: 'Nhân', 
-                    prediction: { homeScore: 2, awayScore: 1, minute: 70 },
-                    timestamp: new Date('2026-01-15T19:10:00')
-                },
-                { 
-                    name: 'Nhân', 
-                    prediction: { homeScore: 1, awayScore: 1, minute: 30 },
-                    timestamp: new Date('2026-01-15T19:15:00')
-                },
-                { 
-                    name: 'Nhân', 
-                    prediction: { homeScore: 1, awayScore: 3, minute: 90 },
-                    timestamp: new Date('2026-01-15T19:20:00')
-                },
-                { 
-                    name: 'Vy', 
-                    prediction: { homeScore: 1, awayScore: 6, minute: 84 },
-                    timestamp: new Date('2026-01-15T19:25:00')
-                }
-            ];
-
-            // Calculate ranking based on game rules
-            const actualHome = match.actualScore.homeScore;
-            const actualAway = match.actualScore.awayScore;
-            const actualMinute = match.actualScore.minute;
-
-            playerPredictions.forEach(player => {
-                const pred = player.prediction;
-                
-                // 1. Exact score
-                player.isExactScore = (pred.homeScore === actualHome && pred.awayScore === actualAway);
-                
-                // 2. Goal difference error
-                const predictedDiff = Math.abs(pred.homeScore - pred.awayScore);
-                const actualDiff = Math.abs(actualHome - actualAway);
-                player.goalDiffError = Math.abs(predictedDiff - actualDiff);
-                
-                // 3. Minute error
-                player.minuteError = Math.abs(pred.minute - actualMinute);
-            });
-
-            // Sort by priority: exact score > goal diff error > minute error > timestamp
-            playerPredictions.sort((a, b) => {
-                if (a.isExactScore !== b.isExactScore) {
-                    return b.isExactScore - a.isExactScore;
-                }
-                if (a.goalDiffError !== b.goalDiffError) {
-                    return a.goalDiffError - b.goalDiffError;
-                }
-                if (a.minuteError !== b.minuteError) {
-                    return a.minuteError - b.minuteError;
-                }
-                return a.timestamp - b.timestamp;
-            });
-
-            // Assign absolute rank (no ties) and points
-            const rankPoints = [4, 3, 2, 1]; // Top 1-4
-            playerPredictions.forEach((player, index) => {
-                player.rank = index + 1;
-                
-                // Rank points
-                player.rankPoint = (index < 4) ? rankPoints[index] : 0;
-                
-                // Exact score bonus
-                player.exactScorePoint = player.isExactScore ? 5 : 0;
-                
-                // Minute bonus - find minimum error
-                const minMinuteError = Math.min(...playerPredictions.map(p => p.minuteError));
-                player.minutePoint = (player.minuteError === minMinuteError) ? 3 : 0;
-                
-                player.totalPoints = player.rankPoint + player.exactScorePoint + player.minutePoint;
-            });
-
-            // Render results list
+            // Show all predictions for this match (mock for now)
             const resultsList = document.getElementById('resultsList');
             resultsList.innerHTML = '';
-
-            playerPredictions.forEach((player) => {
-                const rankClass = player.rank <= 4 ? `rank-${player.rank}` : 'rank-other';
-                const itemClass = player.isCurrentUser ? 'result-item current-user' : 'result-item';
-
+            
+            if (match.userPrediction) {
                 const item = document.createElement('div');
-                item.className = itemClass;
+                item.className = 'results-item current-user';
+                const totalPoints = (match.points?.rank || 0) + (match.points?.exactScore || 0) + (match.points?.minute || 0);
                 
-                let pointsHTML = '';
-                if (player.totalPoints > 0) {
-                    if (player.rankPoint > 0) {
-                        pointsHTML += `<span class="point-icon rank-point">⭐+${player.rankPoint}</span>`;
-                    }
-                    if (player.exactScorePoint > 0) {
-                        pointsHTML += `<span class="point-icon exact-score">🎯+${player.exactScorePoint}</span>`;
-                    }
-                    if (player.minutePoint > 0) {
-                        pointsHTML += `<span class="point-icon minute-point">🕒+${player.minutePoint}</span>`;
-                    }
-                } else {
-                    pointsHTML = `<span class="point-icon zero">+0</span>`;
-                }
-
                 item.innerHTML = `
-                    <div class="result-rank ${rankClass}">${player.rank}</div>
-                    <div class="result-player">
-                        <div class="result-player-name">${player.name}</div>
-                        <div class="result-prediction">${player.prediction.homeScore}-${player.prediction.awayScore} | ${player.prediction.minute}'</div>
+                    <div class="results-item-header">
+                        <span class="results-item-name">${currentPlayer.name} (Bạn)</span>
+                        <span class="results-item-time">${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <div class="result-points">
-                        ${pointsHTML}
+                    <div class="results-item-prediction">
+                        <span class="prediction-score">${match.userPrediction.homeScore} - ${match.userPrediction.awayScore}</span>
+                        <span class="prediction-minute">${match.userPrediction.minute}'</span>
+                    </div>
+                    <div class="results-item-points">
+                        ${match.points?.rank ? `<span class="point-badge">+${match.points.rank}</span>` : ''}
+                        ${match.points?.exactScore ? `<span class="point-badge">+${match.points.exactScore}</span>` : ''}
+                        ${match.points?.minute ? `<span class="point-badge">+${match.points.minute}</span>` : ''}
+                        <span class="total-points">Tổng: ${totalPoints} điểm</span>
                     </div>
                 `;
-
+                
                 resultsList.appendChild(item);
-            });
+            } else {
+                resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Bạn chưa dự đoán trận này</p>';
+            }
 
             modal.classList.add('active');
         }
@@ -2316,31 +2380,89 @@
             document.getElementById('resultsModal').classList.remove('active');
         }
 
-        // Favorite Team Modal Functions
+        // ============================================
+        // LOGIN MODAL
+        // ============================================
+        
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.add('active');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.remove('active');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('loginName').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const groupCode = document.getElementById('loginGroupCode').value.trim();
+            
+            console.log('🔐 Attempting login...', { email, groupCode });
+            
+            try {
+                // Verify group code
+                if (groupCode !== DEMO_GROUP_CODE) {
+                    alert('Mã nhóm không đúng!');
+                    return;
+                }
+                
+                // Login
+                const result = await loginUser(email, password);
+                
+                if (result.success) {
+                    console.log('✅ Login successful!');
+                    currentPlayer = result.player;
+                    
+                    closeLoginModal();
+                    
+                    // Reload app with user data
+                    await initApp();
+                    
+                    alert('Đăng nhập thành công!');
+                } else {
+                    console.error('❌ Login failed:', result.error);
+                    alert('Đăng nhập thất bại: ' + result.error);
+                }
+            } catch (error) {
+                console.error('❌ Login error:', error);
+                alert('Lỗi đăng nhập: ' + error.message);
+            }
+        }
+
+        // ============================================
+        // FAVORITE TEAM MODAL
+        // ============================================
+        
         let tempSelectedTeam = null;
 
         function openFavoriteTeamModal() {
+            if (!currentPlayer) {
+                alert('Vui lòng đăng nhập!');
+                openLoginModal();
+                return;
+            }
+            
             const modal = document.getElementById('favoriteTeamModal');
             const deadlineText = document.getElementById('favoriteDeadlineText');
             const searchInput = document.getElementById('favoriteTeamSearch');
             
-            // Show deadline
-            deadlineText.textContent = favoriteTeamSettings.deadline.toLocaleString('vi-VN', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            if (favoriteTeamSettings.deadline) {
+                deadlineText.textContent = favoriteTeamSettings.deadline.toLocaleString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
             
-            // Clear search
             searchInput.value = '';
             tempSelectedTeam = favoriteTeamSettings.selectedTeam;
             
-            // Render team list
             renderFavoriteTeamList();
             
-            // Update selected display if already selected
             if (tempSelectedTeam) {
                 updateFavoriteTeamSelected(tempSelectedTeam);
             }
@@ -2428,31 +2550,45 @@
             selectedDiv.style.display = 'block';
         }
 
-        function confirmFavoriteTeam() {
+        async function confirmFavoriteTeam() {
             if (!tempSelectedTeam) return;
             
-            // Save selection
-            favoriteTeamSettings.selectedTeam = tempSelectedTeam;
-            favoriteTeamSettings.teamStatus = 'active'; // Đội còn thi đấu
+            console.log('💾 Saving favorite team...', tempSelectedTeam);
             
-            // Hide form, show success animation
-            document.getElementById('favoriteTeamList').style.display = 'none';
-            document.getElementById('favoriteTeamSearch').parentElement.style.display = 'none';
-            document.getElementById('favoriteTeamActions').style.display = 'none';
-            document.getElementById('favoriteTeamSelected').style.display = 'none';
-            
-            const checkmark = document.getElementById('favoriteSuccessCheckmark');
-            checkmark.classList.add('show');
-            
-            // Close after animation
-            setTimeout(() => {
-                closeFavoriteTeamModal();
-                renderScheduleMatches(); // Refresh card
-                renderStats(); // Refresh stats
-            }, 1500);
+            try {
+                const result = await selectFavoriteTeam(currentPlayer.id, tempSelectedTeam);
+                
+                if (result.success) {
+                    console.log('✅ Favorite team saved!');
+                    
+                    favoriteTeamSettings.selectedTeam = tempSelectedTeam;
+                    favoriteTeamSettings.teamStatus = 'active';
+                    currentPlayer.favorite_team = tempSelectedTeam;
+                    currentPlayer.favorite_team_status = 'active';
+                    
+                    document.getElementById('favoriteTeamList').style.display = 'none';
+                    document.getElementById('favoriteTeamSearch').parentElement.style.display = 'none';
+                    document.getElementById('favoriteTeamActions').style.display = 'none';
+                    document.getElementById('favoriteTeamSelected').style.display = 'none';
+                    
+                    const checkmark = document.getElementById('favoriteSuccessCheckmark');
+                    checkmark.classList.add('show');
+                    
+                    setTimeout(() => {
+                        closeFavoriteTeamModal();
+                        renderAllPages();
+                    }, 1500);
+                } else {
+                    console.error('❌ Failed to save favorite team:', result.error);
+                    alert('Lỗi khi lưu đội yêu thích: ' + result.error);
+                }
+            } catch (error) {
+                console.error('❌ Error saving favorite team:', error);
+                alert('Lỗi: ' + error.message);
+            }
         }
 
-        // Search handler
+        // Search handler for favorite team
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('favoriteTeamSearch');
             if (searchInput) {
@@ -2462,77 +2598,42 @@
             }
         });
 
-        function renderStats() {
-            const container = document.getElementById('statsFavoriteTeam');
-            if (!container) return;
+        // ============================================
+        // PAGE NAVIGATION
+        // ============================================
+        
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
             
-            if (!favoriteTeamSettings.selectedTeam) {
-                container.innerHTML = '';
-                return;
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.classList.add('active');
             }
             
-            const teamData = countries[favoriteTeamSettings.selectedTeam];
-            const status = favoriteTeamSettings.teamStatus;
-            
-            let statusText = '';
-            let pointsLabel = '';
-            let pointsValue = 0;
-            
-            if (status === 'champion') {
-                statusText = '🏆 Vô địch!';
-                pointsLabel = 'Điểm nhận được';
-                pointsValue = favoriteTeamSettings.points.champion;
-            } else if (status === 'eliminated' || status === 'round16' || status === 'quarter' || status === 'semi' || status === 'final') {
-                // Đã bị loại - hiện điểm chính xác
-                const points = getTeamPoints(status === 'eliminated' ? 'round16' : status);
-                statusText = status === 'eliminated' ? '❌ Đã bị loại' : `✓ Đã đạt ${getStatusName(status)}`;
-                pointsLabel = 'Điểm nhận được';
-                pointsValue = points;
-            } else {
-                // Còn thi đấu - hiện điểm tối thiểu
-                statusText = '⚽ Đang thi đấu';
-                pointsLabel = 'Điểm tối thiểu';
-                pointsValue = favoriteTeamSettings.points.round16; // Ít nhất cũng vào vòng 16
-            }
-            
-            container.innerHTML = `
-                <div class="stats-favorite-team">
-                    <div class="stats-favorite-team-header">
-                        <div class="stats-favorite-team-icon">${teamData.flag}</div>
-                        <div class="stats-favorite-team-info">
-                            <div class="stats-favorite-team-name">${favoriteTeamSettings.selectedTeam}</div>
-                            <div class="stats-favorite-team-status">${statusText}</div>
-                        </div>
-                    </div>
-                    <div class="stats-favorite-team-points">
-                        <div class="stats-favorite-team-points-label">${pointsLabel}</div>
-                        <div class="stats-favorite-team-points-value">+${pointsValue}</div>
-                    </div>
-                </div>
-            `;
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => {
+                if (tab.onclick && tab.onclick.toString().includes(pageId)) {
+                    tab.classList.add('active');
+                }
+            });
         }
 
-        function getStatusName(status) {
-            const names = {
-                'round16': 'Vòng 16',
-                'quarter': 'Tứ kết',
-                'semi': 'Bán kết',
-                'final': 'Chung kết'
-            };
-            return names[status] || status;
-        }
-
-        // Initialize - Start with Homepage
+        // ============================================
+        // INITIALIZE APP
+        // ============================================
+        
         document.addEventListener('DOMContentLoaded', function() {
-            renderUpcomingMatches();
-            renderScheduleMatches();
-            renderHistoryMatches();
-            renderLeaderboard();
-            renderStats(); // Render favorite team stats
-            
-            // Set homepage as default
-            switchPage('homepage');
+            console.log('🚀 DOM loaded, initializing app...');
+            initApp();
         });
+
+        console.log('✅ Script loaded successfully');
     </script>
 </body>
 </html>
