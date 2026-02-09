@@ -1195,8 +1195,8 @@
     </style>
     <!-- Supabase -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="config.js?v=5"></script>
-    <script defer src="supabase-db.js?v=5"></script>
+    <script defer src="config.js?v=6"></script>
+    <script defer src="supabase-db.js?v=6"></script>
 </head>
 <body>
     <div class="container">
@@ -2628,12 +2628,55 @@
         }
 
         // ============================================
-        // INITIALIZE APP
+        // INITIALIZE APP WITH SAFETY CHECKS
         // ============================================
         
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM loaded, initializing app...');
-            initApp();
+        // Function to check if all required functions are loaded
+        function checkFunctionsLoaded() {
+            const requiredFunctions = [
+                'getMatches',
+                'getCurrentUser', 
+                'getLeaderboard',
+                'getPlayerPredictions',
+                'savePrediction',
+                'loginUser',
+                'logoutUser'
+            ];
+            
+            for (const funcName of requiredFunctions) {
+                if (typeof window[funcName] === 'undefined') {
+                    console.warn(`⚠️ Function ${funcName} not loaded yet`);
+                    return false;
+                }
+            }
+            
+            console.log('✅ All functions loaded');
+            return true;
+        }
+        
+        // Wait for all scripts to load
+        window.addEventListener('load', function() {
+            console.log('🚀 Window loaded, checking scripts...');
+            
+            // Double-check functions are available
+            let attempts = 0;
+            const maxAttempts = 20; // Max 2 seconds
+            
+            const checkAndInit = setInterval(function() {
+                attempts++;
+                
+                if (checkFunctionsLoaded()) {
+                    clearInterval(checkAndInit);
+                    console.log('🚀 Starting app initialization...');
+                    initApp();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkAndInit);
+                    console.error('❌ Failed to load required functions after', attempts * 100, 'ms');
+                    alert('Lỗi: Không thể tải ứng dụng. Vui lòng refresh trang (Ctrl+Shift+R)');
+                } else {
+                    console.log(`⏳ Waiting for scripts... (${attempts}/${maxAttempts})`);
+                }
+            }, 100); // Check every 100ms
         });
 
         console.log('✅ Script loaded successfully');
