@@ -1195,8 +1195,8 @@
     </style>
     <!-- Supabase -->
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="config.js?v=3"></script>
-    <script defer src="supabase-db.js?v=3"></script>
+    <script defer src="config.js?v=5"></script>
+    <script defer src="supabase-db.js?v=5"></script>
 </head>
 <body>
     <div class="container">
@@ -1633,46 +1633,53 @@
         console.log('🚀 App initializing...');
 
         // ============================================
-        // INIT APP
+        // INIT APP - OPTIMIZED LOGIC
         // ============================================
         
         async function initApp() {
-            console.log('📊 Loading app data...');
+            console.log('📊 Loading app...');
             
             try {
-                // Check if user is logged in
-                currentPlayer = await getCurrentUser();
+                // STEP 1: Load GLOBAL data (matches - same for all groups)
+                console.log('📥 Loading matches (global)...');
+                await loadMatchesGlobal();
+                console.log('✅ Matches loaded');
                 
-                if (currentPlayer) {
-                    console.log('✅ User logged in:', currentPlayer.name);
-                    updateUIForLoggedInUser();
+                // STEP 2: Check login (optional)
+                try {
+                    currentPlayer = await getCurrentUser();
                     
-                    // Load group
-                    const group = await getGroupByCode(DEMO_GROUP_CODE);
-                    if (!group) {
-                        console.error('❌ Group not found:', DEMO_GROUP_CODE);
-                        alert('Không tìm thấy nhóm! Vui lòng liên hệ admin.');
-                        return;
+                    if (currentPlayer) {
+                        console.log('✅ User logged in:', currentPlayer.name);
+                        
+                        // Get group ID from user profile
+                        groupId = currentPlayer.group_id;
+                        console.log('✅ Group ID:', groupId);
+                        
+                        updateUIForLoggedInUser();
+                        
+                        // Load GROUP-SPECIFIC data
+                        await Promise.all([
+                            loadMyPredictions(),
+                            loadLeaderboard(),
+                            loadFavoriteTeamSettings()
+                        ]);
+                        
+                        console.log('✅ Personal & group data loaded');
+                    } else {
+                        console.log('ℹ️ Guest mode - matches visible, login to compete');
+                        updateUIForGuestUser();
                     }
-                    
-                    groupId = group.id;
-                    console.log('✅ Group loaded:', group.name);
-                    
-                    // Load data
-                    await Promise.all([
-                        loadMatches(),
-                        loadLeaderboard(),
-                        loadFavoriteTeamSettings()
-                    ]);
-                    
-                    console.log('✅ All data loaded');
-                } else {
-                    console.log('ℹ️ User not logged in - showing login prompt');
+                } catch (loginError) {
+                    // Login check failed - continue as guest
+                    console.log('ℹ️ Login check failed, continuing as guest');
+                    console.error('Login error:', loginError);
                     updateUIForGuestUser();
                 }
                 
-                // Render UI
+                // STEP 3: Render UI
                 renderAllPages();
+                console.log('✅ App ready!');
                 
             } catch (error) {
                 console.error('❌ Init error:', error);
@@ -1684,11 +1691,12 @@
         // DATA LOADING
         // ============================================
         
-        async function loadMatches() {
-            console.log('📥 Loading matches...');
-            
+        async function loadMatchesGlobal() {
             try {
-                const dbMatches = await getMatches(groupId);
+                // Load ALL matches (not filtered by group)
+                // Admin creates matches, all groups see them
+                const dbMatches = await getMatches(); // No groupId param!
+                
                 console.log('✅ Loaded', dbMatches.length, 'matches');
                 
                 // Convert database matches to app format
@@ -1704,14 +1712,9 @@
                         awayScore: m.away_score,
                         minute: m.minute
                     } : null,
-                    userPrediction: null, // Will be loaded separately
+                    userPrediction: null, // Will be loaded after login
                     points: null
                 }));
-                
-                // Load user predictions for each match
-                if (currentPlayer) {
-                    await loadMyPredictions();
-                }
                 
             } catch (error) {
                 console.error('❌ Error loading matches:', error);

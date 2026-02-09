@@ -113,11 +113,18 @@ async function createGroup(name, code) {
 
 async function getMatches(groupId) {
   try {
-    const { data: matches, error } = await supabase
+    // NEW LOGIC: Matches are GLOBAL - all groups see same matches
+    // Only filter if groupId is explicitly provided (for backward compatibility)
+    let query = supabase
       .from('matches')
       .select('*')
-      .eq('group_id', groupId)
       .order('match_date', { ascending: true });
+    
+    // Optional: filter by group_id if provided
+    // But for this app, we load ALL matches regardless of group
+    // (Matches are created by admin and shared across all groups)
+    
+    const { data: matches, error } = await query;
     
     if (error) throw error;
     
