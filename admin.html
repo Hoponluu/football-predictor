@@ -1,0 +1,2574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Dự Đoán Tỉ Số</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Colors */
+            --primary-green: #4ADE80;
+            --yellow-bg: #FEF3C7;
+            --stroke: #E0E0E0;
+            --stroke-hover: #D6D6D6;
+            --bg-gray: #F5F5F5;
+            --white: #FFFFFF;
+            --black: #000000;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --red: #EF4444;
+            --blue: #3B82F6;
+            --orange: #F59E0B;
+            
+            /* Spacing */
+            --border-radius: 12px;
+            --spacing: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--bg-gray);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-green) 0%, #22C55E 100%);
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-logo-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .login-logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        /* Admin Layout */
+        .admin-layout {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .admin-layout.active {
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--white);
+            border-right: 1px solid var(--stroke);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .sidebar-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+        }
+
+        .menu-item:hover {
+            background: var(--bg-gray);
+        }
+
+        .menu-item.active {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+
+        .menu-icon {
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--stroke);
+        }
+
+        .admin-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+        }
+
+        .admin-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .admin-details {
+            flex: 1;
+        }
+
+        .admin-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .admin-role {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--red);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            padding: 24px;
+            width: calc(100% - 260px);
+        }
+
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        /* Page Content */
+        .page-content {
+            display: none;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            border: 1px solid var(--stroke);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-icon.green { background: rgba(74, 222, 128, 0.1); }
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.1); }
+        .stat-icon.orange { background: rgba(245, 158, 11, 0.1); }
+        .stat-icon.red { background: rgba(239, 68, 68, 0.1); }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: var(--primary-green);
+            font-weight: 600;
+        }
+
+        /* Card */
+        .card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            border: 1px solid var(--stroke);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        /* Alert Box */
+        .alert {
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .alert.warning {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            color: #92400E;
+        }
+
+        .alert.danger {
+            background: #FEE2E2;
+            border: 1px solid #EF4444;
+            color: #991B1B;
+        }
+
+        .alert.info {
+            background: #DBEAFE;
+            border: 1px solid #3B82F6;
+            color: #1E40AF;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .alert-text {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Button */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-green);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: #3BC76C;
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--text-dark);
+            border: 1px solid var(--stroke);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-gray);
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--stroke);
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            color: var(--text-dark);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+        }
+
+        .form-input.error {
+            border-color: var(--red);
+        }
+
+        .form-error {
+            font-size: 12px;
+            color: var(--red);
+            margin-top: 4px;
+        }
+
+        /* Favorite Team Selection */
+        .team-preview {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: var(--bg-gray);
+            border-radius: var(--border-radius);
+            margin: 16px 0;
+        }
+
+        .team-preview-flag {
+            font-size: 48px;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .team-preview-info {
+            flex: 1;
+        }
+
+        .team-preview-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .team-preview-status {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .bonus-points-table {
+            width: 100%;
+            margin: 16px 0;
+            border-collapse: collapse;
+        }
+
+        .bonus-points-table th,
+        .bonus-points-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .bonus-points-table th {
+            background: var(--bg-gray);
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+
+        .bonus-points-table td {
+            font-size: 14px;
+        }
+
+        .bonus-points-table input[type="number"] {
+            width: 80px;
+            padding: 6px 10px;
+            border: 1px solid var(--stroke);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .bonus-points-table input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-green);
+        }
+
+        .lock-notice {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--yellow-bg);
+            border: 1px solid var(--orange);
+            border-radius: var(--border-radius);
+            margin: 16px 0;
+        }
+
+        .lock-notice-icon {
+            font-size: 24px;
+        }
+
+        .lock-notice-text {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+
+        /* Country Autocomplete */
+        .country-input-wrapper {
+            position: relative;
+        }
+
+        .country-flag-preview {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            pointer-events: none;
+        }
+
+        .form-input.with-flag {
+            padding-left: 44px;
+        }
+
+        .country-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--white);
+            border: 1px solid var(--stroke);
+            border-radius: 8px;
+            margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .country-suggestions.show {
+            display: block;
+        }
+
+        .country-suggestion-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .country-suggestion-item:hover {
+            background: var(--bg-gray);
+        }
+
+        .country-suggestion-flag {
+            font-size: 20px;
+            width: 28px;
+            text-align: center;
+        }
+
+        .country-suggestion-name {
+            font-size: 14px;
+            color: var(--text-dark);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--stroke);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table thead {
+            background: var(--bg-gray);
+        }
+
+        .table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .table td {
+            padding: 16px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .table tbody tr:hover {
+            background: var(--bg-gray);
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--primary-green);
+        }
+
+        .badge.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--orange);
+        }
+
+        .badge.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+        }
+
+        .badge.info {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--blue);
+        }
+
+        /* Action Buttons */
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .action-btn.edit {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--blue);
+        }
+
+        .action-btn.edit:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .action-btn.delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+        }
+
+        .action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .action-btn.view {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--primary-green);
+        }
+
+        .action-btn.view:hover {
+            background: rgba(74, 222, 128, 0.2);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: var(--text-light);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-gray);
+            color: var(--text-dark);
+        }
+
+        .modal-body {
+            margin-bottom: 24px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Activity List */
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 14px;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-text {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Success Checkmark Animation */
+        .success-checkmark {
+            display: none;
+        }
+
+        .success-checkmark.show {
+            display: block;
+            animation: scaleIn 0.3s ease;
+        }
+
+        @keyframes scaleIn {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .checkmark-circle {
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            stroke-width: 2;
+            stroke: var(--primary-green);
+            fill: none;
+            animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+
+        .checkmark-check {
+            transform-origin: 50% 50%;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            stroke: var(--primary-green);
+            stroke-width: 3;
+            animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.4s forwards;
+        }
+
+        @keyframes stroke {
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            width: 48px;
+            height: 48px;
+            background: var(--primary-green);
+            border: none;
+            border-radius: 12px;
+            color: var(--white);
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .mobile-menu-toggle:active {
+            transform: scale(0.95);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+                box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding-top: 80px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Dashboard layout - stack sections */
+            .dashboard-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="login-logo-icon">🔐</div>
+                <div class="login-logo-text">Admin Panel</div>
+            </div>
+            <div class="login-subtitle">Đăng nhập với tài khoản quản trị viên</div>
+            
+            <div>
+                <div class="form-group">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input type="text" class="form-input" id="adminUsername" placeholder="admin" value="admin">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu</label>
+                    <input type="password" class="form-input" id="adminPassword" placeholder="••••••••" value="admin">
+                </div>
+
+                <button onclick="doLogin()" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                    Đăng nhập
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Layout -->
+    <div class="admin-layout" id="adminLayout">
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">☰</button>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    ⚽ Admin Panel
+                </div>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a class="menu-item active" onclick="switchAdminPage('dashboard')">
+                    <span class="menu-icon">📊</span>
+                    Dashboard
+                </a>
+                <a class="menu-item" onclick="switchAdminPage('matches')">
+                    <span class="menu-icon">⚽</span>
+                    Quản lý Trận đấu
+                </a>
+                <a class="menu-item" onclick="switchAdminPage('players')">
+                    <span class="menu-icon">👥</span>
+                    Quản lý Người chơi
+                </a>
+                <a class="menu-item" onclick="switchAdminPage('group')">
+                    <span class="menu-icon">👨‍👩‍👧‍👦</span>
+                    Cài đặt Nhóm
+                </a>
+                <a class="menu-item" onclick="switchAdminPage('settings')">
+                    <span class="menu-icon">⚙️</span>
+                    Cài đặt Game
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="admin-info">
+                    <div class="admin-avatar">A</div>
+                    <div class="admin-details">
+                        <div class="admin-name">Admin</div>
+                        <div class="admin-role">Quản trị viên</div>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()" title="Đăng xuất">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard" class="page-content active">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <p class="page-subtitle">Tổng quan hệ thống</p>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-label">Tổng số trận</div>
+                                <div class="stat-value">16</div>
+                                <div class="stat-change">+3 trận mới</div>
+                            </div>
+                            <div class="stat-icon green">⚽</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-label">Người chơi</div>
+                                <div class="stat-value">8</div>
+                                <div class="stat-change">+2 người mới</div>
+                            </div>
+                            <div class="stat-icon blue">👥</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-label">Dự đoán</div>
+                                <div class="stat-value">120</div>
+                                <div class="stat-change">85% tham gia</div>
+                            </div>
+                            <div class="stat-icon orange">🎯</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-label">Cần xử lý</div>
+                                <div class="stat-value">2</div>
+                                <div class="stat-change">Trận chưa nhập KQ</div>
+                            </div>
+                            <div class="stat-icon red">⚠️</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts -->
+                <div class="alert warning">
+                    <span class="alert-icon">⚠️</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Cần xử lý</div>
+                        <div class="alert-text">
+                            • 2 trận đã kết thúc chưa nhập kết quả<br>
+                            • 3 người chưa dự đoán trận tiếp theo
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;" class="dashboard-grid">
+                    <!-- Upcoming Matches -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Trận đấu sắp tới</h2>
+                            <button class="btn btn-sm btn-primary" onclick="switchAdminPage('matches')">
+                                Xem tất cả
+                            </button>
+                        </div>
+
+                        <div class="table-wrapper">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Trận đấu</th>
+                                        <th>Thời gian</th>
+                                        <th>Trạng thái</th>
+                                        <th>Dự đoán</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="upcomingMatchesTable">
+                                    <!-- Will be populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Hoạt động gần đây</h2>
+                        </div>
+                        <ul class="activity-list">
+                            <li class="activity-item">
+                                <div class="activity-icon" style="background: rgba(74, 222, 128, 0.1);">🎯</div>
+                                <div class="activity-content">
+                                    <div class="activity-text"><strong>Na Bito</strong> dự đoán Brazil vs Argentina</div>
+                                    <div class="activity-time">5 phút trước</div>
+                                </div>
+                            </li>
+                            <li class="activity-item">
+                                <div class="activity-icon" style="background: rgba(59, 130, 246, 0.1);">✓</div>
+                                <div class="activity-content">
+                                    <div class="activity-text"><strong>Admin</strong> nhập kết quả Belgium vs Italy</div>
+                                    <div class="activity-time">1 giờ trước</div>
+                                </div>
+                            </li>
+                            <li class="activity-item">
+                                <div class="activity-icon" style="background: rgba(245, 158, 11, 0.1);">👤</div>
+                                <div class="activity-content">
+                                    <div class="activity-text"><strong>Tuệ</strong> tham gia nhóm</div>
+                                    <div class="activity-time">2 giờ trước</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matches Management Page -->
+            <div id="matches" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Quản lý Trận đấu</h1>
+                    <p class="page-subtitle">Thêm, sửa, xóa và nhập kết quả trận đấu</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Danh sách trận đấu</h2>
+                        <button class="btn btn-primary" onclick="openAddMatchModal()">
+                            ➕ Thêm trận mới
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Trận đấu</th>
+                                    <th>Nhóm</th>
+                                    <th>Thời gian</th>
+                                    <th>Trạng thái</th>
+                                    <th>Kết quả</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matchesTable">
+                                <!-- Will be populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Players Management Page -->
+            <div id="players" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Quản lý Người chơi</h1>
+                    <p class="page-subtitle">Xem và quản lý danh sách người chơi</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Danh sách người chơi</h2>
+                        <button class="btn btn-primary" onclick="openAddPlayerModal()">
+                            ➕ Thêm người chơi
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Tên</th>
+                                    <th>Email</th>
+                                    <th>Tổng điểm</th>
+                                    <th>Số trận</th>
+                                    <th>Top 1</th>
+                                    <th>Đúng tỉ số</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="playersTable">
+                                <!-- Will be populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Settings Page -->
+            <div id="group" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Cài đặt Nhóm</h1>
+                    <p class="page-subtitle">Quản lý thông tin và mã mời nhóm</p>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title" style="margin-bottom: 20px;">Thông tin nhóm</h2>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Tên nhóm</label>
+                        <input type="text" class="form-input" value="World Cup 2026 - Nhóm bạn">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Mã nhóm</label>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="text" class="form-input" value="WC2026-ABC123" readonly style="flex: 1;">
+                            <button class="btn btn-secondary">📋 Copy</button>
+                            <button class="btn btn-primary">🔄 Tạo mã mới</button>
+                        </div>
+                    </div>
+
+                    <div class="alert info">
+                        <span class="alert-icon">ℹ️</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Link mời</div>
+                            <div class="alert-text">
+                                Chia sẻ link này để mời người chơi: <br>
+                                <strong>https://app.com/join/WC2026-ABC123</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary">💾 Lưu thay đổi</button>
+                </div>
+
+                <!-- Favorite Team Card -->
+                <div class="card">
+                    <h2 class="card-title" style="margin-bottom: 20px;">⭐ Đội bóng yêu thích</h2>
+                    
+                    <div class="alert info">
+                        <span class="alert-icon">ℹ️</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Cách hoạt động</div>
+                            <div class="alert-text">
+                                Người chơi có thể chọn 1 đội yêu thích. Đội đó đi càng sâu, điểm bonus càng cao!<br>
+                                <strong>⚠️ Chỉ cho chọn sau khi vòng bảng kết thúc</strong> để tránh lợi thế không công bằng.<br><br>
+                                <strong>Cách tính điểm:</strong> Chỉ nhận điểm của vòng xa nhất đội đạt được.<br>
+                                Ví dụ: Đội vô địch → 40 điểm | Đội thua bán kết → 15 điểm | Đội thua tứ kết → 10 điểm
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lock/Unlock Toggle -->
+                    <div class="form-group">
+                        <label class="form-label">Trạng thái tính năng</label>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <select class="form-select" id="favoriteTeamStatus" onchange="toggleFavoriteTeamFeature()" style="max-width: 300px;">
+                                <option value="locked">🔒 Khóa (Chưa cho chọn)</option>
+                                <option value="unlocked">🔓 Mở khóa (Cho phép chọn)</option>
+                            </select>
+                            <span class="badge warning" id="favoriteTeamStatusBadge">Đang khóa</span>
+                        </div>
+                    </div>
+
+                    <div class="lock-notice" id="lockNotice">
+                        <span class="lock-notice-icon">🔒</span>
+                        <div class="lock-notice-text">
+                            <strong>Tính năng đang khóa</strong><br>
+                            Mở khóa sau khi vòng bảng kết thúc để người chơi có thể chọn đội yêu thích.
+                        </div>
+                    </div>
+
+                    <!-- Admin Preview -->
+                    <div class="form-group" id="adminPreviewSection">
+                        <label class="form-label">Preview cho Admin (chọn thử)</label>
+                        <div class="country-input-wrapper">
+                            <span class="country-flag-preview" id="favoriteTeamFlag"></span>
+                            <input type="text" class="form-input with-flag" id="favoriteTeamInput" placeholder="Gõ để tìm đội..." autocomplete="off" oninput="showCountrySuggestions(this, 'favoriteTeamFlag', 'favoriteTeamSuggestions')" onfocus="showCountrySuggestions(this, 'favoriteTeamFlag', 'favoriteTeamSuggestions')">
+                            <div class="country-suggestions" id="favoriteTeamSuggestions"></div>
+                        </div>
+                    </div>
+
+                    <div class="team-preview" id="teamPreview" style="display: none;">
+                        <div class="team-preview-flag" id="teamPreviewFlag"></div>
+                        <div class="team-preview-info">
+                            <div class="team-preview-name" id="teamPreviewName">Chưa chọn đội</div>
+                            <div class="team-preview-status">Điểm nếu vô địch: <strong id="maxPotentialPoints">0 điểm</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Bonus Points Configuration -->
+                    <h3 style="margin: 32px 0 16px; font-size: 16px; font-weight: 600;">Cấu hình điểm bonus</h3>
+                    
+                    <table class="bonus-points-table">
+                        <thead>
+                            <tr>
+                                <th>Vòng đấu</th>
+                                <th>Điểm bonus</th>
+                                <th>Ghi chú</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Vòng 16</strong></td>
+                                <td><input type="number" id="pointsRound16" value="5" min="0" max="100"></td>
+                                <td style="color: var(--text-light); font-size: 13px;">Bị loại ở vòng này</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tứ kết</strong></td>
+                                <td><input type="number" id="pointsQuarter" value="10" min="0" max="100"></td>
+                                <td style="color: var(--text-light); font-size: 13px;">Bị loại ở tứ kết</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Bán kết</strong></td>
+                                <td><input type="number" id="pointsSemi" value="15" min="0" max="100"></td>
+                                <td style="color: var(--text-light); font-size: 13px;">Bị loại ở bán kết</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Chung kết</strong></td>
+                                <td><input type="number" id="pointsFinal" value="25" min="0" max="100"></td>
+                                <td style="color: var(--text-light); font-size: 13px;">Thua chung kết (Á quân)</td>
+                            </tr>
+                            <tr style="background: var(--yellow-bg);">
+                                <td><strong>🏆 Vô địch</strong></td>
+                                <td><input type="number" id="pointsChampion" value="40" min="0" max="100"></td>
+                                <td style="color: var(--text-light); font-size: 13px;">Giành chức vô địch</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="alert warning">
+                        <span class="alert-icon">💡</span>
+                        <div class="alert-content">
+                            <div class="alert-title">Lưu ý tính điểm - CHỈ TÍNH VÒNG CAO NHẤT</div>
+                            <div class="alert-text">
+                                Điểm bonus <strong>KHÔNG tích lũy</strong> - chỉ nhận điểm của vòng xa nhất đội đạt được.<br><br>
+                                <strong>Ví dụ với cấu hình mặc định:</strong><br>
+                                • Đội vô địch → Chỉ nhận <strong>40 điểm</strong> (không phải 5+10+15+25+40 = 95)<br>
+                                • Đội thua chung kết → Chỉ nhận <strong>25 điểm</strong><br>
+                                • Đội thua bán kết → Chỉ nhận <strong>15 điểm</strong><br>
+                                • Đội thua tứ kết → Chỉ nhận <strong>10 điểm</strong><br>
+                                • Đội thua vòng 16 → Chỉ nhận <strong>5 điểm</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveFavoriteTeamSettings()">💾 Lưu cài đặt</button>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Cài đặt Game</h1>
+                    <p class="page-subtitle">Cấu hình điểm số và luật chơi</p>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title" style="margin-bottom: 20px;">Điểm xếp hạng</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Top 1</label>
+                            <input type="number" class="form-input" value="4" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Top 2</label>
+                            <input type="number" class="form-input" value="3" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Top 3</label>
+                            <input type="number" class="form-input" value="2" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Top 4</label>
+                            <input type="number" class="form-input" value="1" min="0">
+                        </div>
+                    </div>
+
+                    <h2 class="card-title" style="margin: 32px 0 20px;">Điểm bonus</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Đúng tỉ số</label>
+                            <input type="number" class="form-input" value="5" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Gần phút nhất</label>
+                            <input type="number" class="form-input" value="3" min="0">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary">💾 Lưu cài đặt</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Match Modal -->
+    <div class="modal-overlay" id="addMatchModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Thêm trận đấu mới</h3>
+                <button class="modal-close" onclick="closeModal('addMatchModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Nhóm/Vòng</label>
+                    <input type="text" class="form-input" id="addMatchGroup" placeholder="GROUP C">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Đội nhà</label>
+                        <div class="country-input-wrapper">
+                            <span class="country-flag-preview" id="addHomeFlag"></span>
+                            <input type="text" class="form-input with-flag" id="addMatchHome" placeholder="Gõ hoặc chọn quốc gia" autocomplete="off" oninput="showCountrySuggestions(this, 'addHomeFlag', 'addHomeSuggestions')" onfocus="showCountrySuggestions(this, 'addHomeFlag', 'addHomeSuggestions')">
+                            <div class="country-suggestions" id="addHomeSuggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Đội khách</label>
+                        <div class="country-input-wrapper">
+                            <span class="country-flag-preview" id="addAwayFlag"></span>
+                            <input type="text" class="form-input with-flag" id="addMatchAway" placeholder="Gõ hoặc chọn quốc gia" autocomplete="off" oninput="showCountrySuggestions(this, 'addAwayFlag', 'addAwaySuggestions')" onfocus="showCountrySuggestions(this, 'addAwayFlag', 'addAwaySuggestions')">
+                            <div class="country-suggestions" id="addAwaySuggestions"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Ngày</label>
+                        <input type="date" class="form-input" id="addMatchDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Giờ</label>
+                        <input type="time" class="form-input" id="addMatchTime">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addMatchModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="confirmAddMatch()">Thêm trận đấu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Match Modal -->
+    <div class="modal-overlay" id="editMatchModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Sửa thông tin trận đấu</h3>
+                <button class="modal-close" onclick="closeModal('editMatchModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Nhóm/Vòng</label>
+                    <input type="text" class="form-input" id="editMatchGroup">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Đội nhà</label>
+                        <div class="country-input-wrapper">
+                            <span class="country-flag-preview" id="editHomeFlag"></span>
+                            <input type="text" class="form-input with-flag" id="editMatchHome" autocomplete="off" oninput="showCountrySuggestions(this, 'editHomeFlag', 'editHomeSuggestions')" onfocus="showCountrySuggestions(this, 'editHomeFlag', 'editHomeSuggestions')">
+                            <div class="country-suggestions" id="editHomeSuggestions"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Đội khách</label>
+                        <div class="country-input-wrapper">
+                            <span class="country-flag-preview" id="editAwayFlag"></span>
+                            <input type="text" class="form-input with-flag" id="editMatchAway" autocomplete="off" oninput="showCountrySuggestions(this, 'editAwayFlag', 'editAwaySuggestions')" onfocus="showCountrySuggestions(this, 'editAwayFlag', 'editAwaySuggestions')">
+                            <div class="country-suggestions" id="editAwaySuggestions"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Ngày</label>
+                        <input type="date" class="form-input" id="editMatchDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Giờ</label>
+                        <input type="time" class="form-input" id="editMatchTime">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trạng thái</label>
+                    <select class="form-select" id="editMatchStatus">
+                        <option value="not-open">Chưa mở dự đoán</option>
+                        <option value="open">Mở dự đoán</option>
+                        <option value="live">Đang live</option>
+                        <option value="finished">Đã kết thúc</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editMatchModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="confirmEditMatch()">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div class="modal-overlay" id="addPlayerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Thêm người chơi mới</h3>
+                <button class="modal-close" onclick="closeModal('addPlayerModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tên người chơi</label>
+                    <input type="text" class="form-input" id="addPlayerName" placeholder="Nguyễn Văn A">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="addPlayerEmail" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu</label>
+                    <input type="password" class="form-input" id="addPlayerPassword" placeholder="••••••••">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addPlayerModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="confirmAddPlayer()">Thêm người chơi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Player Modal -->
+    <div class="modal-overlay" id="editPlayerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Sửa thông tin người chơi</h3>
+                <button class="modal-close" onclick="closeModal('editPlayerModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tên người chơi</label>
+                    <input type="text" class="form-input" id="editPlayerName">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="editPlayerEmail">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Reset mật khẩu (để trống nếu không đổi)</label>
+                    <input type="password" class="form-input" id="editPlayerPassword" placeholder="••••••••">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editPlayerModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="confirmEditPlayer()">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enter Result Modal -->
+    <div class="modal-overlay" id="enterResultModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="resultModalTitle">Nhập kết quả</h3>
+                <button class="modal-close" onclick="closeModal('enterResultModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert info">
+                    <span class="alert-icon">ℹ️</span>
+                    <div class="alert-content">
+                        <div class="alert-text">
+                            <strong id="resultMatchInfo">Belgium vs Italy</strong><br>
+                            <span id="resultPredictionCount">8 người đã dự đoán</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tỉ số đội nhà</label>
+                        <input type="number" class="form-input" id="resultHomeScore" min="0" max="20" value="2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tỉ số đội khách</label>
+                        <input type="number" class="form-input" id="resultAwayScore" min="0" max="20" value="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phút ghi bàn cuối cùng</label>
+                    <input type="number" class="form-input" id="resultMinute" min="0" max="120" value="82">
+                </div>
+
+                <div class="alert warning" style="margin-top: 20px;">
+                    <span class="alert-icon">⚠️</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Preview</div>
+                        <div class="alert-text" id="resultPreview">
+                            • 3 người đúng tỉ số → +5 điểm<br>
+                            • 2 người gần phút nhất → +3 điểm
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Success Animation -->
+                <svg class="success-checkmark" id="resultSuccessCheckmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" style="display: none; width: 80px; height: 80px; margin: 20px auto;">
+                    <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                    <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                </svg>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('enterResultModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="confirmResult()">Tính điểm & Lưu kết quả</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Result Modal -->
+    <div class="modal-overlay" id="editResultModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Sửa kết quả</h3>
+                <button class="modal-close" onclick="closeModal('editResultModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert danger">
+                    <span class="alert-icon">⚠️</span>
+                    <div class="alert-content">
+                        <div class="alert-title">Cảnh báo</div>
+                        <div class="alert-text">
+                            Sửa kết quả sẽ tính lại điểm cho tất cả người chơi. Thao tác này không thể hoàn tác.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tỉ số đội nhà</label>
+                        <input type="number" class="form-input" id="editHomeScore" min="0" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tỉ số đội khách</label>
+                        <input type="number" class="form-input" id="editAwayScore" min="0" max="20">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phút ghi bàn cuối cùng</label>
+                    <input type="number" class="form-input" id="editMinute" min="0" max="120">
+                </div>
+
+                <!-- Success Animation -->
+                <svg class="success-checkmark" id="editResultSuccessCheckmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" style="display: none; width: 80px; height: 80px; margin: 20px auto;">
+                    <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                    <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                </svg>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editResultModal')">Hủy</button>
+                <button class="btn btn-danger" onclick="confirmEditResult()">Xác nhận sửa kết quả</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Countries Database - Updated for World Cup 2026
+        // ✅ = Đã qualify WC 2026 | 🎯 = Đang playoff
+        const countries = {
+            // HOSTS - AUTO QUALIFIED
+            'Canada': { flag: '🇨🇦', color: '#FF0000', wc2026: '✅ Host' },
+            'Mexico': { flag: '🇲🇽', color: '#006847', wc2026: '✅ Host' },
+            'United States': { flag: '🇺🇸', color: '#B22234', wc2026: '✅ Host' },
+            
+            // EUROPE - 12 QUALIFIED + 4 PLAYOFF SPOTS
+            'Austria': { flag: '🇦🇹', color: '#ED2939', wc2026: '✅' },
+            'Belgium': { flag: '🇧🇪', color: '#FDDA24', wc2026: '✅' },
+            'Croatia': { flag: '🇭🇷', color: '#FF0000', wc2026: '✅' },
+            'England': { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', color: '#FFFFFF', wc2026: '✅' },
+            'France': { flag: '🇫🇷', color: '#0055A4', wc2026: '✅' },
+            'Germany': { flag: '🇩🇪', color: '#000000', wc2026: '✅' },
+            'Netherlands': { flag: '🇳🇱', color: '#FF4F00', wc2026: '✅' },
+            'Norway': { flag: '🇳🇴', color: '#BA0C2F', wc2026: '✅' },
+            'Portugal': { flag: '🇵🇹', color: '#FF0000', wc2026: '✅' },
+            'Scotland': { flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: '#0065BD', wc2026: '✅' },
+            'Spain': { flag: '🇪🇸', color: '#AA151B', wc2026: '✅' },
+            'Switzerland': { flag: '🇨🇭', color: '#FF0000', wc2026: '✅' },
+            // Playoffs
+            'Italy': { flag: '🇮🇹', color: '#009246', wc2026: '🎯 Playoff' },
+            'Poland': { flag: '🇵🇱', color: '#DC143C', wc2026: '🎯 Playoff' },
+            'Ukraine': { flag: '🇺🇦', color: '#0057B7', wc2026: '🎯 Playoff' },
+            'Sweden': { flag: '🇸🇪', color: '#006AA7', wc2026: '🎯 Playoff' },
+            'Albania': { flag: '🇦🇱', color: '#E41E20', wc2026: '🎯 Playoff' },
+            'Bosnia and Herzegovina': { flag: '🇧🇦', color: '#002395', wc2026: '🎯 Playoff' },
+            'Northern Ireland': { flag: 'ﷻ', color: '#FFFFFF', wc2026: '🎯 Playoff' },
+            'Wales': { flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', color: '#00A550', wc2026: '🎯 Playoff' },
+            'Romania': { flag: '🇷🇴', color: '#002B7F', wc2026: '🎯 Playoff' },
+            'Slovakia': { flag: '🇸🇰', color: '#0B4EA2', wc2026: '🎯 Playoff' },
+            'Turkey': { flag: '🇹🇷', color: '#E30A17', wc2026: '🎯 Playoff' },
+            'Kosovo': { flag: '🇽🇰', color: '#244AA5', wc2026: '🎯 Playoff' },
+            
+            // ASIA - 8 QUALIFIED
+            'Australia': { flag: '🇦🇺', color: '#012169', wc2026: '✅' },
+            'Iran': { flag: '🇮🇷', color: '#239F40', wc2026: '✅' },
+            'Japan': { flag: '🇯🇵', color: '#BC002D', wc2026: '✅' },
+            'Jordan': { flag: '🇯🇴', color: '#000000', wc2026: '✅ First time!' },
+            'Qatar': { flag: '🇶🇦', color: '#8D1B3D', wc2026: '✅' },
+            'Saudi Arabia': { flag: '🇸🇦', color: '#165C2A', wc2026: '✅' },
+            'South Korea': { flag: '🇰🇷', color: '#003478', wc2026: '✅' },
+            'Uzbekistan': { flag: '🇺🇿', color: '#1EB53A', wc2026: '✅ First time!' },
+            
+            // AFRICA - 9 QUALIFIED
+            'Cape Verde': { flag: '🇨🇻', color: '#003893', wc2026: '✅ First time!' },
+            'Morocco': { flag: '🇲🇦', color: '#C1272D', wc2026: '✅' },
+            'Nigeria': { flag: '🇳🇬', color: '#008751', wc2026: '✅' },
+            'Senegal': { flag: '🇸🇳', color: '#00853F', wc2026: '✅' },
+            'Tunisia': { flag: '🇹🇳', color: '#E70013', wc2026: '✅' },
+            'Egypt': { flag: '🇪🇬', color: '#CE1126', wc2026: '✅' },
+            'Ghana': { flag: '🇬🇭', color: '#006B3F', wc2026: '✅' },
+            'Cameroon': { flag: '🇨🇲', color: '#007A5E', wc2026: '✅' },
+            'Ivory Coast': { flag: '🇨🇮', color: '#FF9A00', wc2026: '✅' },
+            
+            // CONCACAF - 3 + HOSTS
+            'Curaçao': { flag: '🇨🇼', color: '#002B7F', wc2026: '✅ First time!' },
+            'Haiti': { flag: '🇭🇹', color: '#D21034', wc2026: '✅' },
+            'Panama': { flag: '🇵🇦', color: '#DA121A', wc2026: '✅' },
+            
+            // OCEANIA - 1 QUALIFIED
+            'New Zealand': { flag: '🇳🇿', color: '#00247D', wc2026: '✅' },
+            
+            // SOUTH AMERICA - QUALIFYING
+            'Argentina': { flag: '🇦🇷', color: '#74ACDF', wc2026: '✅' },
+            'Brasil': { flag: '🇧🇷', color: '#009B3A', wc2026: '🎯' },
+            'Uruguay': { flag: '🇺🇾', color: '#0038A8', wc2026: '🎯' },
+            'Colombia': { flag: '🇨🇴', color: '#FCD116', wc2026: '🎯' },
+            'Chile': { flag: '🇨🇱', color: '#0039A6', wc2026: '🎯' },
+            'Ecuador': { flag: '🇪🇨', color: '#FFD100', wc2026: '🎯' },
+            'Peru': { flag: '🇵🇪', color: '#D91023', wc2026: '🎯' },
+            'Venezuela': { flag: '🇻🇪', color: '#FFCC00', wc2026: '🎯' },
+            'Paraguay': { flag: '🇵🇾', color: '#D52B1E', wc2026: '🎯' },
+            'Bolivia': { flag: '🇧🇴', color: '#007934', wc2026: '🎯' },
+            
+            // OTHER POPULAR COUNTRIES
+            'Vietnam': { flag: '🇻🇳', color: '#DA251D' },
+            'Thailand': { flag: '🇹🇭', color: '#A51931' },
+            'Indonesia': { flag: '🇮🇩', color: '#FF0000' },
+            'Malaysia': { flag: '🇲🇾', color: '#CC0001' },
+            'Singapore': { flag: '🇸🇬', color: '#EF3340' },
+            'Philippines': { flag: '🇵🇭', color: '#0038A8' },
+            'Myanmar': { flag: '🇲🇲', color: '#FECB00' },
+            'Cambodia': { flag: '🇰🇭', color: '#032EA1' },
+            'Laos': { flag: '🇱🇦', color: '#CE1126' },
+            'Brunei': { flag: '🇧🇳', color: '#F7E017' },
+            'Timor-Leste': { flag: '🇹🇱', color: '#DC241F' },
+            
+            // ASIA - OTHERS
+            'China': { flag: '🇨🇳', color: '#DE2910' },
+            'India': { flag: '🇮🇳', color: '#FF9933' },
+            'Pakistan': { flag: '🇵🇰', color: '#01411C' },
+            'Bangladesh': { flag: '🇧🇩', color: '#006A4E' },
+            'Sri Lanka': { flag: '🇱🇰', color: '#8B0000' },
+            'Nepal': { flag: '🇳🇵', color: '#DC143C' },
+            'Bhutan': { flag: '🇧🇹', color: '#FF4E12' },
+            'Maldives': { flag: '🇲🇻', color: '#D21034' },
+            'Afghanistan': { flag: '🇦🇫', color: '#000000' },
+            'Iraq': { flag: '🇮🇶', color: '#CE1126' },
+            'Syria': { flag: '🇸🇾', color: '#CE1126' },
+            'Lebanon': { flag: '🇱🇧', color: '#ED1C24' },
+            'Palestine': { flag: '🇵🇸', color: '#000000' },
+            'Yemen': { flag: '🇾🇪', color: '#CE1126' },
+            'Oman': { flag: '🇴🇲', color: '#E70013' },
+            'UAE': { flag: '🇦🇪', color: '#00732F' },
+            'Kuwait': { flag: '🇰🇼', color: '#007A3D' },
+            'Bahrain': { flag: '🇧🇭', color: '#CE1126' },
+            'Kazakhstan': { flag: '🇰🇿', color: '#00AFCA' },
+            'Kyrgyzstan': { flag: '🇰🇬', color: '#E8112D' },
+            'Tajikistan': { flag: '🇹🇯', color: '#006600' },
+            'Turkmenistan': { flag: '🇹🇲', color: '#00843D' },
+            'Mongolia': { flag: '🇲🇳', color: '#C4272F' },
+            'North Korea': { flag: '🇰🇵', color: '#024FA2' },
+            'Hong Kong': { flag: '🇭🇰', color: '#DE2910' },
+            'Macau': { flag: '🇲🇴', color: '#00785E' },
+            'Taiwan': { flag: '🇹🇼', color: '#FE0000' },
+            
+            // EUROPE - OTHERS
+            'Russia': { flag: '🇷🇺', color: '#0039A6' },
+            'Denmark': { flag: '🇩🇰', color: '#C60C30' },
+            'Finland': { flag: '🇫🇮', color: '#003580' },
+            'Iceland': { flag: '🇮🇸', color: '#02529C' },
+            'Ireland': { flag: '🇮🇪', color: '#169B62' },
+            'Czech Republic': { flag: '🇨🇿', color: '#D7141A' },
+            'Hungary': { flag: '🇭🇺', color: '#CD2A3E' },
+            'Greece': { flag: '🇬🇷', color: '#0D5EAF' },
+            'Serbia': { flag: '🇷🇸', color: '#C6363C' },
+            'Bulgaria': { flag: '🇧🇬', color: '#00966E' },
+            'Slovenia': { flag: '🇸🇮', color: '#005DA4' },
+            'North Macedonia': { flag: '🇲🇰', color: '#D20000' },
+            'Montenegro': { flag: '🇲🇪', color: '#C40308' },
+            'Cyprus': { flag: '🇨🇾', color: '#D57800' },
+            'Malta': { flag: '🇲🇹', color: '#CF142B' },
+            'Luxembourg': { flag: '🇱🇺', color: '#00A1DE' },
+            'Moldova': { flag: '🇲🇩', color: '#0046AE' },
+            'Belarus': { flag: '🇧🇾', color: '#C8313E' },
+            'Estonia': { flag: '🇪🇪', color: '#0072CE' },
+            'Latvia': { flag: '🇱🇻', color: '#9E3039' },
+            'Lithuania': { flag: '🇱🇹', color: '#FDB913' },
+            'Armenia': { flag: '🇦🇲', color: '#D90012' },
+            'Azerbaijan': { flag: '🇦🇿', color: '#00B5E2' },
+            'Georgia': { flag: '🇬🇪', color: '#FF0000' },
+            'Andorra': { flag: '🇦🇩', color: '#0018A8' },
+            'Monaco': { flag: '🇲🇨', color: '#CE1126' },
+            'San Marino': { flag: '🇸🇲', color: '#5EB3D7' },
+            'Liechtenstein': { flag: '🇱🇮', color: '#002B7F' },
+            'Faroe Islands': { flag: '🇫🇴', color: '#003897' },
+            'Gibraltar': { flag: '🇬🇮', color: '#DA000C' },
+            
+            // AFRICA - OTHERS
+            'South Africa': { flag: '🇿🇦', color: '#007A4D' },
+            'Algeria': { flag: '🇩🇿', color: '#006233' },
+            'Angola': { flag: '🇦🇴', color: '#CE1126' },
+            'Benin': { flag: '🇧🇯', color: '#FCD116' },
+            'Botswana': { flag: '🇧🇼', color: '#75AADB' },
+            'Burkina Faso': { flag: '🇧🇫', color: '#EF2B2D' },
+            'Burundi': { flag: '🇧🇮', color: '#CE1126' },
+            'Chad': { flag: '🇹🇩', color: '#002664' },
+            'Comoros': { flag: '🇰🇲', color: '#3A75C4' },
+            'Congo': { flag: '🇨🇬', color: '#009543' },
+            'DR Congo': { flag: '🇨🇩', color: '#007FFF' },
+            'Djibouti': { flag: '🇩🇯', color: '#6AB2E7' },
+            'Equatorial Guinea': { flag: '🇬🇶', color: '#3E9A00' },
+            'Eritrea': { flag: '🇪🇷', color: '#12AD2B' },
+            'Eswatini': { flag: '🇸🇿', color: '#3E5EB9' },
+            'Ethiopia': { flag: '🇪🇹', color: '#DA121A' },
+            'Gabon': { flag: '🇬🇦', color: '#009E60' },
+            'Gambia': { flag: '🇬🇲', color: '#CE1126' },
+            'Guinea': { flag: '🇬🇳', color: '#CE1126' },
+            'Guinea-Bissau': { flag: '🇬🇼', color: '#CE1126' },
+            'Kenya': { flag: '🇰🇪', color: '#BB0000' },
+            'Lesotho': { flag: '🇱🇸', color: '#00209F' },
+            'Liberia': { flag: '🇱🇷', color: '#BF0A30' },
+            'Libya': { flag: '🇱🇾', color: '#E70013' },
+            'Madagascar': { flag: '🇲🇬', color: '#FC3D32' },
+            'Malawi': { flag: '🇲🇼', color: '#CE1126' },
+            'Mali': { flag: '🇲🇱', color: '#14B53A' },
+            'Mauritania': { flag: '🇲🇷', color: '#006233' },
+            'Mauritius': { flag: '🇲🇺', color: '#EA2839' },
+            'Mozambique': { flag: '🇲🇿', color: '#007168' },
+            'Namibia': { flag: '🇳🇦', color: '#003580' },
+            'Niger': { flag: '🇳🇪', color: '#E05206' },
+            'Rwanda': { flag: '🇷🇼', color: '#00A1DE' },
+            'São Tomé and Príncipe': { flag: '🇸🇹', color: '#12AD2B' },
+            'Seychelles': { flag: '🇸🇨', color: '#003F87' },
+            'Sierra Leone': { flag: '🇸🇱', color: '#1EB53A' },
+            'Somalia': { flag: '🇸🇴', color: '#4189DD' },
+            'South Sudan': { flag: '🇸🇸', color: '#078930' },
+            'Sudan': { flag: '🇸🇩', color: '#D21034' },
+            'Tanzania': { flag: '🇹🇿', color: '#1EB53A' },
+            'Togo': { flag: '🇹🇬', color: '#006A4E' },
+            'Uganda': { flag: '🇺🇬', color: '#FCDC04' },
+            'Zambia': { flag: '🇿🇲', color: '#198A00' },
+            'Zimbabwe': { flag: '🇿🇼', color: '#319E48' },
+            
+            // NORTH AMERICA - OTHERS
+            'Costa Rica': { flag: '🇨🇷', color: '#002B7F' },
+            'Honduras': { flag: '🇭🇳', color: '#0073CF' },
+            'El Salvador': { flag: '🇸🇻', color: '#0047AB' },
+            'Guatemala': { flag: '🇬🇹', color: '#4997D0' },
+            'Nicaragua': { flag: '🇳🇮', color: '#0067C6' },
+            'Belize': { flag: '🇧🇿', color: '#003F87' },
+            'Jamaica': { flag: '🇯🇲', color: '#009B3A' },
+            'Trinidad and Tobago': { flag: '🇹🇹', color: '#CE1126' },
+            'Barbados': { flag: '🇧🇧', color: '#00267F' },
+            'Bahamas': { flag: '🇧🇸', color: '#00ABC9' },
+            'Grenada': { flag: '🇬🇩', color: '#007A5E' },
+            'Suriname': { flag: '🇸🇷', color: '#377E3F' },
+            'Guyana': { flag: '🇬🇾', color: '#CE1126' },
+            'Dominican Republic': { flag: '🇩🇴', color: '#002D62' },
+            'Cuba': { flag: '🇨🇺', color: '#002A8F' },
+            'Antigua and Barbuda': { flag: '🇦🇬', color: '#CE1126' },
+            'Saint Lucia': { flag: '🇱🇨', color: '#65CFFF' },
+            'Saint Vincent': { flag: '🇻🇨', color: '#F4F100' },
+            'Dominica': { flag: '🇩🇲', color: '#009543' },
+            'Saint Kitts and Nevis': { flag: '🇰🇳', color: '#CE1126' },
+            
+            // OCEANIA - OTHERS
+            'Fiji': { flag: '🇫🇯', color: '#68BFE5' },
+            'Papua New Guinea': { flag: '🇵🇬', color: '#CE1126' },
+            'Solomon Islands': { flag: '🇸🇧', color: '#0051BA' },
+            'Vanuatu': { flag: '🇻🇺', color: '#D21034' },
+            'Samoa': { flag: '🇼🇸', color: '#CE1126' },
+            'Tonga': { flag: '🇹🇴', color: '#C10000' },
+            'Tahiti': { flag: '🇵🇫', color: '#ED2939' },
+            'New Caledonia': { flag: '🇳🇨', color: '#009543' }
+        };
+
+        // Mock Data
+        let matches = [
+            { id: 1, group: 'GROUP C', home: 'Vietnam', away: 'Brasil', dateTime: new Date(new Date().setHours(20, 0, 0, 0)), status: 'open', predictions: 6, result: null },
+            { id: 2, group: 'GROUP D', home: 'Canada', away: 'France', dateTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000), status: 'not-open', predictions: 0, result: null },
+            { id: 3, group: 'GROUP E', home: 'Germany', away: 'Albania', dateTime: new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000), status: 'not-open', predictions: 0, result: null },
+            { id: 4, group: 'GROUP F', home: 'Belgium', away: 'Italy', dateTime: new Date(new Date().getTime() - 2 * 60 * 60 * 1000), status: 'finished', predictions: 8, result: { home: 2, away: 0, minute: 82 } },
+            { id: 5, group: 'GROUP G', home: 'Sweden', away: 'Holland', dateTime: new Date(new Date().getTime() - 48 * 60 * 60 * 1000), status: 'finished', predictions: 7, result: null }
+        ];
+
+        let players = [
+            { id: 1, name: 'Na Bito', email: 'nabito@gmail.com', totalPoints: 120, matches: 15, top1: 4, exactScores: 2 },
+            { id: 2, name: 'Tuệ', email: 'tue@gmail.com', totalPoints: 85, matches: 14, top1: 1, exactScores: 3 },
+            { id: 3, name: 'Vy', email: 'vy@gmail.com', totalPoints: 76, matches: 15, top1: 0, exactScores: 2 },
+            { id: 4, name: 'Lan', email: 'lan@gmail.com', totalPoints: 92, matches: 15, top1: 4, exactScores: 1 }
+        ];
+
+        let selectedMatch = null;
+
+        // Auth - Simple login function
+        function doLogin() {
+            const username = document.getElementById('adminUsername').value;
+            const password = document.getElementById('adminPassword').value;
+
+            if (username === 'admin' && password === 'admin') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminLayout').classList.add('active');
+                renderDashboard();
+            } else {
+                alert('Sai tên đăng nhập hoặc mật khẩu!');
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('Bạn có chắc muốn đăng xuất?')) {
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('adminLayout').classList.remove('active');
+            }
+        }
+
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('mobile-open');
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const sidebar = document.querySelector('.sidebar');
+            const menuToggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (sidebar && menuToggle) {
+                if (sidebar.classList.contains('mobile-open') && 
+                    !sidebar.contains(event.target) && 
+                    !menuToggle.contains(event.target)) {
+                    sidebar.classList.remove('mobile-open');
+                }
+            }
+
+            // Close country suggestions when clicking outside
+            const suggestions = document.querySelectorAll('.country-suggestions');
+            suggestions.forEach(sugg => {
+                if (!sugg.parentElement.contains(event.target)) {
+                    sugg.classList.remove('show');
+                }
+            });
+        });
+
+        // Country Autocomplete
+        function showCountrySuggestions(input, flagPreviewId, suggestionsId) {
+            const value = input.value.toLowerCase().trim();
+            const suggestionsDiv = document.getElementById(suggestionsId);
+            const flagPreview = document.getElementById(flagPreviewId);
+            
+            // Update flag preview
+            if (countries[input.value]) {
+                flagPreview.textContent = countries[input.value].flag;
+            } else {
+                flagPreview.textContent = '';
+            }
+            
+            if (value === '') {
+                // Show all countries if empty
+                const html = Object.keys(countries).slice(0, 10).map(name => 
+                    `<div class="country-suggestion-item" onclick="selectCountry('${name}', '${input.id}', '${flagPreviewId}', '${suggestionsId}')">
+                        <span class="country-suggestion-flag">${countries[name].flag}</span>
+                        <span class="country-suggestion-name">${name}</span>
+                    </div>`
+                ).join('');
+                suggestionsDiv.innerHTML = html || '<div style="padding: 12px; color: var(--text-light); font-size: 13px;">Không tìm thấy quốc gia</div>';
+                suggestionsDiv.classList.add('show');
+                return;
+            }
+            
+            // Filter countries by input
+            const filtered = Object.keys(countries).filter(name => 
+                name.toLowerCase().includes(value)
+            );
+            
+            if (filtered.length > 0) {
+                const html = filtered.slice(0, 10).map(name => 
+                    `<div class="country-suggestion-item" onclick="selectCountry('${name}', '${input.id}', '${flagPreviewId}', '${suggestionsId}')">
+                        <span class="country-suggestion-flag">${countries[name].flag}</span>
+                        <span class="country-suggestion-name">${name}</span>
+                    </div>`
+                ).join('');
+                suggestionsDiv.innerHTML = html;
+                suggestionsDiv.classList.add('show');
+            } else {
+                suggestionsDiv.innerHTML = '<div style="padding: 12px; color: var(--text-light); font-size: 13px;">Không tìm thấy quốc gia</div>';
+                suggestionsDiv.classList.add('show');
+            }
+        }
+
+        function selectCountry(countryName, inputId, flagPreviewId, suggestionsId) {
+            const input = document.getElementById(inputId);
+            const flagPreview = document.getElementById(flagPreviewId);
+            const suggestionsDiv = document.getElementById(suggestionsId);
+            
+            input.value = countryName;
+            flagPreview.textContent = countries[countryName].flag;
+            suggestionsDiv.classList.remove('show');
+        }
+
+        // Page Navigation
+        function switchAdminPage(pageId) {
+            // Update menu
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update page
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+
+            // Render data
+            if (pageId === 'dashboard') renderDashboard();
+            if (pageId === 'matches') renderMatchesTable();
+            if (pageId === 'players') renderPlayersTable();
+        }
+
+        // Render Functions
+        function renderDashboard() {
+            renderUpcomingMatches();
+        }
+
+        function renderUpcomingMatches() {
+            const tbody = document.getElementById('upcomingMatchesTable');
+            const upcoming = matches.filter(m => m.status !== 'finished').slice(0, 5);
+
+            let html = '';
+            upcoming.forEach(match => {
+                const dateStr = match.dateTime.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+                const timeStr = match.dateTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+                let statusBadge = '';
+                if (match.status === 'open') {
+                    statusBadge = '<span class="badge success">Mở dự đoán</span>';
+                } else if (match.status === 'live') {
+                    statusBadge = '<span class="badge danger">Đang live</span>';
+                } else {
+                    statusBadge = '<span class="badge warning">Chưa mở</span>';
+                }
+
+                html += `
+                    <tr>
+                        <td><strong>${match.home} vs ${match.away}</strong><br><small>${match.group}</small></td>
+                        <td>${dateStr}<br>${timeStr}</td>
+                        <td>${statusBadge}</td>
+                        <td>${match.predictions}/8</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="action-btn edit" onclick="editMatch(${match.id})" title="Sửa">✏️</button>
+                                ${match.status === 'open' ? '<button class="action-btn view" onclick="openEnterResultModal(' + match.id + ')" title="Nhập KQ">✓</button>' : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="5" class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Không có trận đấu</div></td></tr>';
+        }
+
+        function renderMatchesTable() {
+            const tbody = document.getElementById('matchesTable');
+
+            let html = '';
+            matches.forEach(match => {
+                const dateStr = match.dateTime.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+                const timeStr = match.dateTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+                let statusBadge = '';
+                if (match.status === 'open') {
+                    statusBadge = '<span class="badge success">Mở</span>';
+                } else if (match.status === 'live') {
+                    statusBadge = '<span class="badge danger">Live</span>';
+                } else if (match.status === 'finished') {
+                    statusBadge = '<span class="badge info">Kết thúc</span>';
+                } else {
+                    statusBadge = '<span class="badge warning">Chưa mở</span>';
+                }
+
+                let resultText = '-';
+                let actions = `
+                    <button class="action-btn edit" onclick="editMatch(${match.id})" title="Sửa">✏️</button>
+                    <button class="action-btn delete" onclick="deleteMatch(${match.id})" title="Xóa">🗑️</button>
+                `;
+
+                if (match.result) {
+                    resultText = `${match.result.home}-${match.result.away} (${match.result.minute}')`;
+                    actions = `
+                        <button class="action-btn view" onclick="viewMatchDetails(${match.id})" title="Xem chi tiết">👁️</button>
+                        <button class="action-btn edit" onclick="openEditResultModal(${match.id})" title="Sửa KQ">✏️</button>
+                    `;
+                } else if (match.status === 'open' || match.status === 'live') {
+                    actions += `<button class="action-btn view" onclick="openEnterResultModal(${match.id})" title="Nhập KQ">✓</button>`;
+                }
+
+                html += `
+                    <tr>
+                        <td>${match.id}</td>
+                        <td><strong>${match.home} vs ${match.away}</strong></td>
+                        <td>${match.group}</td>
+                        <td>${dateStr} ${timeStr}</td>
+                        <td>${statusBadge}</td>
+                        <td>${resultText}</td>
+                        <td>
+                            <div class="action-btns">
+                                ${actions}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function renderPlayersTable() {
+            const tbody = document.getElementById('playersTable');
+
+            let html = '';
+            players.forEach(player => {
+                html += `
+                    <tr>
+                        <td><strong>${player.name}</strong></td>
+                        <td>${player.email}</td>
+                        <td><strong>${player.totalPoints}</strong></td>
+                        <td>${player.matches}</td>
+                        <td>${player.top1}</td>
+                        <td>${player.exactScores}</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="action-btn view" onclick="viewPlayerDetails(${player.id})" title="Xem">👁️</button>
+                                <button class="action-btn edit" onclick="editPlayer(${player.id})" title="Sửa">✏️</button>
+                                <button class="action-btn delete" onclick="deletePlayer(${player.id})" title="Xóa">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Modal Functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function openAddMatchModal() {
+            // Clear form
+            document.getElementById('addMatchGroup').value = '';
+            document.getElementById('addMatchHome').value = '';
+            document.getElementById('addMatchAway').value = '';
+            document.getElementById('addMatchDate').value = '';
+            document.getElementById('addMatchTime').value = '';
+            
+            // Clear flag previews
+            document.getElementById('addHomeFlag').textContent = '';
+            document.getElementById('addAwayFlag').textContent = '';
+            
+            openModal('addMatchModal');
+        }
+
+        function openAddPlayerModal() {
+            alert('Chức năng thêm người chơi - Coming soon!');
+        }
+
+        function openEnterResultModal(matchId) {
+            selectedMatch = matches.find(m => m.id === matchId);
+            document.getElementById('resultModalTitle').textContent = 'Nhập kết quả';
+            document.getElementById('resultMatchInfo').textContent = `${selectedMatch.home} vs ${selectedMatch.away}`;
+            document.getElementById('resultPredictionCount').textContent = `${selectedMatch.predictions} người đã dự đoán`;
+            openModal('enterResultModal');
+        }
+
+        function openEditResultModal(matchId) {
+            selectedMatch = matches.find(m => m.id === matchId);
+            if (selectedMatch.result) {
+                document.getElementById('editHomeScore').value = selectedMatch.result.home;
+                document.getElementById('editAwayScore').value = selectedMatch.result.away;
+                document.getElementById('editMinute').value = selectedMatch.result.minute;
+            }
+            openModal('editResultModal');
+        }
+
+        function confirmResult() {
+            const home = parseInt(document.getElementById('resultHomeScore').value);
+            const away = parseInt(document.getElementById('resultAwayScore').value);
+            const minute = parseInt(document.getElementById('resultMinute').value);
+
+            if (isNaN(home) || isNaN(away) || isNaN(minute)) {
+                alert('Vui lòng nhập đầy đủ kết quả!');
+                return;
+            }
+
+            if (!selectedMatch) {
+                alert('Lỗi: Không tìm thấy trận đấu!');
+                return;
+            }
+
+            // Update data
+            selectedMatch.result = { home, away, minute };
+            selectedMatch.status = 'finished';
+            
+            // Close modal
+            closeModal('enterResultModal');
+            
+            // Update tables
+            renderMatchesTable();
+            renderDashboard();
+            
+            // Success message
+            alert(`✅ Đã lưu kết quả thành công!\n\nTỉ số: ${home}-${away}\nPhút: ${minute}\n\nĐã tính điểm cho tất cả người chơi.`);
+        }
+
+        function confirmEditResult() {
+            const home = parseInt(document.getElementById('editHomeScore').value);
+            const away = parseInt(document.getElementById('editAwayScore').value);
+            const minute = parseInt(document.getElementById('editMinute').value);
+
+            if (isNaN(home) || isNaN(away) || isNaN(minute)) {
+                alert('Vui lòng nhập đầy đủ kết quả!');
+                return;
+            }
+
+            if (confirm(`⚠️ Xác nhận sửa kết quả?\n\nTỉ số mới: ${home}-${away}\nPhút: ${minute}\n\nĐiểm của tất cả người chơi sẽ được tính lại.`)) {
+                // Update data
+                selectedMatch.result = { home, away, minute };
+                
+                // Close modal
+                closeModal('editResultModal');
+                
+                // Update tables
+                renderMatchesTable();
+                renderDashboard();
+                
+                // Success message
+                alert(`✅ Đã cập nhật kết quả thành công!\n\nTỉ số mới: ${home}-${away}\nPhút: ${minute}\n\nĐã tính lại điểm cho tất cả người chơi.`);
+            }
+        }
+
+        // CRUD Functions
+        let selectedPlayer = null;
+
+        function editMatch(id) {
+            selectedMatch = matches.find(m => m.id === id);
+            if (selectedMatch) {
+                // Populate form
+                document.getElementById('editMatchGroup').value = selectedMatch.group;
+                document.getElementById('editMatchHome').value = selectedMatch.home;
+                document.getElementById('editMatchAway').value = selectedMatch.away;
+                
+                // Update flag previews
+                if (countries[selectedMatch.home]) {
+                    document.getElementById('editHomeFlag').textContent = countries[selectedMatch.home].flag;
+                }
+                if (countries[selectedMatch.away]) {
+                    document.getElementById('editAwayFlag').textContent = countries[selectedMatch.away].flag;
+                }
+                
+                const date = new Date(selectedMatch.dateTime);
+                document.getElementById('editMatchDate').value = date.toISOString().split('T')[0];
+                document.getElementById('editMatchTime').value = date.toTimeString().slice(0, 5);
+                document.getElementById('editMatchStatus').value = selectedMatch.status;
+                
+                openModal('editMatchModal');
+            }
+        }
+
+        function confirmEditMatch() {
+            if (selectedMatch) {
+                const home = document.getElementById('editMatchHome').value.trim();
+                const away = document.getElementById('editMatchAway').value.trim();
+
+                // Check if countries exist
+                if (!countries[home]) {
+                    alert(`⚠️ Không tìm thấy quốc gia "${home}" trong database!\n\nVui lòng chọn từ danh sách gợi ý hoặc kiểm tra lại chính tả.`);
+                    return;
+                }
+                if (!countries[away]) {
+                    alert(`⚠️ Không tìm thấy quốc gia "${away}" trong database!\n\nVui lòng chọn từ danh sách gợi ý hoặc kiểm tra lại chính tả.`);
+                    return;
+                }
+
+                selectedMatch.group = document.getElementById('editMatchGroup').value;
+                selectedMatch.home = home;
+                selectedMatch.away = away;
+                
+                const date = document.getElementById('editMatchDate').value;
+                const time = document.getElementById('editMatchTime').value;
+                selectedMatch.dateTime = new Date(`${date}T${time}`);
+                selectedMatch.status = document.getElementById('editMatchStatus').value;
+                
+                closeModal('editMatchModal');
+                renderMatchesTable();
+                renderDashboard();
+                alert(`✅ Đã cập nhật trận đấu!\n\n${home} vs ${away}`);
+            }
+        }
+
+        function confirmAddMatch() {
+            const group = document.getElementById('addMatchGroup').value.trim();
+            const home = document.getElementById('addMatchHome').value.trim();
+            const away = document.getElementById('addMatchAway').value.trim();
+            const date = document.getElementById('addMatchDate').value;
+            const time = document.getElementById('addMatchTime').value;
+
+            // Validation
+            if (!group || !home || !away || !date || !time) {
+                alert('Vui lòng điền đầy đủ thông tin!');
+                return;
+            }
+
+            // Check if countries exist
+            if (!countries[home]) {
+                alert(`⚠️ Không tìm thấy quốc gia "${home}" trong database!\n\nVui lòng chọn từ danh sách gợi ý hoặc kiểm tra lại chính tả.`);
+                return;
+            }
+            if (!countries[away]) {
+                alert(`⚠️ Không tìm thấy quốc gia "${away}" trong database!\n\nVui lòng chọn từ danh sách gợi ý hoặc kiểm tra lại chính tả.`);
+                return;
+            }
+
+            const newMatch = {
+                id: matches.length + 1,
+                group: group,
+                home: home,
+                away: away,
+                dateTime: new Date(`${date}T${time}`),
+                status: 'not-open',
+                predictions: 0,
+                result: null
+            };
+            
+            matches.push(newMatch);
+            closeModal('addMatchModal');
+            renderMatchesTable();
+            renderDashboard();
+            alert(`✅ Đã thêm trận đấu!\n\n${home} vs ${away}\n${date} ${time}`);
+        }
+
+        function deleteMatch(id) {
+            if (confirm('Bạn có chắc muốn xóa trận này?')) {
+                matches = matches.filter(m => m.id !== id);
+                renderMatchesTable();
+                renderDashboard();
+                alert('Đã xóa trận đấu!');
+            }
+        }
+
+        function viewMatchDetails(id) {
+            alert(`Xem chi tiết trận ${id} - Coming soon!`);
+        }
+
+        function editPlayer(id) {
+            selectedPlayer = players.find(p => p.id === id);
+            if (selectedPlayer) {
+                document.getElementById('editPlayerName').value = selectedPlayer.name;
+                document.getElementById('editPlayerEmail').value = selectedPlayer.email;
+                document.getElementById('editPlayerPassword').value = '';
+                openModal('editPlayerModal');
+            }
+        }
+
+        function confirmEditPlayer() {
+            if (selectedPlayer) {
+                selectedPlayer.name = document.getElementById('editPlayerName').value;
+                selectedPlayer.email = document.getElementById('editPlayerEmail').value;
+                
+                const newPassword = document.getElementById('editPlayerPassword').value;
+                if (newPassword) {
+                    console.log('Password updated for', selectedPlayer.name);
+                }
+                
+                closeModal('editPlayerModal');
+                renderPlayersTable();
+                alert('Đã cập nhật thông tin người chơi!');
+            }
+        }
+
+        function confirmAddPlayer() {
+            const newPlayer = {
+                id: players.length + 1,
+                name: document.getElementById('addPlayerName').value,
+                email: document.getElementById('addPlayerEmail').value,
+                totalPoints: 0,
+                matches: 0,
+                top1: 0,
+                exactScores: 0
+            };
+            
+            players.push(newPlayer);
+            closeModal('addPlayerModal');
+            renderPlayersTable();
+            alert('Đã thêm người chơi mới!');
+        }
+
+        function deletePlayer(id) {
+            if (confirm('Bạn có chắc muốn xóa người chơi này? Tất cả dữ liệu dự đoán sẽ bị xóa.')) {
+                players = players.filter(p => p.id !== id);
+                renderPlayersTable();
+                alert('Đã xóa người chơi!');
+            }
+        }
+
+        function viewPlayerDetails(id) {
+            alert(`Xem chi tiết người chơi ${id} - Coming soon!`);
+        }
+
+        // Favorite Team Feature
+        let favoriteTeamSettings = {
+            status: 'locked',
+            selectedTeam: null,
+            points: {
+                round16: 5,
+                quarter: 10,
+                semi: 15,
+                final: 25,
+                champion: 40
+            }
+        };
+
+        function toggleFavoriteTeamFeature() {
+            const status = document.getElementById('favoriteTeamStatus').value;
+            const badge = document.getElementById('favoriteTeamStatusBadge');
+            const lockNotice = document.getElementById('lockNotice');
+            
+            favoriteTeamSettings.status = status;
+            
+            if (status === 'unlocked') {
+                badge.textContent = 'Đã mở khóa';
+                badge.className = 'badge success';
+                lockNotice.style.display = 'none';
+            } else {
+                badge.textContent = 'Đang khóa';
+                badge.className = 'badge warning';
+                lockNotice.style.display = 'flex';
+            }
+        }
+
+        function saveFavoriteTeamSettings() {
+            // Get points from inputs
+            favoriteTeamSettings.points.round16 = parseInt(document.getElementById('pointsRound16').value) || 0;
+            favoriteTeamSettings.points.quarter = parseInt(document.getElementById('pointsQuarter').value) || 0;
+            favoriteTeamSettings.points.semi = parseInt(document.getElementById('pointsSemi').value) || 0;
+            favoriteTeamSettings.points.final = parseInt(document.getElementById('pointsFinal').value) || 0;
+            favoriteTeamSettings.points.champion = parseInt(document.getElementById('pointsChampion').value) || 0;
+            
+            // Max points = Champion points only (not cumulative)
+            const maxPoints = favoriteTeamSettings.points.champion;
+            
+            alert(`✅ Đã lưu cài đặt đội yêu thích!\n\nTrạng thái: ${favoriteTeamSettings.status === 'unlocked' ? 'Đã mở khóa' : 'Đang khóa'}\nĐiểm tối đa (nếu vô địch): ${maxPoints} điểm`);
+        }
+
+        // Update team preview when selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const favoriteInput = document.getElementById('favoriteTeamInput');
+            if (favoriteInput) {
+                favoriteInput.addEventListener('input', function() {
+                    const teamName = this.value.trim();
+                    if (countries[teamName]) {
+                        updateTeamPreview(teamName);
+                    }
+                });
+            }
+        });
+
+        function updateTeamPreview(teamName) {
+            const preview = document.getElementById('teamPreview');
+            const flag = document.getElementById('teamPreviewFlag');
+            const name = document.getElementById('teamPreviewName');
+            const maxPoints = document.getElementById('maxPotentialPoints');
+            
+            if (countries[teamName]) {
+                preview.style.display = 'flex';
+                flag.textContent = countries[teamName].flag;
+                name.textContent = teamName;
+                
+                // Max points = Champion points only (highest round)
+                const championPoints = favoriteTeamSettings.points.champion;
+                
+                maxPoints.textContent = `${championPoints} điểm`;
+                
+                // Show WC 2026 status if available
+                if (countries[teamName].wc2026) {
+                    name.innerHTML = `${teamName} <span class="badge success">${countries[teamName].wc2026}</span>`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
