@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supabase Connection</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #ccc;
+            background: #f9f9f9;
+        }
+        .test-item.success {
+            border-color: #10B981;
+            background: #D1FAE5;
+        }
+        .test-item.error {
+            border-color: #EF4444;
+            background: #FEE2E2;
+        }
+        .status {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .success .status { color: #10B981; }
+        .error .status { color: #EF4444; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Supabase Setup</h1>
+    
+    <div class="test-box">
+        <h2>Test Results:</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>Console Log:</h2>
+        <pre id="console-log" style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto;"></pre>
+    </div>
+
+    <!-- Load scripts in order -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+        const consoleLog = document.getElementById('console-log');
+        let logs = [];
+
+        // Capture console.log
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logs.push(args.join(' '));
+            consoleLog.textContent = logs.join('\n');
+        };
+
+        const originalError = console.error;
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logs.push('ERROR: ' + args.join(' '));
+            consoleLog.textContent = logs.join('\n');
+        };
+
+        function addTest(name, success, message) {
+            const div = document.createElement('div');
+            div.className = `test-item ${success ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <span class="status">${success ? '✅' : '❌'}</span>
+                <strong>${name}:</strong> ${message}
+            `;
+            results.appendChild(div);
+        }
+
+        async function runTests() {
+            console.log('🧪 Starting tests...');
+
+            // Test 1: Supabase SDK loaded
+            if (typeof window.supabase !== 'undefined') {
+                addTest('Supabase SDK', true, 'Loaded successfully');
+            } else {
+                addTest('Supabase SDK', false, 'Not loaded! Check CDN script tag');
+                return;
+            }
+
+            // Test 2: Config loaded
+            if (typeof SUPABASE_CONFIG !== 'undefined') {
+                addTest('Config', true, `URL: ${SUPABASE_CONFIG.url}`);
+            } else {
+                addTest('Config', false, 'config.js not loaded!');
+                return;
+            }
+
+            // Test 3: Supabase client initialized
+            if (typeof supabase !== 'undefined') {
+                addTest('Supabase Client', true, 'Initialized successfully');
+            } else {
+                addTest('Supabase Client', false, 'supabase-client.js not loaded!');
+                return;
+            }
+
+            // Test 4: Functions available
+            const requiredFunctions = [
+                'getCurrentUser',
+                'loginUser',
+                'getMatches',
+                'savePrediction',
+                'getLeaderboard'
+            ];
+
+            let allFunctionsExist = true;
+            requiredFunctions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    console.log(`✅ Function ${funcName} exists`);
+                } else {
+                    console.error(`❌ Function ${funcName} NOT FOUND`);
+                    allFunctionsExist = false;
+                }
+            });
+
+            if (allFunctionsExist) {
+                addTest('Functions', true, 'All required functions loaded');
+            } else {
+                addTest('Functions', false, 'Some functions missing! Check console');
+                return;
+            }
+
+            // Test 5: Database connection
+            try {
+                const group = await getGroupByCode(DEMO_GROUP_CODE);
+                if (group) {
+                    addTest('Database Connection', true, `Connected! Group: ${group.name}`);
+                } else {
+                    addTest('Database Connection', false, 'Group not found! Run demo-data-v2.sql');
+                }
+            } catch (error) {
+                addTest('Database Connection', false, `Error: ${error.message}`);
+                console.error('Database error:', error);
+            }
+
+            // Test 6: Load matches
+            try {
+                const matches = await getMatches(await getGroupByCode(DEMO_GROUP_CODE).then(g => g.id));
+                if (matches && matches.length > 0) {
+                    addTest('Load Matches', true, `Found ${matches.length} matches`);
+                } else {
+                    addTest('Load Matches', false, 'No matches found! Run demo-data-v2.sql');
+                }
+            } catch (error) {
+                addTest('Load Matches', false, `Error: ${error.message}`);
+                console.error('Load matches error:', error);
+            }
+
+            // Test 7: Load players
+            try {
+                const group = await getGroupByCode(DEMO_GROUP_CODE);
+                const players = await getPlayers(group.id);
+                if (players && players.length > 0) {
+                    addTest('Load Players', true, `Found ${players.length} players`);
+                    console.log('Players:', players.map(p => p.email).join(', '));
+                } else {
+                    addTest('Load Players', false, 'No players found! Run demo-data-v2.sql');
+                }
+            } catch (error) {
+                addTest('Load Players', false, `Error: ${error.message}`);
+                console.error('Load players error:', error);
+            }
+
+            console.log('✅ All tests completed!');
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>
