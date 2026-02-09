@@ -105,6 +105,48 @@
             background: #3BC76C;
         }
 
+        .nav-user-section {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-user-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-user-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .nav-logout-btn {
+            padding: 10px 20px;
+            background: transparent;
+            color: var(--text-light);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-logout-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--text-light);
+        }
+
         /* Page Content */
         .page-content {
             display: none;
@@ -1203,7 +1245,11 @@
             <button class="nav-tab active" onclick="switchPage('homepage')" style="padding: 8px 12px;">🏠</button>
             <button class="nav-tab" onclick="switchPage('schedule')">📅 Lịch thi đấu</button>
             <button class="nav-tab" onclick="switchPage('leaderboard')">🏆 Bảng xếp hạng</button>
-            <button class="nav-login" onclick="openLoginModal()">Đăng nhập</button>
+            <div class="nav-user-section" id="navUserSection" style="display: none;">
+                <button class="nav-user-btn" onclick="openProfilePage()" id="navUserBtn">User</button>
+                <button class="nav-logout-btn" onclick="handleLogout()">Đăng xuất</button>
+            </div>
+            <button class="nav-login" id="navLoginBtn" onclick="openLoginModal()">Đăng nhập</button>
         </nav>
 
         <!-- Homepage -->
@@ -1235,23 +1281,8 @@
                     <div class="section-header">
                         <h2 class="section-title">👤 THÀNH TÍCH CÁ NHÂN</h2>
                     </div>
-                    <div class="stats-row">
-                        <div class="stat-card">
-                            <div class="stat-number">2</div>
-                            <div class="stat-label">🏆 VỊ TRÍ</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">120</div>
-                            <div class="stat-label">📊 ĐIỂM</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">4</div>
-                            <div class="stat-label">🎯 TỈ SỐ</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">4</div>
-                            <div class="stat-label">🥇 NHẤT</div>
-                        </div>
+                    <div class="stats-row" id="personalStatsCards">
+                        <!-- Will be populated by JavaScript -->
                     </div>
                     
                     <!-- Favorite Team Stats -->
@@ -1345,6 +1376,36 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Profile Page -->
+    <div id="profile" class="page-content">
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">👤 TRANG CÁ NHÂN</h2>
+            </div>
+            
+            <!-- Personal Stats -->
+            <div class="stats-row" id="profileStatsCards">
+                <!-- Will be populated by JavaScript -->
+            </div>
+            
+            <!-- Favorite Team Section -->
+            <div style="margin-top: 24px;">
+                <h3 style="font-size: 18px; margin-bottom: 16px; color: var(--text);">⭐ Đội Yêu Thích</h3>
+                <div id="profileFavoriteTeam">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Prediction History -->
+            <div style="margin-top: 24px;">
+                <h3 style="font-size: 18px; margin-bottom: 16px; color: var(--text);">📊 Lịch Sử Dự Đoán</h3>
+                <div id="profilePredictionHistory">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
     </div>
 
     <!-- Modal -->
@@ -1763,6 +1824,35 @@
             return predictions || [];
           } catch (error) {
             console.error('Get player predictions error:', error);
+            return [];
+          }
+        }
+        
+        // Get all predictions for a match (all players in group)
+        async function getMatchPredictions(matchId) {
+          try {
+            const { data: predictions, error } = await supabase
+              .from('predictions')
+              .select(`
+                *,
+                players!inner (
+                  id,
+                  name,
+                  group_id
+                )
+              `)
+              .eq('match_id', matchId)
+              .eq('players.group_id', groupId);
+            
+            if (error) throw error;
+            
+            return (predictions || []).map(p => ({
+              ...p,
+              player_name: p.players.name,
+              player_id: p.players.id
+            }));
+          } catch (error) {
+            console.error('Get match predictions error:', error);
             return [];
           }
         }
@@ -2190,27 +2280,33 @@
         // ============================================
         
         function updateUIForLoggedInUser() {
-            // Update login button
-            const loginBtn = document.querySelector('.nav-login');
-            if (loginBtn) {
-                loginBtn.textContent = currentPlayer.name;
-                loginBtn.onclick = () => {
-                    if (confirm('Đăng xuất?')) {
-                        handleLogout();
-                    }
-                };
+            // Hide login button
+            const loginBtn = document.getElementById('navLoginBtn');
+            if (loginBtn) loginBtn.style.display = 'none';
+            
+            // Show user section
+            const userSection = document.getElementById('navUserSection');
+            const userBtn = document.getElementById('navUserBtn');
+            
+            if (userSection && userBtn) {
+                userSection.style.display = 'flex';
+                userBtn.textContent = currentPlayer.name;
             }
         }
 
         function updateUIForGuestUser() {
-            const loginBtn = document.querySelector('.nav-login');
-            if (loginBtn) {
-                loginBtn.textContent = 'Đăng nhập';
-                loginBtn.onclick = () => openLoginModal();
-            }
+            // Show login button
+            const loginBtn = document.getElementById('navLoginBtn');
+            if (loginBtn) loginBtn.style.display = 'block';
+            
+            // Hide user section
+            const userSection = document.getElementById('navUserSection');
+            if (userSection) userSection.style.display = 'none';
         }
 
         async function handleLogout() {
+            if (!confirm('Bạn có chắc muốn đăng xuất?')) return;
+            
             await logoutUser();
             currentPlayer = null;
             groupId = null;
@@ -2219,9 +2315,95 @@
             leaderboardData = [];
             
             updateUIForGuestUser();
+            switchPage('homepage');
             renderAllPages();
             
             console.log('✅ Logged out');
+        }
+
+        // Open Profile Page
+        function openProfilePage() {
+            switchPage('profile');
+            renderProfilePage();
+        }
+
+        // Render Profile Page
+        function renderProfilePage() {
+            if (!currentPlayer) return;
+            
+            // Render stats
+            const statsContainer = document.getElementById('profileStatsCards');
+            const userStats = leaderboardData.find(p => p.id === currentPlayer.id);
+            
+            if (statsContainer && userStats) {
+                statsContainer.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${userStats.rank}</div>
+                        <div class="stat-label">🏆 VỊ TRÍ</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${userStats.points}</div>
+                        <div class="stat-label">📊 ĐIỂM</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${userStats.exactScore}</div>
+                        <div class="stat-label">🎯 TỈ SỐ</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${userStats.top1}</div>
+                        <div class="stat-label">🥇 NHẤT</div>
+                    </div>
+                `;
+            }
+            
+            // Render favorite team
+            const favTeamContainer = document.getElementById('profileFavoriteTeam');
+            if (favTeamContainer) {
+                if (currentPlayer.favorite_team && countries[currentPlayer.favorite_team]) {
+                    const teamData = countries[currentPlayer.favorite_team];
+                    favTeamContainer.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: ${teamData.color}; border-radius: 12px;">
+                            <div style="font-size: 48px;">${teamData.flag}</div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 20px; font-weight: 600; color: var(--text);">${currentPlayer.favorite_team}</div>
+                                <div style="font-size: 14px; color: var(--text-light); margin-top: 4px;">Đội yêu thích của bạn</div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="openFavoriteTeamModal()">Đổi đội</button>
+                        </div>
+                    `;
+                } else {
+                    favTeamContainer.innerHTML = `
+                        <div style="text-align: center; padding: 32px; background: var(--bg-secondary); border-radius: 12px;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">⭐</div>
+                            <p style="color: var(--text-light); margin-bottom: 16px;">Bạn chưa chọn đội yêu thích</p>
+                            <button class="btn btn-primary" onclick="openFavoriteTeamModal()">Chọn ngay</button>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Render prediction history
+            const historyContainer = document.getElementById('profilePredictionHistory');
+            if (historyContainer) {
+                const userMatches = matches.filter(m => m.userPrediction);
+                if (userMatches.length > 0) {
+                    historyContainer.innerHTML = userMatches.map(match => `
+                        <div style="padding: 16px; background: var(--bg-secondary); border-radius: 12px; margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: var(--text);">${match.home} vs ${match.away}</span>
+                                <span style="color: var(--text-light); font-size: 13px;">${match.date.toLocaleDateString('vi-VN')}</span>
+                            </div>
+                            <div style="display: flex; gap: 16px; align-items: center;">
+                                <span style="font-size: 18px; font-weight: 600; color: var(--text);">${match.userPrediction.homeScore} - ${match.userPrediction.awayScore}</span>
+                                <span style="color: var(--text-light);">${match.userPrediction.minute}'</span>
+                                ${match.points ? `<span style="color: #10B981; margin-left: auto; font-weight: 600;">+${(match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0)} điểm</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    historyContainer.innerHTML = '<p style="text-align: center; padding: 32px; color: var(--text-light);">Bạn chưa có dự đoán nào</p>';
+                }
+            }
         }
 
         function renderAllPages() {
@@ -2229,6 +2411,7 @@
             renderScheduleMatches();
             renderHistoryMatches();
             renderLeaderboard();
+            renderPersonalStats();
             renderStats();
         }
 
@@ -2490,7 +2673,7 @@
             leaderboardData.forEach(player => {
                 const rankClass = player.rank <= 4 ? `rank-${player.rank}` : 'rank-other';
                 const isCurrentUser = currentPlayer && player.id === currentPlayer.id;
-                const rowClass = isCurrentUser ? 'style="background: #FEF3C7;"' : '';
+                const rowClass = isCurrentUser ? 'style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-left: 4px solid #F59E0B; font-weight: 600;"' : '';
                 
                 html += `
                     <tr ${rowClass}>
@@ -2506,6 +2689,42 @@
 
             if (tbody) tbody.innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</td></tr>';
             if (preview) preview.innerHTML = html ? `<table class="leaderboard-table"><tbody>${html}</tbody></table>` : '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
+        }
+
+        function renderPersonalStats() {
+            const container = document.getElementById('personalStatsCards');
+            if (!container) return;
+            
+            if (!currentPlayer) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Đăng nhập để xem thành tích</p>';
+                return;
+            }
+            
+            const userStats = leaderboardData.find(p => p.id === currentPlayer.id);
+            
+            if (!userStats) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${userStats.rank}</div>
+                    <div class="stat-label">🏆 VỊ TRÍ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${userStats.points}</div>
+                    <div class="stat-label">📊 ĐIỂM</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${userStats.exactScore}</div>
+                    <div class="stat-label">🎯 TỈ SỐ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${userStats.top1}</div>
+                    <div class="stat-label">🥇 NHẤT</div>
+                </div>
+            `;
         }
 
         function renderStats() {
@@ -2736,36 +2955,54 @@
             document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
             document.getElementById('resultsMinute').textContent = `${match.actualScore.minute}'`;
             
-            // Show all predictions for this match (mock for now)
+            // Load all predictions for this match from all players in group
             const resultsList = document.getElementById('resultsList');
-            resultsList.innerHTML = '';
+            resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Đang tải dự đoán...</p>';
             
-            if (match.userPrediction) {
-                const item = document.createElement('div');
-                item.className = 'results-item current-user';
-                const totalPoints = (match.points?.rank || 0) + (match.points?.exactScore || 0) + (match.points?.minute || 0);
+            getMatchPredictions(match.id).then(predictions => {
+                resultsList.innerHTML = '';
                 
-                item.innerHTML = `
-                    <div class="results-item-header">
-                        <span class="results-item-name">${currentPlayer.name} (Bạn)</span>
-                        <span class="results-item-time">${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div class="results-item-prediction">
-                        <span class="prediction-score">${match.userPrediction.homeScore} - ${match.userPrediction.awayScore}</span>
-                        <span class="prediction-minute">${match.userPrediction.minute}'</span>
-                    </div>
-                    <div class="results-item-points">
-                        ${match.points?.rank ? `<span class="point-badge">+${match.points.rank}</span>` : ''}
-                        ${match.points?.exactScore ? `<span class="point-badge">+${match.points.exactScore}</span>` : ''}
-                        ${match.points?.minute ? `<span class="point-badge">+${match.points.minute}</span>` : ''}
-                        <span class="total-points">Tổng: ${totalPoints} điểm</span>
-                    </div>
-                `;
+                if (predictions.length === 0) {
+                    resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Chưa có ai dự đoán trận này</p>';
+                    return;
+                }
                 
-                resultsList.appendChild(item);
-            } else {
-                resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Bạn chưa dự đoán trận này</p>';
-            }
+                // Sort by total points descending
+                predictions.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+                
+                predictions.forEach(pred => {
+                    const item = document.createElement('div');
+                    const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
+                    item.className = `results-item ${isCurrentUser ? 'current-user' : ''}`;
+                    
+                    const totalPoints = pred.total_points || 0;
+                    const pointsRank = pred.points_rank || 0;
+                    const pointsExact = pred.points_exact_score || 0;
+                    const pointsMinute = pred.points_minute || 0;
+                    
+                    item.innerHTML = `
+                        <div class="results-item-header">
+                            <span class="results-item-name">${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}</span>
+                            <span class="results-item-time">${new Date(pred.updated_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div class="results-item-prediction">
+                            <span class="prediction-score">${pred.home_score} - ${pred.away_score}</span>
+                            <span class="prediction-minute">${pred.minute}'</span>
+                        </div>
+                        <div class="results-item-points">
+                            ${pointsRank ? `<span class="point-badge">+${pointsRank}</span>` : ''}
+                            ${pointsExact ? `<span class="point-badge">+${pointsExact}</span>` : ''}
+                            ${pointsMinute ? `<span class="point-badge">+${pointsMinute}</span>` : ''}
+                            <span class="total-points">Tổng: ${totalPoints} điểm</span>
+                        </div>
+                    `;
+                    
+                    resultsList.appendChild(item);
+                });
+            }).catch(error => {
+                console.error('Error loading predictions:', error);
+                resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #f87171;">Lỗi tải dữ liệu</p>';
+            });
 
             modal.classList.add('active');
         }
