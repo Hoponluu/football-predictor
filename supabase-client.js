@@ -454,9 +454,39 @@ function subscribeToPredictions(playerId, callback) {
 }
 
 // ============================================
+// EXPORT TO WINDOW (CRITICAL FOR BROWSER ACCESS)
+// ============================================
+
+// Export all functions to window object so they can be accessed globally
+window.getCurrentUser = getCurrentUser;
+window.loginUser = loginUser;
+window.logoutUser = logoutUser;
+window.getGroupByCode = getGroupByCode;
+window.createGroup = createGroup;
+window.getMatches = getMatches;
+window.createMatch = createMatch;
+window.updateMatchStatus = updateMatchStatus;
+window.enterMatchResult = enterMatchResult;
+window.getPrediction = getPrediction;
+window.savePrediction = savePrediction;
+window.getPlayerPredictions = getPlayerPredictions;
+window.getLeaderboard = getLeaderboard;
+window.getFavoriteTeamSettings = getFavoriteTeamSettings;
+window.selectFavoriteTeam = selectFavoriteTeam;
+window.updateFavoriteTeamSettings = updateFavoriteTeamSettings;
+window.getPlayers = getPlayers;
+window.createPlayer = createPlayer;
+window.subscribeToMatches = subscribeToMatches;
+window.subscribeToPredictions = subscribeToPredictions;
+
+// Export supabase client
+window.supabaseClient = supabase;
+
+// ============================================
 // INITIALIZATION
 // ============================================
 
 console.log('✅ Supabase client initialized');
 console.log('📊 Database:', SUPABASE_CONFIG.url);
 console.log('👥 Ready to connect to group:', DEMO_GROUP_CODE);
+console.log('✅ All functions exported to window object');
