@@ -2828,44 +2828,44 @@
 
         async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
             try {
+                console.log('🔄 Calculating points for match:', matchId);
+                
                 // Get all predictions for this match
                 const { data: predictions, error: predError } = await supabase
                     .from('predictions')
-                    .select('*')
+                    .select('id, player_id, home_score, away_score, minute')
                     .eq('match_id', matchId);
                 
-                if (predError) throw predError;
+                if (predError) {
+                    console.error('Error loading predictions:', predError);
+                    throw predError;
+                }
                 
                 if (!predictions || predictions.length === 0) {
-                    console.log('No predictions for this match');
+                    console.log('ℹ️ No predictions for this match');
                     return;
                 }
                 
-                // RESET all predictions points to 0 first (important for edit mode)
-                for (const pred of predictions) {
-                    const { error: resetError } = await supabase
-                        .from('predictions')
-                        .update({
-                            points_rank: 0,
-                            points_exact_score: 0,
-                            points_minute: 0,
-                            total_points: 0
-                        })
-                        .eq('id', pred.id);
-                    
-                    if (resetError) throw resetError;
-                }
+                console.log(`📊 Found ${predictions.length} predictions to score`);
                 
-                // Calculate accuracy score for each prediction
+                // Get scoring rules
+                const rules = scoringRules || {
+                    points_rank_1: 5,
+                    points_rank_2: 4,
+                    points_rank_3: 3,
+                    points_rank_other: 2,
+                    points_exact_score: 5,
+                    points_exact_minute: 3
+                };
+                
+                // Calculate scores for all predictions
                 const scoredPredictions = predictions.map(pred => {
                     const homeDiff = Math.abs(pred.home_score - actualHome);
                     const awayDiff = Math.abs(pred.away_score - actualAway);
                     const totalDiff = homeDiff + awayDiff;
                     
-                    // Check exact score
+                    // Check exact match
                     const exactScore = (pred.home_score === actualHome && pred.away_score === actualAway);
-                    
-                    // Check exact minute
                     const exactMinute = (pred.minute === actualMinute);
                     
                     // Accuracy score (lower is better)
@@ -2878,79 +2878,85 @@
                                         (actualHome < actualAway ? 'away' : 'draw');
                     
                     if (predWinner === actualWinner) {
-                        accuracy -= 0.5; // Small bonus
+                        accuracy -= 0.5;
                     }
                     
                     return {
-                        ...pred,
+                        id: pred.id,
+                        player_id: pred.player_id,
                         accuracy,
                         exactScore,
-                        exactMinute,
-                        totalDiff
+                        exactMinute
                     };
                 });
                 
                 // Sort by accuracy (best first)
                 scoredPredictions.sort((a, b) => a.accuracy - b.accuracy);
                 
-                // Assign rank points based on scoring rules
-                const rules = scoringRules || {
-                    points_rank_1: 5,
-                    points_rank_2: 4,
-                    points_rank_3: 3,
-                    points_rank_other: 2,
-                    points_exact_score: 5,
-                    points_exact_minute: 3
-                };
+                // Calculate points and prepare batch updates
+                const updates = [];
                 
-                // Update each prediction with points
                 for (let i = 0; i < scoredPredictions.length; i++) {
                     const pred = scoredPredictions[i];
                     
                     // Rank points
                     let rankPoints = 0;
-                    if (i === 0) {
-                        rankPoints = rules.points_rank_1;
-                    } else if (i === 1) {
-                        rankPoints = rules.points_rank_2;
-                    } else if (i === 2) {
-                        rankPoints = rules.points_rank_3;
-                    } else {
-                        rankPoints = rules.points_rank_other;
-                    }
+                    if (i === 0) rankPoints = rules.points_rank_1;
+                    else if (i === 1) rankPoints = rules.points_rank_2;
+                    else if (i === 2) rankPoints = rules.points_rank_3;
+                    else rankPoints = rules.points_rank_other;
                     
-                    // Exact score bonus
+                    // Bonuses
                     const exactScorePoints = pred.exactScore ? rules.points_exact_score : 0;
-                    
-                    // Exact minute bonus
                     const exactMinutePoints = pred.exactMinute ? rules.points_exact_minute : 0;
-                    
                     const totalPoints = rankPoints + exactScorePoints + exactMinutePoints;
                     
-                    // Update prediction
-                    const { error: updateError } = await supabase
-                        .from('predictions')
-                        .update({
-                            points_rank: rankPoints,
-                            points_exact_score: exactScorePoints,
-                            points_minute: exactMinutePoints,
-                            total_points: totalPoints
-                        })
-                        .eq('id', pred.id);
-                    
-                    if (updateError) throw updateError;
+                    updates.push({
+                        id: pred.id,
+                        points_rank: rankPoints,
+                        points_exact_score: exactScorePoints,
+                        points_minute: exactMinutePoints,
+                        total_points: totalPoints
+                    });
                 }
                 
-                // Update player total points and stats
-                const playerIds = [...new Set(predictions.map(p => p.player_id))];
+                // Update predictions ONE BY ONE with delay to avoid conflicts
+                console.log('💾 Updating prediction points...');
+                for (const update of updates) {
+                    const { error } = await supabase
+                        .from('predictions')
+                        .update({
+                            points_rank: update.points_rank,
+                            points_exact_score: update.points_exact_score,
+                            points_minute: update.points_minute,
+                            total_points: update.total_points
+                        })
+                        .eq('id', update.id);
+                    
+                    if (error) {
+                        console.error('Update error for prediction', update.id, ':', error);
+                    }
+                    
+                    // Small delay to avoid race conditions
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+                
+                console.log('✅ Prediction points updated');
+                
+                // Update player stats
+                const playerIds = [...new Set(scoredPredictions.map(p => p.player_id))];
+                console.log(`👥 Updating stats for ${playerIds.length} players...`);
                 
                 for (const playerId of playerIds) {
                     await updatePlayerStats(playerId);
+                    await new Promise(resolve => setTimeout(resolve, 50));
                 }
                 
-                console.log('✅ Calculated points for', predictions.length, 'predictions');
+                console.log('✅ All points calculated successfully!');
+                
             } catch (error) {
-                console.error('Calculate points error:', error);
+                console.error('❌ Calculate points error:', error);
+                alert('Lỗi khi tính điểm: ' + error.message + '\n\nVui lòng thử lại hoặc liên hệ admin.');
                 throw error;
             }
         }
