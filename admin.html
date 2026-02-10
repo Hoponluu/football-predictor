@@ -1330,12 +1330,22 @@
     <div class="modal-overlay" id="enterResultModal">
         <div class="modal" style="max-width: 500px;">
             <div class="modal-header">
-                <h3 class="modal-title">Nhập kết quả trận đấu</h3>
+                <h3 class="modal-title" id="enterResultModalTitle">Nhập kết quả trận đấu</h3>
                 <button class="modal-close" onclick="closeModal('enterResultModal')">×</button>
             </div>
             <div class="modal-body">
                 <div style="text-align: center; margin-bottom: 24px;">
                     <h4 id="resultMatchTitle" style="font-size: 18px; font-weight: 600;">Loading...</h4>
+                </div>
+                
+                <!-- Edit Warning -->
+                <div id="editResultWarning" class="alert warning" style="display: none; margin-bottom: 16px;">
+                    <span class="alert-icon">⚠️</span>
+                    <div class="alert-content">
+                        <div class="alert-text">
+                            <strong>Lưu ý:</strong> Sửa kết quả sẽ tính lại điểm cho tất cả dự đoán của trận này!
+                        </div>
+                    </div>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
@@ -1944,7 +1954,7 @@
                 }
                 
                 const resultText = match.home_score !== null && match.away_score !== null
-                    ? `${match.home_score}-${match.away_score} (${match.first_goal_minute || match.minute}')`
+                    ? `${match.home_score}-${match.away_score} (${match.minute}')`
                     : '-';
                 
                 // Display match_group (primary) or group_name (fallback)
@@ -1965,6 +1975,7 @@
                             <div class="action-btns">
                                 ${match.status !== 'finished' ? `<button class="action-btn edit" onclick="editMatch(${matchIdStr})" title="Sửa">✏️</button>` : ''}
                                 ${match.status === 'open' || (match.status !== 'finished' && new Date(match.match_date) < new Date()) ? `<button class="action-btn view" onclick="openEnterResultModal(${matchIdStr})" title="Nhập KQ">✓</button>` : ''}
+                                ${match.status === 'finished' ? `<button class="action-btn edit" onclick="openEditResultModal(${matchIdStr})" title="Sửa KQ">✏️</button>` : ''}
                                 ${match.status === 'finished' ? `<button class="action-btn view" onclick="viewMatchDetails(${matchIdStr})" title="Chi tiết">👁️</button>` : ''}
                                 <button class="action-btn delete" onclick="deleteMatch(${matchIdStr})" title="Xóa">🗑️</button>
                             </div>
@@ -2705,9 +2716,42 @@
             currentResultMatch = match;
             
             document.getElementById('resultMatchTitle').textContent = `${match.home_team} vs ${match.away_team}`;
+            document.getElementById('enterResultModalTitle').textContent = 'Nhập kết quả trận đấu';
             document.getElementById('resultHomeScore').value = '';
             document.getElementById('resultAwayScore').value = '';
             document.getElementById('resultMinute').value = '';
+            
+            // Hide edit warning
+            document.getElementById('editResultWarning').style.display = 'none';
+            
+            document.getElementById('enterResultModal').classList.add('active');
+        }
+
+        function openEditResultModal(matchId) {
+            // matchId is already a string (UUID)
+            const match = allMatches.find(m => m.id === matchId);
+            if (!match) {
+                alert('Không tìm thấy trận đấu!');
+                return;
+            }
+            
+            if (match.status !== 'finished') {
+                alert('Trận đấu chưa kết thúc!');
+                return;
+            }
+            
+            currentResultMatch = match;
+            
+            document.getElementById('resultMatchTitle').textContent = `${match.home_team} vs ${match.away_team}`;
+            document.getElementById('enterResultModalTitle').textContent = 'Sửa kết quả trận đấu';
+            
+            // Pre-fill with existing results
+            document.getElementById('resultHomeScore').value = match.home_score || '';
+            document.getElementById('resultAwayScore').value = match.away_score || '';
+            document.getElementById('resultMinute').value = match.minute || '';
+            
+            // Show edit warning
+            document.getElementById('editResultWarning').style.display = 'block';
             
             document.getElementById('enterResultModal').classList.add('active');
         }
@@ -2729,28 +2773,46 @@
                 return;
             }
             
-            if (!confirm(`Xác nhận kết quả:\n${currentResultMatch.home_team} ${homeScore} - ${awayScore} ${currentResultMatch.away_team}\nPhút: ${minute}'`)) {
+            // Detect if editing existing result
+            const isEditing = currentResultMatch.status === 'finished' && 
+                             currentResultMatch.home_score !== null;
+            
+            // Confirmation message
+            let confirmMsg = `Xác nhận kết quả:\n${currentResultMatch.home_team} ${homeScore} - ${awayScore} ${currentResultMatch.away_team}\nPhút: ${minute}'`;
+            
+            if (isEditing) {
+                const oldResult = `${currentResultMatch.home_score}-${currentResultMatch.away_score} (${currentResultMatch.minute}')`;
+                const newResult = `${homeScore}-${awayScore} (${minute}')`;
+                confirmMsg = `⚠️ SỬA KẾT QUẢ\n\nKết quả cũ: ${oldResult}\nKết quả mới: ${newResult}\n\n` +
+                           `Điểm của tất cả người chơi sẽ được tính lại!\n\nBạn có chắc chắn?`;
+            }
+            
+            if (!confirm(confirmMsg)) {
                 return;
             }
             
             try {
-                // Update match with result
+                // Update match with result - use 'minute' column (not 'first_goal_minute')
                 const { error: matchError } = await supabase
                     .from('matches')
                     .update({
                         home_score: homeScore,
                         away_score: awayScore,
-                        first_goal_minute: minute,
+                        minute: minute,
                         status: 'finished'
                     })
                     .eq('id', currentResultMatch.id);
                 
                 if (matchError) throw matchError;
                 
-                // Calculate points for all predictions
+                // Calculate/Recalculate points for all predictions
                 await calculateAndUpdatePoints(currentResultMatch.id, homeScore, awayScore, minute);
                 
-                alert('✅ Đã nhập kết quả và tính điểm thành công!');
+                const successMsg = isEditing 
+                    ? '✅ Đã cập nhật kết quả và tính lại điểm thành công!'
+                    : '✅ Đã nhập kết quả và tính điểm thành công!';
+                
+                alert(successMsg);
                 
                 await loadMatches();
                 await loadPredictions();
@@ -2777,6 +2839,21 @@
                 if (!predictions || predictions.length === 0) {
                     console.log('No predictions for this match');
                     return;
+                }
+                
+                // RESET all predictions points to 0 first (important for edit mode)
+                for (const pred of predictions) {
+                    const { error: resetError } = await supabase
+                        .from('predictions')
+                        .update({
+                            points_rank: 0,
+                            points_exact_score: 0,
+                            points_minute: 0,
+                            total_points: 0
+                        })
+                        .eq('id', pred.id);
+                    
+                    if (resetError) throw resetError;
                 }
                 
                 // Calculate accuracy score for each prediction
@@ -2920,7 +2997,7 @@
                 return;
             }
             
-            alert(`Chi tiết trận đấu:\n${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team}\nPhút: ${match.first_goal_minute}'\nTrạng thái: ${match.status}`);
+            alert(`Chi tiết trận đấu:\n${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team}\nPhút: ${match.minute}'\nTrạng thái: ${match.status}`);
         }
 
         // ============================================
