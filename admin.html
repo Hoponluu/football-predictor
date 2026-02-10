@@ -2171,6 +2171,7 @@
 
         async function saveRules() {
             const rules = {
+                id: scoringRules?.id || 1,  // CRITICAL: Include ID for upsert to UPDATE instead of INSERT!
                 points_rank_1: parseInt(document.getElementById('ruleTop1').value),
                 points_rank_2: parseInt(document.getElementById('ruleTop2').value),
                 points_rank_3: parseInt(document.getElementById('ruleTop3').value),
@@ -2189,7 +2190,7 @@
             try {
                 const { data, error } = await supabase
                     .from('scoring_rules')
-                    .upsert(rules)
+                    .upsert(rules, { onConflict: 'id' })  // Specify conflict column
                     .select()
                     .single();
                 
@@ -2831,7 +2832,7 @@
                 console.log('🔄 Calculating points for match:', matchId);
                 
                 // Get all predictions for this match
-                const { data: predictions, error: predError } = await supabase
+                const { data: predictions, error: predError} = await supabase
                     .from('predictions')
                     .select('id, player_id, home_score, away_score, minute')
                     .eq('match_id', matchId);
@@ -2843,7 +2844,6 @@
                 
                 if (!predictions || predictions.length === 0) {
                     console.log('ℹ️ No predictions for this match');
-                    alert('✅ Đã lưu kết quả! (Chưa có dự đoán nào cho trận này)');
                     return;
                 }
                 
@@ -2893,8 +2893,8 @@
                 
                 // Calculate points and prepare updates
                 const updates = [];
-                const playerPoints = {};
-                const playerStats = {};
+                const playerPointsMap = {};
+                const playerStatsMap = {};
                 
                 for (let i = 0; i < scoredPredictions.length; i++) {
                     const pred = scoredPredictions[i];
@@ -2920,23 +2920,26 @@
                     });
                     
                     // Accumulate player stats
-                    if (!playerPoints[pred.player_id]) {
-                        playerPoints[pred.player_id] = 0;
-                        playerStats[pred.player_id] = { exactScoreCount: 0, top1Count: 0 };
+                    if (!playerPointsMap[pred.player_id]) {
+                        playerPointsMap[pred.player_id] = 0;
+                        playerStatsMap[pred.player_id] = { exactScoreCount: 0, top1Count: 0 };
                     }
-                    playerPoints[pred.player_id] += totalPoints;
-                    if (exactScorePoints > 0) playerStats[pred.player_id].exactScoreCount++;
-                    if (i === 0) playerStats[pred.player_id].top1Count++;
+                    playerPointsMap[pred.player_id] += totalPoints;
+                    if (pred.exactScore) playerStatsMap[pred.player_id].exactScoreCount++;
+                    if (i === 0) playerStatsMap[pred.player_id].top1Count++;
+                    
+                    console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints})`);
                 }
                 
-                console.log('💾 Updating predictions using raw SQL...');
+                console.log('💾 Updating predictions using PostgreSQL function...');
                 
-                // TRY APPROACH: Use raw SQL via RPC to bypass Supabase client issues
-                // Build SQL statements
+                // Update predictions using PostgreSQL function (bypasses RLS!)
+                let successCount = 0;
+                let failCount = 0;
+                
                 for (const update of updates) {
                     try {
-                        // Direct SQL update via rpc (if function exists) or fallback to client
-                        const { error } = await supabase.rpc('update_prediction_points', {
+                        const { error } = await supabase.rpc('admin_update_prediction_points', {
                             p_prediction_id: update.id,
                             p_points_rank: update.points_rank,
                             p_points_exact_score: update.points_exact_score,
@@ -2945,34 +2948,26 @@
                         });
                         
                         if (error) {
-                            // Function doesn't exist, fallback to direct update
-                            console.log('RPC not available, using direct update...');
-                            const { error: updateError } = await supabase
-                                .from('predictions')
-                                .update({
-                                    points_rank: update.points_rank,
-                                    points_exact_score: update.points_exact_score,
-                                    points_minute: update.points_minute,
-                                    total_points: update.total_points
-                                })
-                                .eq('id', update.id);
-                            
-                            if (updateError) {
-                                console.error('Update error:', updateError);
-                            }
+                            console.error(`  ❌ Error updating prediction ${update.id}:`, error);
+                            failCount++;
+                        } else {
+                            successCount++;
                         }
                         
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        await new Promise(resolve => setTimeout(resolve, 50));
                         
                     } catch (err) {
-                        console.error('Failed to update prediction:', err);
+                        console.error(`  ❌ Failed to update prediction ${update.id}:`, err);
+                        failCount++;
                     }
                 }
+                
+                console.log(`  ${successCount} predictions updated, ${failCount} failed`);
                 
                 console.log('💾 Updating player totals...');
                 
                 // Update player stats
-                for (const playerId of Object.keys(playerPoints)) {
+                for (const playerId of Object.keys(playerPointsMap)) {
                     try {
                         const { data: player } = await supabase
                             .from('players')
@@ -2981,30 +2976,38 @@
                             .single();
                         
                         if (player) {
+                            const newTotal = (player.total_points || 0) + playerPointsMap[playerId];
+                            const newExactCount = (player.exact_score_count || 0) + playerStatsMap[playerId].exactScoreCount;
+                            const newTop1Count = (player.top1_count || 0) + playerStatsMap[playerId].top1Count;
+                            
                             await supabase
                                 .from('players')
                                 .update({
-                                    total_points: (player.total_points || 0) + playerPoints[playerId],
-                                    exact_score_count: (player.exact_score_count || 0) + playerStats[playerId].exactScoreCount,
-                                    top1_count: (player.top1_count || 0) + playerStats[playerId].top1Count
+                                    total_points: newTotal,
+                                    exact_score_count: newExactCount,
+                                    top1_count: newTop1Count
                                 })
                                 .eq('id', playerId);
                             
-                            console.log(`✅ Updated player ${playerId}: +${playerPoints[playerId]} points`);
+                            console.log(`  ✅ Player ${playerId.substring(0,8)}: +${playerPointsMap[playerId]} → Total: ${newTotal}`);
                         }
                         
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        await new Promise(resolve => setTimeout(resolve, 50));
                         
                     } catch (err) {
-                        console.error('Failed to update player:', err);
+                        console.error(`  ❌ Failed to update player ${playerId}:`, err);
                     }
                 }
                 
-                console.log('✅ Points calculated! Check predictions table to verify updates.');
+                if (failCount > 0) {
+                    console.warn(`⚠️ Some predictions failed to update (${failCount}/${updates.length})`);
+                    console.warn('Check if PostgreSQL function "admin_update_prediction_points" exists');
+                } else {
+                    console.log('✅ All points calculated and updated successfully!');
+                }
                 
             } catch (error) {
                 console.error('❌ Calculate points error:', error);
-                alert('Lỗi khi tính điểm: ' + error.message);
                 throw error;
             }
         }
