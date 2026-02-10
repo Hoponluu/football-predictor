@@ -1877,9 +1877,11 @@
                 
                 const matchPredictions = allPredictions.filter(p => p.match_id === match.id).length;
                 
+                const groupDisplay = match.match_group || match.group_name || 'Vòng bảng';
+                
                 html += `
                     <tr>
-                        <td><strong>${match.home_team} vs ${match.away_team}</strong><br><small>${match.group_name || 'Vòng bảng'}</small></td>
+                        <td><strong>${match.home_team} vs ${match.away_team}</strong><br><small>${groupDisplay}</small></td>
                         <td>${dateStr}<br>${timeStr}</td>
                         <td>${statusBadge}</td>
                         <td>${matchPredictions}/${allPlayers.length}</td>
@@ -1942,14 +1944,17 @@
                 }
                 
                 const resultText = match.home_score !== null && match.away_score !== null
-                    ? `${match.home_score}-${match.away_score} (${match.first_goal_minute}')`
+                    ? `${match.home_score}-${match.away_score} (${match.first_goal_minute || match.minute}')`
                     : '-';
+                
+                // Display match_group (primary) or group_name (fallback)
+                const groupDisplay = match.match_group || match.group_name || 'Vòng bảng';
                 
                 html += `
                     <tr>
                         <td>${match.id}</td>
                         <td><strong>${match.home_team} vs ${match.away_team}</strong></td>
-                        <td>${match.group_name || 'Vòng bảng'}</td>
+                        <td>${groupDisplay}</td>
                         <td>${dateStr} ${timeStr}</td>
                         <td>${statusBadge}</td>
                         <td>${resultText}</td>
@@ -2550,7 +2555,8 @@
             // Populate form
             document.getElementById('matchHomeTeam').value = match.home_team;
             document.getElementById('matchAwayTeam').value = match.away_team;
-            document.getElementById('matchGroup').value = match.group_name || '';
+            // Use match_group (primary column) or fallback to group_name
+            document.getElementById('matchGroup').value = match.match_group || match.group_name || '';
             
             // Format datetime for input
             const date = new Date(match.match_date);
@@ -2606,7 +2612,8 @@
             const matchData = {
                 home_team: homeTeam,
                 away_team: awayTeam,
-                group_name: group,
+                match_group: group || '',  // Use match_group (database column)
+                group_name: group || '',   // Also set group_name for compatibility
                 match_date: matchDate.toISOString(),
                 status: status
             };
