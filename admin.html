@@ -1265,6 +1265,293 @@
     <!-- Modals will be added via JavaScript as this file is getting large -->
     <div id="modalsContainer"></div>
 
+    <!-- Add Match Modal -->
+    <div class="modal-overlay" id="addMatchModal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="addMatchModalTitle">Thêm trận đấu mới</h3>
+                <button class="modal-close" onclick="closeModal('addMatchModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Đội nhà</label>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <span id="homeTeamFlag" class="flag-preview"></span>
+                        <select class="form-select" id="matchHomeTeam" onchange="updateTeamFlag('home')" style="flex: 1;">
+                            <option value="">Chọn đội nhà</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Đội khách</label>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <span id="awayTeamFlag" class="flag-preview"></span>
+                        <select class="form-select" id="matchAwayTeam" onchange="updateTeamFlag('away')" style="flex: 1;">
+                            <option value="">Chọn đội khách</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Bảng đấu</label>
+                    <input type="text" class="form-input" id="matchGroup" placeholder="VD: Bảng A, Vòng 1/8, Tứ kết...">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Ngày</label>
+                        <input type="date" class="form-input" id="matchDate">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Giờ</label>
+                        <input type="time" class="form-input" id="matchTime">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Trạng thái</label>
+                    <select class="form-select" id="matchStatus">
+                        <option value="not-open">Chưa mở dự đoán</option>
+                        <option value="open">Đang mở dự đoán</option>
+                        <option value="finished">Đã kết thúc</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addMatchModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="saveMatch()">💾 Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enter Result Modal -->
+    <div class="modal-overlay" id="enterResultModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Nhập kết quả trận đấu</h3>
+                <button class="modal-close" onclick="closeModal('enterResultModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h4 id="resultMatchTitle" style="font-size: 18px; font-weight: 600;">Loading...</h4>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Tỉ số đội nhà</label>
+                        <input type="number" class="form-input" id="resultHomeScore" min="0" placeholder="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Tỉ số đội khách</label>
+                        <input type="number" class="form-input" id="resultAwayScore" min="0" placeholder="0">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Phút ghi bàn đầu tiên</label>
+                    <input type="number" class="form-input" id="resultMinute" min="1" max="120" placeholder="VD: 75">
+                    <small style="color: var(--text-light); display: block; margin-top: 8px;">
+                        Nhập phút ghi bàn đầu tiên (1-120)
+                    </small>
+                </div>
+                
+                <div class="alert info">
+                    <span class="alert-icon">ℹ️</span>
+                    <div class="alert-content">
+                        <div class="alert-text">
+                            Hệ thống sẽ tự động tính điểm cho tất cả dự đoán của trận này
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('enterResultModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="saveMatchResult()">✅ Xác nhận kết quả</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div class="modal-overlay" id="addPlayerModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="addPlayerModalTitle">Thêm người chơi mới</h3>
+                <button class="modal-close" onclick="closeModal('addPlayerModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tên</label>
+                    <input type="text" class="form-input" id="playerName" placeholder="VD: Nguyễn Văn A">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="playerEmail" placeholder="example@email.com">
+                </div>
+                
+                <div class="form-group" id="playerPasswordGroup">
+                    <label class="form-label">Mật khẩu</label>
+                    <input type="password" class="form-input" id="playerPassword" placeholder="••••••••">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Nhóm</label>
+                    <select class="form-select" id="playerGroup">
+                        <option value="">Chọn nhóm</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addPlayerModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="savePlayer()">💾 Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Detail Modal -->
+    <div class="modal-overlay" id="playerDetailModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Chi tiết người chơi</h3>
+                <button class="modal-close" onclick="closeModal('playerDetailModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div>
+                        <div class="form-label">Tên</div>
+                        <div style="font-weight: 600;" id="playerDetailName">-</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Email</div>
+                        <div id="playerDetailEmail">-</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Nhóm</div>
+                        <div id="playerDetailGroup">-</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Tổng điểm</div>
+                        <div style="font-weight: 600; color: var(--primary-green);" id="playerDetailPoints">0</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Số dự đoán</div>
+                        <div id="playerDetailPredictions">0</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Top 1</div>
+                        <div id="playerDetailTop1">0</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Đúng tỉ số</div>
+                        <div id="playerDetailExact">0</div>
+                    </div>
+                </div>
+                
+                <h4 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">Lịch sử dự đoán</h4>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Trận đấu</th>
+                                <th>Dự đoán</th>
+                                <th>Kết quả</th>
+                                <th>Trạng thái</th>
+                                <th>Điểm</th>
+                            </tr>
+                        </thead>
+                        <tbody id="playerPredictionsTable">
+                            <tr><td colspan="5" class="loading">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('playerDetailModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Group Modal -->
+    <div class="modal-overlay" id="addGroupModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="addGroupModalTitle">Tạo nhóm mới</h3>
+                <button class="modal-close" onclick="closeModal('addGroupModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Tên nhóm</label>
+                    <input type="text" class="form-input" id="groupName" placeholder="VD: Nhóm bạn thân">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Mã nhóm</label>
+                    <input type="text" class="form-input" id="groupCode" placeholder="WC2026-XXXXX">
+                    <small style="color: var(--text-light); display: block; margin-top: 8px;">
+                        Mã này dùng để người chơi tham gia nhóm
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addGroupModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="saveGroup()">💾 Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Detail Modal -->
+    <div class="modal-overlay" id="groupDetailModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Chi tiết nhóm</h3>
+                <button class="modal-close" onclick="closeModal('groupDetailModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div>
+                        <div class="form-label">Tên nhóm</div>
+                        <div style="font-weight: 600;" id="groupDetailName">-</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Mã nhóm</div>
+                        <div><code id="groupDetailCode">-</code></div>
+                    </div>
+                    <div>
+                        <div class="form-label">Số thành viên</div>
+                        <div id="groupDetailMembers">0</div>
+                    </div>
+                    <div>
+                        <div class="form-label">Ngày tạo</div>
+                        <div id="groupDetailCreated">-</div>
+                    </div>
+                </div>
+                
+                <h4 style="margin-bottom: 16px; font-size: 16px; font-weight: 600;">Danh sách thành viên</h4>
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Hạng</th>
+                                <th>Tên</th>
+                                <th>Điểm</th>
+                                <th>Dự đoán</th>
+                            </tr>
+                        </thead>
+                        <tbody id="groupMembersTable">
+                            <tr><td colspan="4" class="loading">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('groupDetailModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -1352,11 +1639,41 @@
                 renderGroupsTable();
                 renderFavoritesTable();
                 
+                // Populate dropdowns
+                populateTeamSelectors();
+                populateGroupSelectors();
+                
                 console.log('✅ Admin panel ready!');
             } catch (error) {
                 console.error('Init error:', error);
                 alert('Lỗi tải dữ liệu: ' + error.message);
             }
+        }
+
+        function populateTeamSelectors() {
+            const homeSelect = document.getElementById('matchHomeTeam');
+            const awaySelect = document.getElementById('matchAwayTeam');
+            
+            const teams = Object.keys(countries).sort();
+            
+            let options = '<option value="">Chọn đội</option>';
+            teams.forEach(team => {
+                options += `<option value="${team}">${countries[team].flag} ${team}</option>`;
+            });
+            
+            homeSelect.innerHTML = options;
+            awaySelect.innerHTML = options;
+        }
+
+        function populateGroupSelectors() {
+            const playerGroupSelect = document.getElementById('playerGroup');
+            
+            let options = '<option value="">Chọn nhóm</option>';
+            allGroups.forEach(group => {
+                options += `<option value="${group.id}">${group.name} (${group.code})</option>`;
+            });
+            
+            playerGroupSelect.innerHTML = options;
         }
 
         // Database Functions
@@ -2194,6 +2511,776 @@
             'Cameroon': { flag: '🇨🇲', color: '#007A5E' },
             'Nigeria': { flag: '🇳🇬', color: '#008751' }
         };
+
+        // ============================================
+        // MATCH CRUD FUNCTIONS
+        // ============================================
+
+        var currentEditingMatch = null;
+        var currentResultMatch = null;
+
+        function openAddMatchModal() {
+            currentEditingMatch = null;
+            
+            // Reset form
+            document.getElementById('matchHomeTeam').value = '';
+            document.getElementById('matchAwayTeam').value = '';
+            document.getElementById('matchGroup').value = '';
+            document.getElementById('matchDate').value = '';
+            document.getElementById('matchTime').value = '';
+            document.getElementById('matchStatus').value = 'not-open';
+            
+            // Reset flag previews
+            document.getElementById('homeTeamFlag').textContent = '';
+            document.getElementById('awayTeamFlag').textContent = '';
+            
+            document.getElementById('addMatchModalTitle').textContent = 'Thêm trận đấu mới';
+            document.getElementById('addMatchModal').classList.add('active');
+        }
+
+        async function editMatch(id) {
+            const match = allMatches.find(m => m.id === id);
+            if (!match) {
+                alert('Không tìm thấy trận đấu!');
+                return;
+            }
+            
+            currentEditingMatch = match;
+            
+            // Populate form
+            document.getElementById('matchHomeTeam').value = match.home_team;
+            document.getElementById('matchAwayTeam').value = match.away_team;
+            document.getElementById('matchGroup').value = match.group_name || '';
+            
+            // Format datetime for input
+            const date = new Date(match.match_date);
+            const dateStr = date.toISOString().split('T')[0];
+            const timeStr = date.toTimeString().slice(0, 5);
+            
+            document.getElementById('matchDate').value = dateStr;
+            document.getElementById('matchTime').value = timeStr;
+            document.getElementById('matchStatus').value = match.status;
+            
+            // Update flag previews
+            updateTeamFlag('home');
+            updateTeamFlag('away');
+            
+            document.getElementById('addMatchModalTitle').textContent = 'Sửa trận đấu';
+            document.getElementById('addMatchModal').classList.add('active');
+        }
+
+        function updateTeamFlag(type) {
+            const selectId = type === 'home' ? 'matchHomeTeam' : 'matchAwayTeam';
+            const flagId = type === 'home' ? 'homeTeamFlag' : 'awayTeamFlag';
+            
+            const team = document.getElementById(selectId).value;
+            const flagSpan = document.getElementById(flagId);
+            
+            if (team && countries[team]) {
+                flagSpan.textContent = countries[team].flag;
+            } else {
+                flagSpan.textContent = '';
+            }
+        }
+
+        async function saveMatch() {
+            const homeTeam = document.getElementById('matchHomeTeam').value;
+            const awayTeam = document.getElementById('matchAwayTeam').value;
+            const group = document.getElementById('matchGroup').value;
+            const date = document.getElementById('matchDate').value;
+            const time = document.getElementById('matchTime').value;
+            const status = document.getElementById('matchStatus').value;
+            
+            if (!homeTeam || !awayTeam || !date || !time) {
+                alert('Vui lòng điền đầy đủ thông tin!');
+                return;
+            }
+            
+            if (homeTeam === awayTeam) {
+                alert('Hai đội không được trùng nhau!');
+                return;
+            }
+            
+            const matchDate = new Date(`${date}T${time}`);
+            
+            const matchData = {
+                home_team: homeTeam,
+                away_team: awayTeam,
+                group_name: group,
+                match_date: matchDate.toISOString(),
+                status: status
+            };
+            
+            try {
+                if (currentEditingMatch) {
+                    // Update existing match
+                    const { error } = await supabase
+                        .from('matches')
+                        .update(matchData)
+                        .eq('id', currentEditingMatch.id);
+                    
+                    if (error) throw error;
+                    
+                    alert('✅ Đã cập nhật trận đấu!');
+                } else {
+                    // Create new match
+                    const { error } = await supabase
+                        .from('matches')
+                        .insert([matchData]);
+                    
+                    if (error) throw error;
+                    
+                    alert('✅ Đã thêm trận đấu mới!');
+                }
+                
+                await loadMatches();
+                renderMatchesTable();
+                renderDashboard();
+                closeModal('addMatchModal');
+            } catch (error) {
+                console.error('Save match error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function deleteMatch(id) {
+            if (!confirm('Bạn có chắc muốn xóa trận đấu này? Tất cả dự đoán cho trận này cũng sẽ bị xóa!')) {
+                return;
+            }
+            
+            try {
+                // Delete all predictions for this match first
+                const { error: predError } = await supabase
+                    .from('predictions')
+                    .delete()
+                    .eq('match_id', id);
+                
+                if (predError) throw predError;
+                
+                // Delete match
+                const { error } = await supabase
+                    .from('matches')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                alert('✅ Đã xóa trận đấu!');
+                await loadMatches();
+                await loadPredictions();
+                renderMatchesTable();
+                renderDashboard();
+            } catch (error) {
+                console.error('Delete match error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        // Enter Result Functions
+        function openEnterResultModal(matchId) {
+            const match = allMatches.find(m => m.id === matchId);
+            if (!match) {
+                alert('Không tìm thấy trận đấu!');
+                return;
+            }
+            
+            currentResultMatch = match;
+            
+            document.getElementById('resultMatchTitle').textContent = `${match.home_team} vs ${match.away_team}`;
+            document.getElementById('resultHomeScore').value = '';
+            document.getElementById('resultAwayScore').value = '';
+            document.getElementById('resultMinute').value = '';
+            
+            document.getElementById('enterResultModal').classList.add('active');
+        }
+
+        async function saveMatchResult() {
+            if (!currentResultMatch) return;
+            
+            const homeScore = parseInt(document.getElementById('resultHomeScore').value);
+            const awayScore = parseInt(document.getElementById('resultAwayScore').value);
+            const minute = parseInt(document.getElementById('resultMinute').value);
+            
+            if (isNaN(homeScore) || isNaN(awayScore) || isNaN(minute)) {
+                alert('Vui lòng nhập đầy đủ thông tin!');
+                return;
+            }
+            
+            if (homeScore < 0 || awayScore < 0 || minute < 1 || minute > 120) {
+                alert('Tỉ số hoặc phút ghi bàn không hợp lệ!');
+                return;
+            }
+            
+            if (!confirm(`Xác nhận kết quả:\n${currentResultMatch.home_team} ${homeScore} - ${awayScore} ${currentResultMatch.away_team}\nPhút: ${minute}'`)) {
+                return;
+            }
+            
+            try {
+                // Update match with result
+                const { error: matchError } = await supabase
+                    .from('matches')
+                    .update({
+                        home_score: homeScore,
+                        away_score: awayScore,
+                        first_goal_minute: minute,
+                        status: 'finished'
+                    })
+                    .eq('id', currentResultMatch.id);
+                
+                if (matchError) throw matchError;
+                
+                // Calculate points for all predictions
+                await calculateAndUpdatePoints(currentResultMatch.id, homeScore, awayScore, minute);
+                
+                alert('✅ Đã nhập kết quả và tính điểm thành công!');
+                
+                await loadMatches();
+                await loadPredictions();
+                await loadPlayers();
+                renderMatchesTable();
+                renderDashboard();
+                closeModal('enterResultModal');
+            } catch (error) {
+                console.error('Save result error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
+            try {
+                // Get all predictions for this match
+                const { data: predictions, error: predError } = await supabase
+                    .from('predictions')
+                    .select('*')
+                    .eq('match_id', matchId);
+                
+                if (predError) throw predError;
+                
+                if (!predictions || predictions.length === 0) {
+                    console.log('No predictions for this match');
+                    return;
+                }
+                
+                // Calculate accuracy score for each prediction
+                const scoredPredictions = predictions.map(pred => {
+                    const homeDiff = Math.abs(pred.home_score - actualHome);
+                    const awayDiff = Math.abs(pred.away_score - actualAway);
+                    const totalDiff = homeDiff + awayDiff;
+                    
+                    // Check exact score
+                    const exactScore = (pred.home_score === actualHome && pred.away_score === actualAway);
+                    
+                    // Check exact minute
+                    const exactMinute = (pred.minute === actualMinute);
+                    
+                    // Accuracy score (lower is better)
+                    let accuracy = totalDiff;
+                    
+                    // Bonus for correct winner
+                    const predWinner = pred.home_score > pred.away_score ? 'home' : 
+                                      (pred.home_score < pred.away_score ? 'away' : 'draw');
+                    const actualWinner = actualHome > actualAway ? 'home' :
+                                        (actualHome < actualAway ? 'away' : 'draw');
+                    
+                    if (predWinner === actualWinner) {
+                        accuracy -= 0.5; // Small bonus
+                    }
+                    
+                    return {
+                        ...pred,
+                        accuracy,
+                        exactScore,
+                        exactMinute,
+                        totalDiff
+                    };
+                });
+                
+                // Sort by accuracy (best first)
+                scoredPredictions.sort((a, b) => a.accuracy - b.accuracy);
+                
+                // Assign rank points based on scoring rules
+                const rules = scoringRules || {
+                    points_rank_1: 5,
+                    points_rank_2: 4,
+                    points_rank_3: 3,
+                    points_rank_other: 2,
+                    points_exact_score: 5,
+                    points_exact_minute: 3
+                };
+                
+                // Update each prediction with points
+                for (let i = 0; i < scoredPredictions.length; i++) {
+                    const pred = scoredPredictions[i];
+                    
+                    // Rank points
+                    let rankPoints = 0;
+                    if (i === 0) {
+                        rankPoints = rules.points_rank_1;
+                    } else if (i === 1) {
+                        rankPoints = rules.points_rank_2;
+                    } else if (i === 2) {
+                        rankPoints = rules.points_rank_3;
+                    } else {
+                        rankPoints = rules.points_rank_other;
+                    }
+                    
+                    // Exact score bonus
+                    const exactScorePoints = pred.exactScore ? rules.points_exact_score : 0;
+                    
+                    // Exact minute bonus
+                    const exactMinutePoints = pred.exactMinute ? rules.points_exact_minute : 0;
+                    
+                    const totalPoints = rankPoints + exactScorePoints + exactMinutePoints;
+                    
+                    // Update prediction
+                    const { error: updateError } = await supabase
+                        .from('predictions')
+                        .update({
+                            points_rank: rankPoints,
+                            points_exact_score: exactScorePoints,
+                            points_minute: exactMinutePoints,
+                            total_points: totalPoints
+                        })
+                        .eq('id', pred.id);
+                    
+                    if (updateError) throw updateError;
+                }
+                
+                // Update player total points and stats
+                const playerIds = [...new Set(predictions.map(p => p.player_id))];
+                
+                for (const playerId of playerIds) {
+                    await updatePlayerStats(playerId);
+                }
+                
+                console.log('✅ Calculated points for', predictions.length, 'predictions');
+            } catch (error) {
+                console.error('Calculate points error:', error);
+                throw error;
+            }
+        }
+
+        async function updatePlayerStats(playerId) {
+            try {
+                // Get all predictions for this player
+                const { data: predictions, error: predError } = await supabase
+                    .from('predictions')
+                    .select('*')
+                    .eq('player_id', playerId);
+                
+                if (predError) throw predError;
+                
+                // Calculate totals
+                const totalPoints = predictions.reduce((sum, p) => sum + (p.total_points || 0), 0);
+                const exactScoreCount = predictions.filter(p => p.points_exact_score > 0).length;
+                const top1Count = predictions.filter(p => p.points_rank === (scoringRules?.points_rank_1 || 5)).length;
+                
+                // Update player
+                const { error: updateError } = await supabase
+                    .from('players')
+                    .update({
+                        total_points: totalPoints,
+                        exact_score_count: exactScoreCount,
+                        top1_count: top1Count
+                    })
+                    .eq('id', playerId);
+                
+                if (updateError) throw updateError;
+                
+                console.log('✅ Updated stats for player', playerId);
+            } catch (error) {
+                console.error('Update player stats error:', error);
+                throw error;
+            }
+        }
+
+        function viewMatchDetails(id) {
+            const match = allMatches.find(m => m.id === id);
+            if (!match) {
+                alert('Không tìm thấy trận đấu!');
+                return;
+            }
+            
+            alert(`Chi tiết trận đấu:\n${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team}\nPhút: ${match.first_goal_minute}'\nTrạng thái: ${match.status}`);
+        }
+
+        // ============================================
+        // PLAYER CRUD FUNCTIONS
+        // ============================================
+
+        var currentEditingPlayer = null;
+
+        function openAddPlayerModal() {
+            currentEditingPlayer = null;
+            
+            document.getElementById('playerName').value = '';
+            document.getElementById('playerEmail').value = '';
+            document.getElementById('playerPassword').value = '';
+            document.getElementById('playerGroup').value = '';
+            
+            document.getElementById('addPlayerModalTitle').textContent = 'Thêm người chơi mới';
+            document.getElementById('playerPasswordGroup').style.display = 'block';
+            document.getElementById('addPlayerModal').classList.add('active');
+        }
+
+        async function editPlayer(id) {
+            const player = allPlayers.find(p => p.id === id);
+            if (!player) {
+                alert('Không tìm thấy người chơi!');
+                return;
+            }
+            
+            currentEditingPlayer = player;
+            
+            document.getElementById('playerName').value = player.name;
+            document.getElementById('playerEmail').value = player.email;
+            document.getElementById('playerGroup').value = player.group_id || '';
+            
+            document.getElementById('addPlayerModalTitle').textContent = 'Sửa thông tin người chơi';
+            document.getElementById('playerPasswordGroup').style.display = 'none';
+            document.getElementById('addPlayerModal').classList.add('active');
+        }
+
+        async function savePlayer() {
+            const name = document.getElementById('playerName').value.trim();
+            const email = document.getElementById('playerEmail').value.trim();
+            const password = document.getElementById('playerPassword').value;
+            const groupId = document.getElementById('playerGroup').value;
+            
+            if (!name || !email) {
+                alert('Vui lòng điền đầy đủ thông tin!');
+                return;
+            }
+            
+            if (!currentEditingPlayer && !password) {
+                alert('Vui lòng nhập mật khẩu!');
+                return;
+            }
+            
+            if (!groupId) {
+                alert('Vui lòng chọn nhóm!');
+                return;
+            }
+            
+            const playerData = {
+                name: name,
+                email: email,
+                group_id: parseInt(groupId)
+            };
+            
+            // Only include password for new players
+            if (!currentEditingPlayer && password) {
+                playerData.password = password;
+            }
+            
+            try {
+                if (currentEditingPlayer) {
+                    // Update existing player
+                    const { error } = await supabase
+                        .from('players')
+                        .update(playerData)
+                        .eq('id', currentEditingPlayer.id);
+                    
+                    if (error) throw error;
+                    
+                    alert('✅ Đã cập nhật thông tin người chơi!');
+                } else {
+                    // Create new player
+                    const { error } = await supabase
+                        .from('players')
+                        .insert([{
+                            ...playerData,
+                            total_points: 0,
+                            exact_score_count: 0,
+                            top1_count: 0
+                        }]);
+                    
+                    if (error) throw error;
+                    
+                    alert('✅ Đã thêm người chơi mới!');
+                }
+                
+                await loadPlayers();
+                renderPlayersTable();
+                renderDashboard();
+                closeModal('addPlayerModal');
+            } catch (error) {
+                console.error('Save player error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function deletePlayer(id) {
+            if (!confirm('Bạn có chắc muốn xóa người chơi này? Tất cả dự đoán của người này cũng sẽ bị xóa!')) {
+                return;
+            }
+            
+            try {
+                // Delete all predictions
+                const { error: predError } = await supabase
+                    .from('predictions')
+                    .delete()
+                    .eq('player_id', id);
+                
+                if (predError) throw predError;
+                
+                // Delete player
+                const { error } = await supabase
+                    .from('players')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                alert('✅ Đã xóa người chơi!');
+                await loadPlayers();
+                await loadPredictions();
+                renderPlayersTable();
+                renderDashboard();
+            } catch (error) {
+                console.error('Delete player error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function viewPlayerDetails(id) {
+            const player = allPlayers.find(p => p.id === id);
+            if (!player) {
+                alert('Không tìm thấy người chơi!');
+                return;
+            }
+            
+            // Get player predictions
+            const { data: predictions, error } = await supabase
+                .from('predictions')
+                .select(`
+                    *,
+                    matches (
+                        home_team,
+                        away_team,
+                        home_score,
+                        away_score,
+                        status
+                    )
+                `)
+                .eq('player_id', id)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Load predictions error:', error);
+                alert('Lỗi: ' + error.message);
+                return;
+            }
+            
+            // Populate modal
+            document.getElementById('playerDetailName').textContent = player.name;
+            document.getElementById('playerDetailEmail').textContent = player.email;
+            document.getElementById('playerDetailGroup').textContent = player.groups?.name || 'N/A';
+            document.getElementById('playerDetailPoints').textContent = player.total_points || 0;
+            document.getElementById('playerDetailPredictions').textContent = predictions?.length || 0;
+            document.getElementById('playerDetailTop1').textContent = player.top1_count || 0;
+            document.getElementById('playerDetailExact').textContent = player.exact_score_count || 0;
+            
+            // Populate predictions table
+            const tbody = document.getElementById('playerPredictionsTable');
+            
+            if (!predictions || predictions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có dự đoán nào</td></tr>';
+            } else {
+                let html = '';
+                predictions.forEach(pred => {
+                    const match = pred.matches;
+                    const statusBadge = match.status === 'finished' 
+                        ? `<span class="badge info">Kết thúc</span>`
+                        : `<span class="badge warning">Chưa KQ</span>`;
+                    
+                    const actualResult = match.status === 'finished'
+                        ? `${match.home_score}-${match.away_score}`
+                        : '-';
+                    
+                    html += `
+                        <tr>
+                            <td>${match.home_team} vs ${match.away_team}</td>
+                            <td>${pred.home_score}-${pred.away_score} (${pred.minute}')</td>
+                            <td>${actualResult}</td>
+                            <td>${statusBadge}</td>
+                            <td><strong>+${pred.total_points || 0}</strong></td>
+                        </tr>
+                    `;
+                });
+                
+                tbody.innerHTML = html;
+            }
+            
+            document.getElementById('playerDetailModal').classList.add('active');
+        }
+
+        // ============================================
+        // GROUP CRUD FUNCTIONS
+        // ============================================
+
+        var currentEditingGroup = null;
+
+        function openAddGroupModal() {
+            currentEditingGroup = null;
+            
+            document.getElementById('groupName').value = '';
+            document.getElementById('groupCode').value = generateGroupCode();
+            
+            document.getElementById('addGroupModalTitle').textContent = 'Tạo nhóm mới';
+            document.getElementById('addGroupModal').classList.add('active');
+        }
+
+        function generateGroupCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = 'WC2026-';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        async function editGroup(id) {
+            const group = allGroups.find(g => g.id === id);
+            if (!group) {
+                alert('Không tìm thấy nhóm!');
+                return;
+            }
+            
+            currentEditingGroup = group;
+            
+            document.getElementById('groupName').value = group.name;
+            document.getElementById('groupCode').value = group.code;
+            
+            document.getElementById('addGroupModalTitle').textContent = 'Sửa thông tin nhóm';
+            document.getElementById('addGroupModal').classList.add('active');
+        }
+
+        async function saveGroup() {
+            const name = document.getElementById('groupName').value.trim();
+            const code = document.getElementById('groupCode').value.trim();
+            
+            if (!name || !code) {
+                alert('Vui lòng điền đầy đủ thông tin!');
+                return;
+            }
+            
+            const groupData = {
+                name: name,
+                code: code
+            };
+            
+            try {
+                if (currentEditingGroup) {
+                    // Update existing group
+                    const { error } = await supabase
+                        .from('groups')
+                        .update(groupData)
+                        .eq('id', currentEditingGroup.id);
+                    
+                    if (error) throw error;
+                    
+                    alert('✅ Đã cập nhật nhóm!');
+                } else {
+                    // Create new group
+                    const { error } = await supabase
+                        .from('groups')
+                        .insert([groupData]);
+                    
+                    if (error) throw error;
+                    
+                    alert('✅ Đã tạo nhóm mới!');
+                }
+                
+                await loadGroups();
+                await loadPlayers();
+                renderGroupsTable();
+                renderDashboard();
+                closeModal('addGroupModal');
+            } catch (error) {
+                console.error('Save group error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function deleteGroup(id) {
+            // Check if group has members
+            const members = allPlayers.filter(p => p.group_id === id);
+            
+            if (members.length > 0) {
+                alert(`Không thể xóa nhóm có ${members.length} thành viên! Vui lòng chuyển họ sang nhóm khác trước.`);
+                return;
+            }
+            
+            if (!confirm('Bạn có chắc muốn xóa nhóm này?')) {
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('groups')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                alert('✅ Đã xóa nhóm!');
+                await loadGroups();
+                renderGroupsTable();
+                renderDashboard();
+            } catch (error) {
+                console.error('Delete group error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function viewGroupDetails(id) {
+            const group = allGroups.find(g => g.id === id);
+            if (!group) {
+                alert('Không tìm thấy nhóm!');
+                return;
+            }
+            
+            const members = allPlayers.filter(p => p.group_id === id);
+            
+            document.getElementById('groupDetailName').textContent = group.name;
+            document.getElementById('groupDetailCode').textContent = group.code;
+            document.getElementById('groupDetailMembers').textContent = members.length;
+            document.getElementById('groupDetailCreated').textContent = new Date(group.created_at).toLocaleDateString('vi-VN');
+            
+            // Populate members table
+            const tbody = document.getElementById('groupMembersTable');
+            
+            if (members.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Chưa có thành viên nào</td></tr>';
+            } else {
+                // Sort by points
+                members.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+                
+                let html = '';
+                members.forEach((member, index) => {
+                    const playerPredictions = allPredictions.filter(p => p.player_id === member.id).length;
+                    
+                    html += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td><strong>${member.name}</strong></td>
+                            <td>${member.total_points || 0}</td>
+                            <td>${playerPredictions}</td>
+                        </tr>
+                    `;
+                });
+                
+                tbody.innerHTML = html;
+            }
+            
+            document.getElementById('groupDetailModal').classList.add('active');
+        }
+
+        // Modal helper
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
 
         console.log('✅ Admin panel script loaded');
     </script>
