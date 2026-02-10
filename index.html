@@ -597,7 +597,7 @@
             background: var(--white);
             border-radius: var(--border-radius);
             padding: 24px;
-            max-width: 400px;
+            max-width: 600px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: modalSlideIn 0.3s ease;
@@ -2985,34 +2985,55 @@ function openModal(match) {
                 // Sort by total points descending
                 predictions.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
                 
-                predictions.forEach(pred => {
-                    const item = document.createElement('div');
-                    const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
-                    item.className = `results-item ${isCurrentUser ? 'current-user' : ''}`;
-                    
-                    const totalPoints = pred.total_points || 0;
-                    const pointsRank = pred.points_rank || 0;
-                    const pointsExact = pred.points_exact_score || 0;
-                    const pointsMinute = pred.points_minute || 0;
-                    
-                    item.innerHTML = `
-                        <div class="results-item-header">
-                            <span class="results-item-name">${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}</span>
-                            <span class="results-item-time">${new Date(pred.updated_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <div class="results-item-prediction">
-                            <span class="prediction-score">${pred.home_score} - ${pred.away_score}</span>
-                            <span class="prediction-minute">${pred.minute}'</span>
-                        </div>
-                        <div class="results-item-points">
-                            ${pointsRank ? `<span class="point-badge">+${pointsRank}</span>` : ''}
-                            ${pointsExact ? `<span class="point-badge">+${pointsExact}</span>` : ''}
-                            ${pointsMinute ? `<span class="point-badge">+${pointsMinute}</span>` : ''}
-                            <span class="total-points">Tổng: ${totalPoints} điểm</span>
-                        </div>
-                    `;
-                    
-                    resultsList.appendChild(item);
+// Create table structure
+let tableHTML = `
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tbody>
+`;
+
+predictions.forEach((pred, index) => {
+    const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
+    const bgColor = isCurrentUser ? '#FEF3C7' : (index % 2 === 0 ? '#F9FAFB' : 'white');
+    
+    const totalPoints = pred.total_points || 0;
+    const pointsRank = pred.points_rank || 0;
+    const pointsExact = pred.points_exact_score || 0;
+    const pointsMinute = pred.points_minute || 0;
+    
+    const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
+    
+    tableHTML += `
+        <tr style="background: ${bgColor};">
+            <td style="padding: 12px 8px; text-align: center; font-size: 16px; width: 40px;">
+                ${rankBadge}
+            </td>
+            <td style="padding: 12px 8px; font-weight: ${isCurrentUser ? '600' : '500'};">
+                ${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}
+            </td>
+            <td style="padding: 12px 8px; text-align: center; font-weight: 600; width: 80px;">
+                ${pred.home_score}-${pred.away_score}
+            </td>
+            <td style="padding: 12px 8px; text-align: center; color: #6B7280; width: 60px;">
+                ${pred.minute}'
+            </td>
+            <td style="padding: 12px 8px; text-align: center; width: 120px;">
+                ${pointsRank ? `<span style="background: #DBEAFE; color: #1E40AF; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px;">🏆 +${pointsRank}</span>` : ''}
+                ${pointsExact ? `<span style="background: #D1FAE5; color: #065F46; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px;">🎯 +${pointsExact}</span>` : ''}
+                ${pointsMinute ? `<span style="background: #FEF3C7; color: #92400E; padding: 2px 6px; border-radius: 4px; font-size: 12px;">💡 +${pointsMinute}</span>` : ''}
+            </td>
+            <td style="padding: 12px 8px; text-align: center; font-weight: 600; color: #10B981; width: 60px;">
+                +${totalPoints}
+            </td>
+        </tr>
+    `;
+});
+
+tableHTML += `
+        </tbody>
+    </table>
+`;
+
+resultsList.innerHTML = tableHTML;
                 });
             }).catch(error => {
                 console.error('Error loading predictions:', error);
