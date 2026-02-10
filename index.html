@@ -2532,20 +2532,6 @@
                 card.onclick = () => openResultsModal(match);
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
-                // Check if match already started
-                const now = new Date();
-                const matchDate = new Date(match.date);
-
-                if (matchDate <= now && match.status !== 'finished') {
-                        alert('⏰ Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
-                        return;
-}
-
-// If match finished, show results instead
-if (match.status === 'finished') {
-    openResultsModal(match);
-    return;
-}
             }
 
             return card;
@@ -2805,14 +2791,29 @@ if (match.status === 'finished') {
         // MODAL FUNCTIONS
         // ============================================
         
-        function openModal(match) {
-            if (!currentPlayer) {
-                alert('Vui lòng đăng nhập để dự đoán!');
-                openLoginModal();
-                return;
-            }
-            
-            selectedMatch = match;
+function openModal(match) {
+    if (!currentPlayer) {
+        alert('Vui lòng đăng nhập để dự đoán!');
+        openLoginModal();
+        return;
+    }
+    
+    // Check if match already started
+    const now = new Date();
+    const matchDate = new Date(match.date);
+    
+    if (matchDate <= now && match.status !== 'finished') {
+        alert('⏰ Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
+        return;
+    }
+    
+    // If match finished, show results instead
+    if (match.status === 'finished') {
+        openResultsModal(match);
+        return;
+    }
+    
+    selectedMatch = match;
             isEditMode = !match.userPrediction;
 
             const modal = document.getElementById('predictionModal');
