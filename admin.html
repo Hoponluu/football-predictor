@@ -1126,7 +1126,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Cấu hình</h2>
+                        <h2 class="card-title">⚙️ Cấu hình chung</h2>
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
@@ -1142,7 +1142,104 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Đội yêu thích của người chơi</h2>
+                        <h2 class="card-title">🎯 Đội được phép chọn (Qualified Teams)</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert info">
+                            <span class="alert-icon">ℹ️</span>
+                            <div class="alert-content">
+                                <div class="alert-text">
+                                    Chọn 32-48 đội đã qua vòng bảng. Chỉ các đội này mới hiển thị trong danh sách cho người chơi chọn.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 16px;">
+                            <button class="btn btn-primary" onclick="openSelectQualifiedTeamsModal()">
+                                ✅ Chọn đội qualified
+                            </button>
+                            <span style="margin-left: 12px; color: var(--text-light);" id="qualifiedTeamsCount">
+                                0 đội đã chọn
+                            </span>
+                        </div>
+                        
+                        <div id="qualifiedTeamsList" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            <!-- Will be populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">❌ Đội bị loại (Eliminated Teams)</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert warning">
+                            <span class="alert-icon">⚠️</span>
+                            <div class="alert-content">
+                                <div class="alert-text">
+                                    Mark các đội đã bị loại ở từng vòng để tính điểm cho người chọn đội đó.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; gap: 16px;">
+                            <div>
+                                <h4 style="margin-bottom: 12px;">Vòng 1/32 (Round of 32)</h4>
+                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('r32')">
+                                    Mark đội bị loại
+                                </button>
+                                <div id="eliminatedR32" style="margin-top: 8px; color: var(--text-light);">
+                                    Chưa có đội bị loại
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 style="margin-bottom: 12px;">Vòng 1/16 (Round of 16)</h4>
+                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('r16')">
+                                    Mark đội bị loại
+                                </button>
+                                <div id="eliminatedR16" style="margin-top: 8px; color: var(--text-light);">
+                                    Chưa có đội bị loại
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 style="margin-bottom: 12px;">Tứ kết (Quarter Finals)</h4>
+                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('quarter')">
+                                    Mark đội bị loại
+                                </button>
+                                <div id="eliminatedQuarter" style="margin-top: 8px; color: var(--text-light);">
+                                    Chưa có đội bị loại
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 style="margin-bottom: 12px;">Bán kết (Semi Finals)</h4>
+                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('semi')">
+                                    Mark đội bị loại
+                                </button>
+                                <div id="eliminatedSemi" style="margin-top: 8px; color: var(--text-light);">
+                                    Chưa có đội bị loại
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 style="margin-bottom: 12px;">Chung kết (Finals)</h4>
+                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('finals')">
+                                    Mark đội bị loại (Á quân)
+                                </button>
+                                <div id="eliminatedFinals" style="margin-top: 8px; color: var(--text-light);">
+                                    Chưa có đội bị loại
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📋 Đội yêu thích của người chơi</h2>
                     </div>
                     <div class="table-wrapper">
                         <table class="table">
@@ -1296,8 +1393,7 @@
                             name,
                             code
                         )
-                    `)
-                    .order('total_points', { ascending: false });
+                    `);
                 
                 if (error) throw error;
                 
@@ -1350,14 +1446,59 @@
 
         async function loadScoringRules() {
             try {
+                // Try to load from database
                 const { data, error } = await supabase
                     .from('scoring_rules')
                     .select('*')
-                    .single();
+                    .limit(1)
+                    .maybeSingle();
                 
-                if (error && error.code !== 'PGRST116') throw error;
+                // If table doesn't exist or no data, use defaults
+                if (error || !data) {
+                    console.warn('⚠️ Scoring rules table not found or empty, using defaults');
+                    scoringRules = {
+                        points_rank_1: 5,
+                        points_rank_2: 4,
+                        points_rank_3: 3,
+                        points_rank_other: 2,
+                        points_exact_score: 5,
+                        points_exact_minute: 3,
+                        fav_group_stage: 0,
+                        fav_r32: 5,
+                        fav_r16: 10,
+                        fav_quarter: 20,
+                        fav_semi: 30,
+                        fav_finals: 40,
+                        fav_champion: 100,
+                        favorite_team_deadline: null,
+                        qualified_teams: [],
+                        eliminated_teams: {}
+                    };
+                } else {
+                    scoringRules = data;
+                }
                 
-                scoringRules = data || {
+                // Populate rules form
+                document.getElementById('ruleTop1').value = scoringRules.points_rank_1 || 5;
+                document.getElementById('ruleTop2').value = scoringRules.points_rank_2 || 4;
+                document.getElementById('ruleTop3').value = scoringRules.points_rank_3 || 3;
+                document.getElementById('ruleOther').value = scoringRules.points_rank_other || 2;
+                document.getElementById('ruleExactScore').value = scoringRules.points_exact_score || 5;
+                document.getElementById('ruleExactMinute').value = scoringRules.points_exact_minute || 3;
+                document.getElementById('favGroupStage').value = scoringRules.fav_group_stage || 0;
+                document.getElementById('favR32').value = scoringRules.fav_r32 || 5;
+                document.getElementById('favR16').value = scoringRules.fav_r16 || 10;
+                document.getElementById('favQuarter').value = scoringRules.fav_quarter || 20;
+                document.getElementById('favSemi').value = scoringRules.fav_semi || 30;
+                document.getElementById('favFinals').value = scoringRules.fav_finals || 40;
+                document.getElementById('favChampion').value = scoringRules.fav_champion || 100;
+                
+                console.log('✅ Loaded scoring rules');
+                return scoringRules;
+            } catch (error) {
+                console.error('Load scoring rules error:', error);
+                // Don't throw, just use defaults
+                scoringRules = {
                     points_rank_1: 5,
                     points_rank_2: 4,
                     points_rank_3: 3,
@@ -1372,29 +1513,7 @@
                     fav_finals: 40,
                     fav_champion: 100
                 };
-                
-                // Populate rules form
-                if (scoringRules) {
-                    document.getElementById('ruleTop1').value = scoringRules.points_rank_1 || 5;
-                    document.getElementById('ruleTop2').value = scoringRules.points_rank_2 || 4;
-                    document.getElementById('ruleTop3').value = scoringRules.points_rank_3 || 3;
-                    document.getElementById('ruleOther').value = scoringRules.points_rank_other || 2;
-                    document.getElementById('ruleExactScore').value = scoringRules.points_exact_score || 5;
-                    document.getElementById('ruleExactMinute').value = scoringRules.points_exact_minute || 3;
-                    document.getElementById('favGroupStage').value = scoringRules.fav_group_stage || 0;
-                    document.getElementById('favR32').value = scoringRules.fav_r32 || 5;
-                    document.getElementById('favR16').value = scoringRules.fav_r16 || 10;
-                    document.getElementById('favQuarter').value = scoringRules.fav_quarter || 20;
-                    document.getElementById('favSemi').value = scoringRules.fav_semi || 30;
-                    document.getElementById('favFinals').value = scoringRules.fav_finals || 40;
-                    document.getElementById('favChampion').value = scoringRules.fav_champion || 100;
-                }
-                
-                console.log('✅ Loaded scoring rules');
                 return scoringRules;
-            } catch (error) {
-                console.error('Load scoring rules error:', error);
-                throw error;
             }
         }
 
@@ -1607,28 +1726,31 @@
             
             if (playersWithFav.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-icon">⭐</div><div class="empty-text">Chưa có ai chọn đội yêu thích</div></td></tr>';
-                return;
+            } else {
+                let html = '';
+                playersWithFav.forEach(player => {
+                    const groupName = player.groups?.name || 'N/A';
+                    const selectedDate = player.favorite_selected_at 
+                        ? new Date(player.favorite_selected_at).toLocaleString('vi-VN')
+                        : 'N/A';
+                    
+                    html += `
+                        <tr>
+                            <td><strong>${player.name}</strong></td>
+                            <td>${groupName}</td>
+                            <td>${player.favorite_team}</td>
+                            <td>${selectedDate}</td>
+                            <td>${player.favorite_points || 0} điểm</td>
+                        </tr>
+                    `;
+                });
+                
+                tbody.innerHTML = html;
             }
             
-            let html = '';
-            playersWithFav.forEach(player => {
-                const groupName = player.groups?.name || 'N/A';
-                const selectedDate = player.favorite_selected_at 
-                    ? new Date(player.favorite_selected_at).toLocaleString('vi-VN')
-                    : 'N/A';
-                
-                html += `
-                    <tr>
-                        <td><strong>${player.name}</strong></td>
-                        <td>${groupName}</td>
-                        <td>${player.favorite_team}</td>
-                        <td>${selectedDate}</td>
-                        <td>${player.favorite_points || 0} điểm</td>
-                    </tr>
-                `;
-            });
-            
-            tbody.innerHTML = html;
+            // Also render qualified and eliminated teams lists
+            renderQualifiedTeamsList();
+            renderEliminatedTeamsList();
         }
 
         // Page Navigation
@@ -1762,6 +1884,316 @@
                 alert('Lỗi lưu deadline: ' + error.message);
             }
         }
+
+        // Qualified Teams Management
+        function openSelectQualifiedTeamsModal() {
+            // Create modal dynamically
+            const modalHTML = `
+                <div class="modal-overlay active" id="qualifiedTeamsModal">
+                    <div class="modal" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h3 class="modal-title">Chọn đội qualified (qua vòng bảng)</h3>
+                            <button class="modal-close" onclick="closeQualifiedTeamsModal()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="margin-bottom: 16px;">
+                                <input type="text" class="form-input" id="searchQualifiedTeams" placeholder="Tìm kiếm đội..." onkeyup="filterQualifiedTeams()">
+                            </div>
+                            <div id="qualifiedTeamsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto;">
+                                <!-- Will be populated -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeQualifiedTeamsModal()">Hủy</button>
+                            <button class="btn btn-primary" onclick="saveQualifiedTeams()">💾 Lưu</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modalsContainer').innerHTML = modalHTML;
+            
+            // Populate with all countries
+            const allTeams = Object.keys(countries).sort();
+            const selectedTeams = scoringRules?.qualified_teams || [];
+            
+            const grid = document.getElementById('qualifiedTeamsGrid');
+            let html = '';
+            
+            allTeams.forEach(team => {
+                const isSelected = selectedTeams.includes(team);
+                html += `
+                    <div class="team-checkbox-item" style="padding: 8px; border: 1px solid var(--stroke); border-radius: 8px; cursor: pointer; background: ${isSelected ? 'rgba(74, 222, 128, 0.1)' : 'white'};" onclick="toggleQualifiedTeam('${team}')">
+                        <input type="checkbox" id="team-${team}" ${isSelected ? 'checked' : ''} style="margin-right: 8px;">
+                        <span style="font-size: 20px;">${countries[team].flag}</span>
+                        <span style="margin-left: 8px; font-size: 14px;">${team}</span>
+                    </div>
+                `;
+            });
+            
+            grid.innerHTML = html;
+        }
+
+        function toggleQualifiedTeam(team) {
+            const checkbox = document.getElementById(`team-${team}`);
+            checkbox.checked = !checkbox.checked;
+            
+            // Update visual
+            const item = checkbox.parentElement;
+            item.style.background = checkbox.checked ? 'rgba(74, 222, 128, 0.1)' : 'white';
+        }
+
+        function filterQualifiedTeams() {
+            const search = document.getElementById('searchQualifiedTeams').value.toLowerCase();
+            const items = document.querySelectorAll('.team-checkbox-item');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(search) ? 'block' : 'none';
+            });
+        }
+
+        async function saveQualifiedTeams() {
+            const checkboxes = document.querySelectorAll('.team-checkbox-item input[type="checkbox"]');
+            const selected = [];
+            
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const team = cb.id.replace('team-', '');
+                    selected.push(team);
+                }
+            });
+            
+            try {
+                const { error } = await supabase
+                    .from('scoring_rules')
+                    .update({ qualified_teams: selected })
+                    .eq('id', scoringRules?.id || 1);
+                
+                if (error) throw error;
+                
+                scoringRules.qualified_teams = selected;
+                renderQualifiedTeamsList();
+                closeQualifiedTeamsModal();
+                alert(`✅ Đã lưu ${selected.length} đội!`);
+            } catch (error) {
+                console.error('Save qualified teams error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        function closeQualifiedTeamsModal() {
+            document.getElementById('modalsContainer').innerHTML = '';
+        }
+
+        function renderQualifiedTeamsList() {
+            const list = document.getElementById('qualifiedTeamsList');
+            const count = document.getElementById('qualifiedTeamsCount');
+            const teams = scoringRules?.qualified_teams || [];
+            
+            count.textContent = `${teams.length} đội đã chọn`;
+            
+            if (teams.length === 0) {
+                list.innerHTML = '<span style="color: var(--text-light);">Chưa có đội nào</span>';
+                return;
+            }
+            
+            let html = '';
+            teams.forEach(team => {
+                html += `
+                    <div style="padding: 6px 12px; background: var(--bg-gray); border-radius: 6px; display: inline-flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">${countries[team]?.flag || '🏴'}</span>
+                        <span style="font-size: 13px;">${team}</span>
+                    </div>
+                `;
+            });
+            
+            list.innerHTML = html;
+        }
+
+        // Eliminated Teams Management
+        function openMarkEliminatedModal(round) {
+            const roundNames = {
+                'r32': 'Vòng 1/32',
+                'r16': 'Vòng 1/16',
+                'quarter': 'Tứ kết',
+                'semi': 'Bán kết',
+                'finals': 'Chung kết (Á quân)'
+            };
+            
+            const modalHTML = `
+                <div class="modal-overlay active" id="eliminatedTeamsModal">
+                    <div class="modal" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <h3 class="modal-title">Mark đội bị loại - ${roundNames[round]}</h3>
+                            <button class="modal-close" onclick="closeEliminatedModal()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="margin-bottom: 16px;">
+                                <input type="text" class="form-input" id="searchEliminatedTeams" placeholder="Tìm kiếm đội..." onkeyup="filterEliminatedTeams()">
+                            </div>
+                            <div id="eliminatedTeamsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto;">
+                                <!-- Will be populated -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeEliminatedModal()">Hủy</button>
+                            <button class="btn btn-primary" onclick="saveEliminatedTeams('${round}')">💾 Lưu</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modalsContainer').innerHTML = modalHTML;
+            
+            // Populate with qualified teams only
+            const qualifiedTeams = scoringRules?.qualified_teams || [];
+            const eliminated = scoringRules?.eliminated_teams || {};
+            const selectedForRound = eliminated[round] || [];
+            
+            const grid = document.getElementById('eliminatedTeamsGrid');
+            let html = '';
+            
+            qualifiedTeams.forEach(team => {
+                const isSelected = selectedForRound.includes(team);
+                html += `
+                    <div class="team-checkbox-item" style="padding: 8px; border: 1px solid var(--stroke); border-radius: 8px; cursor: pointer; background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : 'white'};" onclick="toggleEliminatedTeam('${team}')">
+                        <input type="checkbox" id="elim-${team}" ${isSelected ? 'checked' : ''} style="margin-right: 8px;">
+                        <span style="font-size: 18px;">${countries[team]?.flag || '🏴'}</span>
+                        <span style="margin-left: 8px; font-size: 13px;">${team}</span>
+                    </div>
+                `;
+            });
+            
+            if (qualifiedTeams.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Chưa có đội qualified. Vui lòng chọn đội qualified trước.</p>';
+            } else {
+                grid.innerHTML = html;
+            }
+        }
+
+        function toggleEliminatedTeam(team) {
+            const checkbox = document.getElementById(`elim-${team}`);
+            checkbox.checked = !checkbox.checked;
+            
+            const item = checkbox.parentElement;
+            item.style.background = checkbox.checked ? 'rgba(239, 68, 68, 0.1)' : 'white';
+        }
+
+        function filterEliminatedTeams() {
+            const search = document.getElementById('searchEliminatedTeams').value.toLowerCase();
+            const items = document.querySelectorAll('.team-checkbox-item');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(search) ? 'block' : 'none';
+            });
+        }
+
+        async function saveEliminatedTeams(round) {
+            const checkboxes = document.querySelectorAll('.team-checkbox-item input[type="checkbox"]');
+            const selected = [];
+            
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const team = cb.id.replace('elim-', '');
+                    selected.push(team);
+                }
+            });
+            
+            try {
+                const eliminated = scoringRules?.eliminated_teams || {};
+                eliminated[round] = selected;
+                
+                const { error } = await supabase
+                    .from('scoring_rules')
+                    .update({ eliminated_teams: eliminated })
+                    .eq('id', scoringRules?.id || 1);
+                
+                if (error) throw error;
+                
+                scoringRules.eliminated_teams = eliminated;
+                renderEliminatedTeamsList();
+                closeEliminatedModal();
+                alert(`✅ Đã lưu ${selected.length} đội bị loại!`);
+            } catch (error) {
+                console.error('Save eliminated teams error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        function closeEliminatedModal() {
+            document.getElementById('modalsContainer').innerHTML = '';
+        }
+
+        function renderEliminatedTeamsList() {
+            const eliminated = scoringRules?.eliminated_teams || {};
+            
+            const rounds = {
+                'r32': 'eliminatedR32',
+                'r16': 'eliminatedR16',
+                'quarter': 'eliminatedQuarter',
+                'semi': 'eliminatedSemi',
+                'finals': 'eliminatedFinals'
+            };
+            
+            Object.entries(rounds).forEach(([round, elemId]) => {
+                const div = document.getElementById(elemId);
+                if (!div) return;
+                
+                const teams = eliminated[round] || [];
+                
+                if (teams.length === 0) {
+                    div.textContent = 'Chưa có đội bị loại';
+                    div.style.color = 'var(--text-light)';
+                } else {
+                    let html = '';
+                    teams.forEach(team => {
+                        html += `<span style="margin-right: 8px;">${countries[team]?.flag || '🏴'} ${team}</span>`;
+                    });
+                    div.innerHTML = html;
+                    div.style.color = 'var(--text-dark)';
+                }
+            });
+        }
+
+        // Add countries database
+        const countries = {
+            'Argentina': { flag: '🇦🇷', color: '#74ACDF' },
+            'Australia': { flag: '🇦🇺', color: '#012169' },
+            'Belgium': { flag: '🇧🇪', color: '#FDDA24' },
+            'Brasil': { flag: '🇧🇷', color: '#009B3A' },
+            'Canada': { flag: '🇨🇦', color: '#FF0000' },
+            'Croatia': { flag: '🇭🇷', color: '#FF0000' },
+            'England': { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', color: '#FFFFFF' },
+            'France': { flag: '🇫🇷', color: '#0055A4' },
+            'Germany': { flag: '🇩🇪', color: '#000000' },
+            'Italy': { flag: '🇮🇹', color: '#009246' },
+            'Japan': { flag: '🇯🇵', color: '#BC002D' },
+            'Mexico': { flag: '🇲🇽', color: '#006847' },
+            'Netherlands': { flag: '🇳🇱', color: '#FF4F00' },
+            'Portugal': { flag: '🇵🇹', color: '#FF0000' },
+            'Spain': { flag: '🇪🇸', color: '#AA151B' },
+            'United States': { flag: '🇺🇸', color: '#B22234' },
+            'Uruguay': { flag: '🇺🇾', color: '#0038A8' },
+            'Vietnam': { flag: '🇻🇳', color: '#DA251D' },
+            'South Korea': { flag: '🇰🇷', color: '#003478' },
+            'Morocco': { flag: '🇲🇦', color: '#C1272D' },
+            'Senegal': { flag: '🇸🇳', color: '#00853F' },
+            'Poland': { flag: '🇵🇱', color: '#DC143C' },
+            'Denmark': { flag: '🇩🇰', color: '#C60C30' },
+            'Switzerland': { flag: '🇨🇭', color: '#FF0000' },
+            'Colombia': { flag: '🇨🇴', color: '#FCD116' },
+            'Ecuador': { flag: '🇪🇨', color: '#FFD100' },
+            'Iran': { flag: '🇮🇷', color: '#239F40' },
+            'Saudi Arabia': { flag: '🇸🇦', color: '#165C2A' },
+            'Ghana': { flag: '🇬🇭', color: '#006B3F' },
+            'Tunisia': { flag: '🇹🇳', color: '#E70013' },
+            'Costa Rica': { flag: '🇨🇷', color: '#002B7F' },
+            'Serbia': { flag: '🇷🇸', color: '#C6363C' },
+            'Cameroon': { flag: '🇨🇲', color: '#007A5E' },
+            'Nigeria': { flag: '🇳🇬', color: '#008751' }
+        };
 
         console.log('✅ Admin panel script loaded');
     </script>
