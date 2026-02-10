@@ -597,7 +597,7 @@
             background: var(--white);
             border-radius: var(--border-radius);
             padding: 24px;
-            max-width: 600px;
+            max-width: 400px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: modalSlideIn 0.3s ease;
@@ -841,7 +841,7 @@
 
         /* Results Detail Modal */
         .results-modal .modal {
-            max-width: 450px;
+            max-width: 650px;
         }
 
         .results-header {
@@ -2791,29 +2791,29 @@
         // MODAL FUNCTIONS
         // ============================================
         
-function openModal(match) {
-    if (!currentPlayer) {
-        alert('Vui lòng đăng nhập để dự đoán!');
-        openLoginModal();
-        return;
-    }
-    
-    // Check if match already started
-    const now = new Date();
-    const matchDate = new Date(match.date);
-    
-    if (matchDate <= now && match.status !== 'finished') {
-        alert('⏰ Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
-        return;
-    }
-    
-    // If match finished, show results instead
-    if (match.status === 'finished') {
-        openResultsModal(match);
-        return;
-    }
-    
-    selectedMatch = match;
+        function openModal(match) {
+            if (!currentPlayer) {
+                alert('Vui lòng đăng nhập để dự đoán!');
+                openLoginModal();
+                return;
+            }
+            
+            // Security: Check if match already started
+            const now = new Date();
+            const matchDate = new Date(match.date);
+            
+            if (matchDate <= now && match.status !== 'finished') {
+                alert('⏰ Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
+                return;
+            }
+            
+            // If match finished, show results instead
+            if (match.status === 'finished') {
+                openResultsModal(match);
+                return;
+            }
+            
+            selectedMatch = match;
             isEditMode = !match.userPrediction;
 
             const modal = document.getElementById('predictionModal');
@@ -2985,56 +2985,55 @@ function openModal(match) {
                 // Sort by total points descending
                 predictions.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
                 
-// Create table structure
-let tableHTML = `
-    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-        <tbody>
-`;
-
-predictions.forEach((pred, index) => {
-    const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
-    const bgColor = isCurrentUser ? '#FEF3C7' : (index % 2 === 0 ? '#F9FAFB' : 'white');
-    
-    const totalPoints = pred.total_points || 0;
-    const pointsRank = pred.points_rank || 0;
-    const pointsExact = pred.points_exact_score || 0;
-    const pointsMinute = pred.points_minute || 0;
-    
-    const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
-    
-    tableHTML += `
-        <tr style="background: ${bgColor};">
-            <td style="padding: 12px 8px; text-align: center; font-size: 16px; width: 40px;">
-                ${rankBadge}
-            </td>
-            <td style="padding: 12px 8px; font-weight: ${isCurrentUser ? '600' : '500'};">
-                ${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}
-            </td>
-            <td style="padding: 12px 8px; text-align: center; font-weight: 600; width: 80px;">
-                ${pred.home_score}-${pred.away_score}
-            </td>
-            <td style="padding: 12px 8px; text-align: center; color: #6B7280; width: 60px;">
-                ${pred.minute}'
-            </td>
-            <td style="padding: 12px 8px; text-align: center; width: 120px;">
-                ${pointsRank ? `<span style="background: #DBEAFE; color: #1E40AF; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px;">🏆 +${pointsRank}</span>` : ''}
-                ${pointsExact ? `<span style="background: #D1FAE5; color: #065F46; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px;">🎯 +${pointsExact}</span>` : ''}
-                ${pointsMinute ? `<span style="background: #FEF3C7; color: #92400E; padding: 2px 6px; border-radius: 4px; font-size: 12px;">💡 +${pointsMinute}</span>` : ''}
-            </td>
-            <td style="padding: 12px 8px; text-align: center; font-weight: 600; color: #10B981; width: 60px;">
-                +${totalPoints}
-            </td>
-        </tr>
-    `;
-});
-
-tableHTML += `
-        </tbody>
-    </table>
-`;
-
-resultsList.innerHTML = tableHTML;
+                // Create table structure (compact design like image 2)
+                let tableHTML = `
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                        <tbody>
+                `;
+                
+                predictions.forEach((pred, index) => {
+                    const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
+                    const bgColor = isCurrentUser ? '#FEF3C7' : (index % 2 === 0 ? '#F9FAFB' : 'white');
+                    
+                    const totalPoints = pred.total_points || 0;
+                    const pointsRank = pred.points_rank || 0;
+                    const pointsExact = pred.points_exact_score || 0;
+                    const pointsMinute = pred.points_minute || 0;
+                    
+                    const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
+                    
+                    tableHTML += `
+                        <tr style="background: ${bgColor}; border-bottom: 1px solid #E5E7EB;">
+                            <td style="padding: 12px 8px; text-align: center; font-size: 16px; width: 40px; font-weight: 600;">
+                                ${rankBadge}
+                            </td>
+                            <td style="padding: 12px 12px; font-weight: ${isCurrentUser ? '600' : '500'}; color: ${isCurrentUser ? '#92400E' : '#1F2937'};">
+                                ${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}
+                            </td>
+                            <td style="padding: 12px 8px; text-align: center; font-weight: 600; width: 80px; color: #1F2937; font-size: 16px;">
+                                ${pred.home_score}-${pred.away_score}
+                            </td>
+                            <td style="padding: 12px 8px; text-align: center; color: #6B7280; width: 60px; font-size: 14px;">
+                                ${pred.minute}'
+                            </td>
+                            <td style="padding: 12px 8px; text-align: center; width: 140px;">
+                                ${pointsRank ? `<span style="display: inline-block; background: #DBEAFE; color: #1E40AF; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">🏆 +${pointsRank}</span>` : ''}
+                                ${pointsExact ? `<span style="display: inline-block; background: #D1FAE5; color: #065F46; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">🎯 +${pointsExact}</span>` : ''}
+                                ${pointsMinute ? `<span style="display: inline-block; background: #FEF3C7; color: #92400E; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">💡 +${pointsMinute}</span>` : ''}
+                            </td>
+                            <td style="padding: 12px 12px; text-align: center; font-weight: 700; color: #10B981; width: 70px; font-size: 16px;">
+                                +${totalPoints}
+                            </td>
+                        </tr>
+                    `;
                 });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                
+                resultsList.innerHTML = tableHTML;
             }).catch(error => {
                 console.error('Error loading predictions:', error);
                 resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #f87171;">Lỗi tải dữ liệu</p>';
