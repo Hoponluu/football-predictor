@@ -1950,6 +1950,9 @@
                 // Display match_group (primary) or group_name (fallback)
                 const groupDisplay = match.match_group || match.group_name || 'Vòng bảng';
                 
+                // Use quotes for UUID strings
+                const matchIdStr = `'${match.id}'`;
+                
                 html += `
                     <tr>
                         <td>${match.id}</td>
@@ -1960,10 +1963,10 @@
                         <td>${resultText}</td>
                         <td>
                             <div class="action-btns">
-                                ${match.status !== 'finished' ? `<button class="action-btn edit" onclick="editMatch(${match.id})" title="Sửa">✏️</button>` : ''}
-                                ${match.status === 'open' || (match.status !== 'finished' && new Date(match.match_date) < new Date()) ? `<button class="action-btn view" onclick="openEnterResultModal(${match.id})" title="Nhập KQ">✓</button>` : ''}
-                                ${match.status === 'finished' ? `<button class="action-btn view" onclick="viewMatchDetails(${match.id})" title="Chi tiết">👁️</button>` : ''}
-                                <button class="action-btn delete" onclick="deleteMatch(${match.id})" title="Xóa">🗑️</button>
+                                ${match.status !== 'finished' ? `<button class="action-btn edit" onclick="editMatch(${matchIdStr})" title="Sửa">✏️</button>` : ''}
+                                ${match.status === 'open' || (match.status !== 'finished' && new Date(match.match_date) < new Date()) ? `<button class="action-btn view" onclick="openEnterResultModal(${matchIdStr})" title="Nhập KQ">✓</button>` : ''}
+                                ${match.status === 'finished' ? `<button class="action-btn view" onclick="viewMatchDetails(${matchIdStr})" title="Chi tiết">👁️</button>` : ''}
+                                <button class="action-btn delete" onclick="deleteMatch(${matchIdStr})" title="Xóa">🗑️</button>
                             </div>
                         </td>
                     </tr>
@@ -1986,6 +1989,9 @@
                 const groupName = player.groups?.name || 'N/A';
                 const playerPredictions = allPredictions.filter(p => p.player_id === player.id).length;
                 
+                // Use quotes for UUID strings
+                const playerIdStr = `'${player.id}'`;
+                
                 html += `
                     <tr>
                         <td><strong>${player.name}</strong></td>
@@ -1996,9 +2002,9 @@
                         <td>${player.top1_count || 0}</td>
                         <td>
                             <div class="action-btns">
-                                <button class="action-btn view" onclick="viewPlayerDetails(${player.id})" title="Xem">👁️</button>
-                                <button class="action-btn edit" onclick="editPlayer(${player.id})" title="Sửa">✏️</button>
-                                <button class="action-btn delete" onclick="deletePlayer(${player.id})" title="Xóa">🗑️</button>
+                                <button class="action-btn view" onclick="viewPlayerDetails(${playerIdStr})" title="Xem">👁️</button>
+                                <button class="action-btn edit" onclick="editPlayer(${playerIdStr})" title="Sửa">✏️</button>
+                                <button class="action-btn delete" onclick="deletePlayer(${playerIdStr})" title="Xóa">🗑️</button>
                             </div>
                         </td>
                     </tr>
@@ -2021,6 +2027,9 @@
                 const memberCount = allPlayers.filter(p => p.group_id === group.id).length;
                 const createdDate = new Date(group.created_at).toLocaleDateString('vi-VN');
                 
+                // Use quotes for UUID strings
+                const groupIdStr = `'${group.id}'`;
+                
                 html += `
                     <tr>
                         <td><strong>${group.name}</strong></td>
@@ -2029,9 +2038,9 @@
                         <td>${createdDate}</td>
                         <td>
                             <div class="action-btns">
-                                <button class="action-btn view" onclick="viewGroupDetails(${group.id})" title="Xem">👁️</button>
-                                <button class="action-btn edit" onclick="editGroup(${group.id})" title="Sửa">✏️</button>
-                                <button class="action-btn delete" onclick="deleteGroup(${group.id})" title="Xóa">🗑️</button>
+                                <button class="action-btn view" onclick="viewGroupDetails(${groupIdStr})" title="Xem">👁️</button>
+                                <button class="action-btn edit" onclick="editGroup(${groupIdStr})" title="Sửa">✏️</button>
+                                <button class="action-btn delete" onclick="deleteGroup(${groupIdStr})" title="Xóa">🗑️</button>
                             </div>
                         </td>
                     </tr>
@@ -2544,6 +2553,7 @@
         }
 
         async function editMatch(id) {
+            // id is already a string (UUID)
             const match = allMatches.find(m => m.id === id);
             if (!match) {
                 alert('Không tìm thấy trận đấu!');
@@ -2685,6 +2695,7 @@
 
         // Enter Result Functions
         function openEnterResultModal(matchId) {
+            // matchId is already a string (UUID)
             const match = allMatches.find(m => m.id === matchId);
             if (!match) {
                 alert('Không tìm thấy trận đấu!');
@@ -2902,6 +2913,7 @@
         }
 
         function viewMatchDetails(id) {
+            // id is already a string (UUID)
             const match = allMatches.find(m => m.id === id);
             if (!match) {
                 alert('Không tìm thấy trận đấu!');
@@ -2931,6 +2943,7 @@
         }
 
         async function editPlayer(id) {
+            // id is already a string (UUID)
             const player = allPlayers.find(p => p.id === id);
             if (!player) {
                 alert('Không tìm thấy người chơi!');
@@ -2952,7 +2965,7 @@
             const name = document.getElementById('playerName').value.trim();
             const email = document.getElementById('playerEmail').value.trim();
             const password = document.getElementById('playerPassword').value;
-            const groupId = document.getElementById('playerGroup').value;
+            const groupId = document.getElementById('playerGroup').value; // Keep as string (UUID)
             
             if (!name || !email) {
                 alert('Vui lòng điền đầy đủ thông tin!');
@@ -2972,7 +2985,7 @@
             const playerData = {
                 name: name,
                 email: email,
-                group_id: parseInt(groupId)
+                group_id: groupId  // Pass UUID string directly, don't parse to int
             };
             
             // Only include password for new players
@@ -3051,6 +3064,7 @@
         }
 
         async function viewPlayerDetails(id) {
+            // id is already a string (UUID)
             const player = allPlayers.find(p => p.id === id);
             if (!player) {
                 alert('Không tìm thấy người chơi!');
@@ -3148,6 +3162,7 @@
         }
 
         async function editGroup(id) {
+            // id is already a string (UUID)
             const group = allGroups.find(g => g.id === id);
             if (!group) {
                 alert('Không tìm thấy nhóm!');
@@ -3242,6 +3257,7 @@
         }
 
         async function viewGroupDetails(id) {
+            // id is already a string (UUID)
             const group = allGroups.find(g => g.id === id);
             if (!group) {
                 alert('Không tìm thấy nhóm!');
