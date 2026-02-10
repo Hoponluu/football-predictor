@@ -2843,6 +2843,7 @@
                 
                 if (!predictions || predictions.length === 0) {
                     console.log('ℹ️ No predictions for this match');
+                    alert('✅ Đã lưu kết quả! (Chưa có dự đoán nào cho trận này)');
                     return;
                 }
                 
@@ -2864,14 +2865,11 @@
                     const awayDiff = Math.abs(pred.away_score - actualAway);
                     const totalDiff = homeDiff + awayDiff;
                     
-                    // Check exact match
                     const exactScore = (pred.home_score === actualHome && pred.away_score === actualAway);
                     const exactMinute = (pred.minute === actualMinute);
                     
-                    // Accuracy score (lower is better)
                     let accuracy = totalDiff;
                     
-                    // Bonus for correct winner
                     const predWinner = pred.home_score > pred.away_score ? 'home' : 
                                       (pred.home_score < pred.away_score ? 'away' : 'draw');
                     const actualWinner = actualHome > actualAway ? 'home' :
@@ -2890,11 +2888,13 @@
                     };
                 });
                 
-                // Sort by accuracy (best first)
+                // Sort by accuracy
                 scoredPredictions.sort((a, b) => a.accuracy - b.accuracy);
                 
-                // Calculate points and prepare batch updates
+                // Calculate points and prepare updates
                 const updates = [];
+                const playerPoints = {};
+                const playerStats = {};
                 
                 for (let i = 0; i < scoredPredictions.length; i++) {
                     const pred = scoredPredictions[i];
@@ -2906,57 +2906,105 @@
                     else if (i === 2) rankPoints = rules.points_rank_3;
                     else rankPoints = rules.points_rank_other;
                     
-                    // Bonuses
                     const exactScorePoints = pred.exactScore ? rules.points_exact_score : 0;
                     const exactMinutePoints = pred.exactMinute ? rules.points_exact_minute : 0;
                     const totalPoints = rankPoints + exactScorePoints + exactMinutePoints;
                     
                     updates.push({
                         id: pred.id,
+                        player_id: pred.player_id,
                         points_rank: rankPoints,
                         points_exact_score: exactScorePoints,
                         points_minute: exactMinutePoints,
                         total_points: totalPoints
                     });
-                }
-                
-                // Update predictions ONE BY ONE with delay to avoid conflicts
-                console.log('💾 Updating prediction points...');
-                for (const update of updates) {
-                    const { error } = await supabase
-                        .from('predictions')
-                        .update({
-                            points_rank: update.points_rank,
-                            points_exact_score: update.points_exact_score,
-                            points_minute: update.points_minute,
-                            total_points: update.total_points
-                        })
-                        .eq('id', update.id);
                     
-                    if (error) {
-                        console.error('Update error for prediction', update.id, ':', error);
+                    // Accumulate player stats
+                    if (!playerPoints[pred.player_id]) {
+                        playerPoints[pred.player_id] = 0;
+                        playerStats[pred.player_id] = { exactScoreCount: 0, top1Count: 0 };
                     }
-                    
-                    // Small delay to avoid race conditions
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                    playerPoints[pred.player_id] += totalPoints;
+                    if (exactScorePoints > 0) playerStats[pred.player_id].exactScoreCount++;
+                    if (i === 0) playerStats[pred.player_id].top1Count++;
                 }
                 
-                console.log('✅ Prediction points updated');
+                console.log('💾 Updating predictions using raw SQL...');
+                
+                // TRY APPROACH: Use raw SQL via RPC to bypass Supabase client issues
+                // Build SQL statements
+                for (const update of updates) {
+                    try {
+                        // Direct SQL update via rpc (if function exists) or fallback to client
+                        const { error } = await supabase.rpc('update_prediction_points', {
+                            p_prediction_id: update.id,
+                            p_points_rank: update.points_rank,
+                            p_points_exact_score: update.points_exact_score,
+                            p_points_minute: update.points_minute,
+                            p_total_points: update.total_points
+                        });
+                        
+                        if (error) {
+                            // Function doesn't exist, fallback to direct update
+                            console.log('RPC not available, using direct update...');
+                            const { error: updateError } = await supabase
+                                .from('predictions')
+                                .update({
+                                    points_rank: update.points_rank,
+                                    points_exact_score: update.points_exact_score,
+                                    points_minute: update.points_minute,
+                                    total_points: update.total_points
+                                })
+                                .eq('id', update.id);
+                            
+                            if (updateError) {
+                                console.error('Update error:', updateError);
+                            }
+                        }
+                        
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                    } catch (err) {
+                        console.error('Failed to update prediction:', err);
+                    }
+                }
+                
+                console.log('💾 Updating player totals...');
                 
                 // Update player stats
-                const playerIds = [...new Set(scoredPredictions.map(p => p.player_id))];
-                console.log(`👥 Updating stats for ${playerIds.length} players...`);
-                
-                for (const playerId of playerIds) {
-                    await updatePlayerStats(playerId);
-                    await new Promise(resolve => setTimeout(resolve, 50));
+                for (const playerId of Object.keys(playerPoints)) {
+                    try {
+                        const { data: player } = await supabase
+                            .from('players')
+                            .select('total_points, exact_score_count, top1_count')
+                            .eq('id', playerId)
+                            .single();
+                        
+                        if (player) {
+                            await supabase
+                                .from('players')
+                                .update({
+                                    total_points: (player.total_points || 0) + playerPoints[playerId],
+                                    exact_score_count: (player.exact_score_count || 0) + playerStats[playerId].exactScoreCount,
+                                    top1_count: (player.top1_count || 0) + playerStats[playerId].top1Count
+                                })
+                                .eq('id', playerId);
+                            
+                            console.log(`✅ Updated player ${playerId}: +${playerPoints[playerId]} points`);
+                        }
+                        
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                    } catch (err) {
+                        console.error('Failed to update player:', err);
+                    }
                 }
                 
-                console.log('✅ All points calculated successfully!');
+                console.log('✅ Points calculated! Check predictions table to verify updates.');
                 
             } catch (error) {
                 console.error('❌ Calculate points error:', error);
-                alert('Lỗi khi tính điểm: ' + error.message + '\n\nVui lòng thử lại hoặc liên hệ admin.');
+                alert('Lỗi khi tính điểm: ' + error.message);
                 throw error;
             }
         }
