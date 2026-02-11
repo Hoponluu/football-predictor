@@ -2820,63 +2820,44 @@
             }
             
             try {
-                // STEP 1: Save match using PostgreSQL function (bypasses RLS)
-                console.log('📝 Saving match result using function...');
+                // SIMPLIFIED: Only save match result, skip predictions entirely
+                console.log('📝 Saving match result (direct update)...');
                 console.log('Match ID:', currentResultMatch.id);
-                console.log('Home Score:', homeScore, typeof homeScore);
-                console.log('Away Score:', awayScore, typeof awayScore);
-                console.log('Minute:', minute, typeof minute);
+                console.log('Scores:', homeScore, '-', awayScore, 'Minute:', minute);
                 
-                const { data: matchData, error: matchError } = await supabase.rpc('admin_update_match_result', {
-                    p_match_id: currentResultMatch.id,
-                    p_home_score: homeScore,
-                    p_away_score: awayScore,
-                    p_minute: minute
-                });
+                // Use direct update since RLS is disabled
+                const { data: matchData, error: matchError } = await supabase
+                    .from('matches')
+                    .update({
+                        home_score: homeScore,
+                        away_score: awayScore,
+                        minute: minute,
+                        status: 'finished'
+                    })
+                    .eq('id', currentResultMatch.id)
+                    .select();
                 
                 if (matchError) {
                     console.error('❌ Match update error:', matchError);
-                    console.error('Error details:', JSON.stringify(matchError, null, 2));
-                    
-                    // If function doesn't exist, show helpful message
-                    if (matchError.message && (matchError.message.includes('function') || matchError.message.includes('does not exist'))) {
-                        alert('❌ Lỗi: PostgreSQL function chưa được tạo!\n\n' +
-                              'Vui lòng:\n' +
-                              '1. Mở Supabase SQL Editor\n' +
-                              '2. Chạy file FIX-MATCH-UPDATE.sql\n' +
-                              '3. Thử lại');
-                    } else {
-                        alert('❌ Lỗi cập nhật trận đấu: ' + matchError.message);
-                    }
+                    alert('❌ Lỗi: ' + matchError.message);
                     throw matchError;
                 }
                 
-                console.log('✅ Match result saved via function!', matchData);
+                console.log('✅ Match saved!', matchData);
                 
-                // Refresh UI immediately
+                // Refresh UI
                 await loadMatches();
                 renderMatchesTable();
                 renderDashboard();
                 
-                // Show success message for match save
-                const successMsg = isEditing 
-                    ? '✅ Đã cập nhật kết quả trận đấu!'
-                    : '✅ Đã lưu kết quả trận đấu!';
-                alert(successMsg);
+                // Success message
+                alert('✅ Đã lưu kết quả trận đấu!\n\n⚠️ Lưu ý: Điểm predictions chưa tính tự động.\nCó thể tính thủ công sau.');
                 
                 closeModal('enterResultModal');
                 
-                // Don't calculate points for now - just save match
-                console.log('ℹ️ Match saved. Skipping points calculation.');
-                
             } catch (error) {
-                console.error('❌ Save match result error:', error);
-                console.error('Error name:', error.name);
-                console.error('Error message:', error.message);
-                console.error('Error code:', error.code);
-                console.error('Error details:', error.details);
-                console.error('Error hint:', error.hint);
-                alert('Lỗi lưu kết quả: ' + error.message + '\n\nChi tiết: ' + (error.details || error.hint || 'N/A'));
+                console.error('❌ Save error:', error);
+                alert('Lỗi: ' + error.message);
                 return;
             }
         }
