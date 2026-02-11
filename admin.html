@@ -1976,7 +1976,8 @@
                                 ${match.status !== 'finished' ? `<button class="action-btn edit" onclick="editMatch(${matchIdStr})" title="Sửa">✏️</button>` : ''}
                                 ${match.status === 'open' || (match.status !== 'finished' && new Date(match.match_date) < new Date()) ? `<button class="action-btn view" onclick="openEnterResultModal(${matchIdStr})" title="Nhập KQ">✓</button>` : ''}
                                 ${match.status === 'finished' ? `<button class="action-btn edit" onclick="openEditResultModal(${matchIdStr})" title="Sửa KQ">✏️</button>` : ''}
-                                ${match.status === 'finished' ? `<button class="action-btn success" onclick="calculateMatchPoints(${matchIdStr})" title="Tính điểm">⚡</button>` : ''}
+                                ${match.status === 'finished' && !match.points_calculated ? `<button class="action-btn success" onclick="calculateMatchPoints(${matchIdStr})" title="Tính điểm">⚡</button>` : ''}
+                                ${match.status === 'finished' && match.points_calculated ? `<button class="action-btn warning" onclick="resetMatchPoints(${matchIdStr})" title="Reset điểm">🔄</button>` : ''}
                                 ${match.status === 'finished' ? `<button class="action-btn view" onclick="viewMatchDetails(${matchIdStr})" title="Chi tiết">👁️</button>` : ''}
                                 <button class="action-btn delete" onclick="deleteMatch(${matchIdStr})" title="Xóa">🗑️</button>
                             </div>
@@ -2827,14 +2828,17 @@
                 console.log('Scores:', homeScore, '-', awayScore, 'Minute:', minute);
                 
                 // Use direct update since RLS is disabled
+                const updateData = {
+                    home_score: homeScore,
+                    away_score: awayScore,
+                    minute: minute,
+                    status: 'finished',
+                    points_calculated: false  // Reset flag when result changes
+                };
+                
                 const { data: matchData, error: matchError } = await supabase
                     .from('matches')
-                    .update({
-                        home_score: homeScore,
-                        away_score: awayScore,
-                        minute: minute,
-                        status: 'finished'
-                    })
+                    .update(updateData)
                     .eq('id', currentResultMatch.id)
                     .select();
                 
@@ -2890,17 +2894,144 @@
                 // Calculate and update points
                 await calculateAndUpdatePoints(matchId, match.home_score, match.away_score, match.minute);
                 
+                // Mark match as points calculated
+                console.log('🏁 Marking match as points calculated...');
+                const { error: flagError } = await supabase
+                    .from('matches')
+                    .update({ points_calculated: true })
+                    .eq('id', matchId);
+                
+                if (flagError) {
+                    console.warn('⚠️ Could not set points_calculated flag:', flagError);
+                }
+                
                 // Refresh data
+                await loadMatches(); // Reload to update button visibility
                 await loadPredictions();
                 await loadPlayers();
+                renderMatchesTable();
                 renderDashboard();
                 
                 // Success message
-                alert('✅ Đã tính điểm thành công!\n\n📊 Đã cập nhật:\n- Predictions table (điểm chi tiết)\n- Players table (tổng điểm)\n\nKiểm tra bảng xếp hạng để xem kết quả!');
+                alert('✅ Đã tính điểm thành công!\n\n📊 Đã cập nhật:\n- Predictions table (điểm chi tiết)\n- Players table (tổng điểm)\n\n💡 Nút ⚡ đã ẩn để tránh tính trùng.\nNếu cần tính lại, dùng nút 🔄 Reset trước!');
                 
             } catch (error) {
                 console.error('❌ Calculate points error:', error);
                 alert('❌ Lỗi khi tính điểm:\n' + error.message + '\n\nVui lòng kiểm tra console để biết chi tiết.');
+            }
+        }
+
+        async function resetMatchPoints(matchId) {
+            try {
+                // Find the match
+                const match = allMatches.find(m => m.id === matchId);
+                if (!match) {
+                    alert('❌ Không tìm thấy trận đấu!');
+                    return;
+                }
+                
+                // Confirm action
+                const confirmMsg = `🔄 RESET ĐIỂM cho trận:\n${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}\n\n⚠️ Hành động này sẽ:\n- Xóa điểm predictions của trận này (set về 0)\n- TRỪ điểm đã cộng vào players\n- Cho phép tính điểm lại\n\n❗ Lưu ý: Nếu đã tính nhiều lần, chỉ trừ điểm lần cuối!\n\nXác nhận reset?`;
+                if (!confirm(confirmMsg)) {
+                    return;
+                }
+                
+                console.log('🔄 Resetting points for match:', matchId);
+                
+                // Get all predictions for this match
+                const { data: predictions, error: predError } = await supabase
+                    .from('predictions')
+                    .select('id, player_id, total_points, points_exact_score')
+                    .eq('match_id', matchId);
+                
+                if (predError) {
+                    console.error('Error loading predictions:', predError);
+                    throw predError;
+                }
+                
+                if (!predictions || predictions.length === 0) {
+                    console.log('ℹ️ No predictions to reset');
+                } else {
+                    console.log(`🔄 Resetting ${predictions.length} predictions...`);
+                    
+                    // First, subtract points from players
+                    const playerAdjustments = {};
+                    const playerStatsAdjustments = {};
+                    
+                    for (const pred of predictions) {
+                        if (pred.total_points > 0) {
+                            if (!playerAdjustments[pred.player_id]) {
+                                playerAdjustments[pred.player_id] = 0;
+                                playerStatsAdjustments[pred.player_id] = { exactScoreCount: 0 };
+                            }
+                            playerAdjustments[pred.player_id] += pred.total_points;
+                            if (pred.points_exact_score > 0) {
+                                playerStatsAdjustments[pred.player_id].exactScoreCount++;
+                            }
+                        }
+                    }
+                    
+                    // Update players (subtract points)
+                    for (const playerId of Object.keys(playerAdjustments)) {
+                        const { data: player } = await supabase
+                            .from('players')
+                            .select('total_points, exact_score_count')
+                            .eq('id', playerId)
+                            .single();
+                        
+                        if (player) {
+                            const newTotal = Math.max(0, (player.total_points || 0) - playerAdjustments[playerId]);
+                            const newExactCount = Math.max(0, (player.exact_score_count || 0) - playerStatsAdjustments[playerId].exactScoreCount);
+                            
+                            await supabase
+                                .from('players')
+                                .update({
+                                    total_points: newTotal,
+                                    exact_score_count: newExactCount
+                                })
+                                .eq('id', playerId);
+                            
+                            console.log(`  ✅ Player ${playerId.substring(0,8)}: -${playerAdjustments[playerId]} → Total: ${newTotal}`);
+                        }
+                    }
+                    
+                    // Reset prediction points to 0
+                    for (const pred of predictions) {
+                        await supabase
+                            .from('predictions')
+                            .update({
+                                points_rank: 0,
+                                points_exact_score: 0,
+                                points_minute: 0,
+                                total_points: 0
+                            })
+                            .eq('id', pred.id);
+                        
+                        await new Promise(resolve => setTimeout(resolve, 20));
+                    }
+                    
+                    console.log('✅ All predictions reset to 0');
+                }
+                
+                // Reset points_calculated flag
+                await supabase
+                    .from('matches')
+                    .update({ points_calculated: false })
+                    .eq('id', matchId);
+                
+                // Refresh data
+                await loadMatches();
+                await loadPredictions();
+                await loadPlayers();
+                renderMatchesTable();
+                renderDashboard();
+                
+                // Success message
+                alert('✅ Đã reset điểm thành công!\n\n🔄 Đã reset:\n- Predictions points → 0\n- Players points (trừ đi)\n\n⚡ Nút tính điểm đã xuất hiện lại.\nBạn có thể tính điểm lại nếu cần!');
+                
+            } catch (error) {
+                console.error('❌ Reset points error:', error);
+                alert('❌ Lỗi khi reset điểm:\n' + error.message + '\n\nVui lòng kiểm tra console.');
             }
         }
 
