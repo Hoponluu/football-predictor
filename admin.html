@@ -1976,6 +1976,7 @@
                                 ${match.status !== 'finished' ? `<button class="action-btn edit" onclick="editMatch(${matchIdStr})" title="Sửa">✏️</button>` : ''}
                                 ${match.status === 'open' || (match.status !== 'finished' && new Date(match.match_date) < new Date()) ? `<button class="action-btn view" onclick="openEnterResultModal(${matchIdStr})" title="Nhập KQ">✓</button>` : ''}
                                 ${match.status === 'finished' ? `<button class="action-btn edit" onclick="openEditResultModal(${matchIdStr})" title="Sửa KQ">✏️</button>` : ''}
+                                ${match.status === 'finished' ? `<button class="action-btn success" onclick="calculateMatchPoints(${matchIdStr})" title="Tính điểm">⚡</button>` : ''}
                                 ${match.status === 'finished' ? `<button class="action-btn view" onclick="viewMatchDetails(${matchIdStr})" title="Chi tiết">👁️</button>` : ''}
                                 <button class="action-btn delete" onclick="deleteMatch(${matchIdStr})" title="Xóa">🗑️</button>
                             </div>
@@ -2862,6 +2863,47 @@
             }
         }
 
+        async function calculateMatchPoints(matchId) {
+            try {
+                // Find the match
+                const match = allMatches.find(m => m.id === matchId);
+                if (!match) {
+                    alert('❌ Không tìm thấy trận đấu!');
+                    return;
+                }
+                
+                // Check if match has results
+                if (match.home_score === null || match.away_score === null || !match.minute) {
+                    alert('❌ Trận đấu chưa có kết quả!\n\nVui lòng nhập kết quả trước khi tính điểm.');
+                    return;
+                }
+                
+                // Confirm action
+                const confirmMsg = `🔢 Tính điểm cho trận:\n${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}\n\nĐiểm sẽ được cập nhật cho:\n- Bảng predictions (chi tiết)\n- Bảng players (tổng điểm)\n\nXác nhận?`;
+                if (!confirm(confirmMsg)) {
+                    return;
+                }
+                
+                // Show processing message
+                console.log('⚡ Starting points calculation for match:', matchId);
+                
+                // Calculate and update points
+                await calculateAndUpdatePoints(matchId, match.home_score, match.away_score, match.minute);
+                
+                // Refresh data
+                await loadPredictions();
+                await loadPlayers();
+                renderDashboard();
+                
+                // Success message
+                alert('✅ Đã tính điểm thành công!\n\n📊 Đã cập nhật:\n- Predictions table (điểm chi tiết)\n- Players table (tổng điểm)\n\nKiểm tra bảng xếp hạng để xem kết quả!');
+                
+            } catch (error) {
+                console.error('❌ Calculate points error:', error);
+                alert('❌ Lỗi khi tính điểm:\n' + error.message + '\n\nVui lòng kiểm tra console để biết chi tiết.');
+            }
+        }
+
         async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
             try {
                 console.log('🔄 Calculating points for match:', matchId);
@@ -2966,21 +3008,23 @@
                     console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints})`);
                 }
                 
-                console.log('💾 Updating predictions using PostgreSQL function...');
+                console.log('💾 Updating predictions table (direct SQL)...');
                 
-                // Update predictions using PostgreSQL function (bypasses RLS!)
+                // Update predictions using direct SQL (RLS is disabled)
                 let successCount = 0;
                 let failCount = 0;
                 
                 for (const update of updates) {
                     try {
-                        const { error } = await supabase.rpc('admin_update_prediction_points', {
-                            p_prediction_id: update.id,
-                            p_points_rank: update.points_rank,
-                            p_points_exact_score: update.points_exact_score,
-                            p_points_minute: update.points_minute,
-                            p_total_points: update.total_points
-                        });
+                        const { error } = await supabase
+                            .from('predictions')
+                            .update({
+                                points_rank: update.points_rank,
+                                points_exact_score: update.points_exact_score,
+                                points_minute: update.points_minute,
+                                total_points: update.total_points
+                            })
+                            .eq('id', update.id);
                         
                         if (error) {
                             console.error(`  ❌ Error updating prediction ${update.id}:`, error);
@@ -2989,7 +3033,7 @@
                             successCount++;
                         }
                         
-                        await new Promise(resolve => setTimeout(resolve, 50));
+                        await new Promise(resolve => setTimeout(resolve, 20));
                         
                     } catch (err) {
                         console.error(`  ❌ Failed to update prediction ${update.id}:`, err);
@@ -2997,7 +3041,7 @@
                     }
                 }
                 
-                console.log(`  ${successCount} predictions updated, ${failCount} failed`);
+                console.log(`  ✅ ${successCount} predictions updated, ${failCount} failed`);
                 
                 console.log('💾 Updating player totals...');
                 
@@ -3036,7 +3080,7 @@
                 
                 if (failCount > 0) {
                     console.warn(`⚠️ Some predictions failed to update (${failCount}/${updates.length})`);
-                    console.warn('Check if PostgreSQL function "admin_update_prediction_points" exists');
+                    throw new Error(`${failCount} predictions failed to update. Check console for details.`);
                 } else {
                     console.log('✅ All points calculated and updated successfully!');
                 }
