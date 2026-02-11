@@ -3074,7 +3074,7 @@
                     const totalDiff = homeDiff + awayDiff;
                     
                     const exactScore = (pred.home_score === actualHome && pred.away_score === actualAway);
-                    const exactMinute = (pred.minute === actualMinute);
+                    const minuteDiff = Math.abs(pred.minute - actualMinute);  // Calculate minute difference
                     
                     let accuracy = totalDiff;
                     
@@ -3092,12 +3092,16 @@
                         player_id: pred.player_id,
                         accuracy,
                         exactScore,
-                        exactMinute
+                        minuteDiff  // Store minute difference instead of boolean
                     };
                 });
                 
                 // Sort by accuracy
                 scoredPredictions.sort((a, b) => a.accuracy - b.accuracy);
+                
+                // Find closest minute prediction (minimum difference)
+                const closestMinuteDiff = Math.min(...scoredPredictions.map(p => p.minuteDiff));
+                console.log(`🕐 Closest minute prediction: ${closestMinuteDiff} minutes difference`);
                 
                 // Calculate points and prepare updates
                 const updates = [];
@@ -3115,7 +3119,10 @@
                     else rankPoints = rules.points_rank_other;
                     
                     const exactScorePoints = pred.exactScore ? rules.points_exact_score : 0;
-                    const exactMinutePoints = pred.exactMinute ? rules.points_exact_minute : 0;
+                    
+                    // Award minute points to CLOSEST prediction (not just exact)
+                    const exactMinutePoints = (pred.minuteDiff === closestMinuteDiff) ? rules.points_exact_minute : 0;
+                    
                     const totalPoints = rankPoints + exactScorePoints + exactMinutePoints;
                     
                     updates.push({
@@ -3136,7 +3143,7 @@
                     if (pred.exactScore) playerStatsMap[pred.player_id].exactScoreCount++;
                     if (i === 0) playerStatsMap[pred.player_id].top1Count++;
                     
-                    console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints})`);
+                    console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints}) [minute diff: ${pred.minuteDiff}]`);
                 }
                 
                 console.log('💾 Updating predictions table (direct SQL)...');
