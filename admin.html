@@ -2820,24 +2820,38 @@
             }
             
             try {
-                // STEP 1: Update match ONLY (separate transaction)
-                console.log('📝 Saving match result...');
-                const { error: matchError } = await supabase
-                    .from('matches')
-                    .update({
-                        home_score: homeScore,
-                        away_score: awayScore,
-                        minute: minute,
-                        status: 'finished'
-                    })
-                    .eq('id', currentResultMatch.id);
+                // STEP 1: Save match using PostgreSQL function (bypasses RLS)
+                console.log('📝 Saving match result using function...');
+                console.log('Match ID:', currentResultMatch.id);
+                console.log('Home Score:', homeScore, typeof homeScore);
+                console.log('Away Score:', awayScore, typeof awayScore);
+                console.log('Minute:', minute, typeof minute);
+                
+                const { data: matchData, error: matchError } = await supabase.rpc('admin_update_match_result', {
+                    p_match_id: currentResultMatch.id,
+                    p_home_score: homeScore,
+                    p_away_score: awayScore,
+                    p_minute: minute
+                });
                 
                 if (matchError) {
-                    console.error('Match update error:', matchError);
+                    console.error('❌ Match update error:', matchError);
+                    console.error('Error details:', JSON.stringify(matchError, null, 2));
+                    
+                    // If function doesn't exist, show helpful message
+                    if (matchError.message && (matchError.message.includes('function') || matchError.message.includes('does not exist'))) {
+                        alert('❌ Lỗi: PostgreSQL function chưa được tạo!\n\n' +
+                              'Vui lòng:\n' +
+                              '1. Mở Supabase SQL Editor\n' +
+                              '2. Chạy file FIX-MATCH-UPDATE.sql\n' +
+                              '3. Thử lại');
+                    } else {
+                        alert('❌ Lỗi cập nhật trận đấu: ' + matchError.message);
+                    }
                     throw matchError;
                 }
                 
-                console.log('✅ Match result saved!');
+                console.log('✅ Match result saved via function!', matchData);
                 
                 // Refresh UI immediately
                 await loadMatches();
@@ -2852,33 +2866,19 @@
                 
                 closeModal('enterResultModal');
                 
+                // Don't calculate points for now - just save match
+                console.log('ℹ️ Match saved. Skipping points calculation.');
+                
             } catch (error) {
                 console.error('❌ Save match result error:', error);
-                alert('Lỗi lưu kết quả: ' + error.message);
-                return; // Don't proceed to calculate points
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error code:', error.code);
+                console.error('Error details:', error.details);
+                console.error('Error hint:', error.hint);
+                alert('Lỗi lưu kết quả: ' + error.message + '\n\nChi tiết: ' + (error.details || error.hint || 'N/A'));
+                return;
             }
-            
-            // STEP 2: Calculate points AFTER match saved (separate operation)
-            // Use setTimeout to ensure it runs in separate execution context
-            setTimeout(async () => {
-                try {
-                    console.log('🔢 Starting points calculation...');
-                    await calculateAndUpdatePoints(currentResultMatch.id, homeScore, awayScore, minute);
-                    
-                    // Refresh data after points calculated
-                    await loadPredictions();
-                    await loadPlayers();
-                    renderDashboard();
-                    
-                    console.log('✅ Points calculation complete!');
-                    alert('✅ Đã tính điểm cho các dự đoán!');
-                    
-                } catch (pointsError) {
-                    console.error('⚠️ Points calculation error:', pointsError);
-                    console.error('Match result was saved, but points calculation failed.');
-                    alert('⚠️ Kết quả đã lưu nhưng tính điểm thất bại.\n\nVui lòng kiểm tra console hoặc tính lại điểm thủ công.');
-                }
-            }, 500); // Wait 500ms to ensure match transaction completed
         }
 
         async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
