@@ -2394,18 +2394,45 @@
             const eliminated = scoringRules?.eliminated_teams || {};
             const selectedForRound = eliminated[round] || [];
             
+            // CRITICAL FIX: Get all teams eliminated in PREVIOUS rounds
+            const roundOrder = ['r32', 'r16', 'quarter', 'semi', 'finals'];
+            const currentRoundIndex = roundOrder.indexOf(round);
+            const previouslyEliminated = new Set();
+            
+            // Collect teams eliminated in all previous rounds
+            for (let i = 0; i < currentRoundIndex; i++) {
+                const prevRound = roundOrder[i];
+                const teamsInRound = eliminated[prevRound] || [];
+                teamsInRound.forEach(team => previouslyEliminated.add(team));
+            }
+            
             const grid = document.getElementById('eliminatedTeamsGrid');
             let html = '';
             
             qualifiedTeams.forEach(team => {
-                const isSelected = selectedForRound.includes(team);
-                html += `
-                    <div class="team-checkbox-item" style="padding: 8px; border: 1px solid var(--stroke); border-radius: 8px; cursor: pointer; background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : 'white'};" onclick="toggleEliminatedTeam('${team}')">
-                        <input type="checkbox" id="elim-${team}" ${isSelected ? 'checked' : ''} style="margin-right: 8px;">
-                        <span style="font-size: 18px;">${countries[team]?.flag || '🏴'}</span>
-                        <span style="margin-left: 8px; font-size: 13px;">${team}</span>
-                    </div>
-                `;
+                const wasEliminatedBefore = previouslyEliminated.has(team);
+                const isSelectedThisRound = selectedForRound.includes(team);
+                
+                // If team was eliminated in previous round, show as disabled/eliminated
+                if (wasEliminatedBefore) {
+                    html += `
+                        <div class="team-checkbox-item" style="padding: 8px; border: 1px solid #ddd; border-radius: 8px; background: #f5f5f5; opacity: 0.5; cursor: not-allowed;" title="Đã bị loại ở vòng trước">
+                            <input type="checkbox" disabled style="margin-right: 8px;">
+                            <span style="font-size: 18px; filter: grayscale(100%);">${countries[team]?.flag || '🏴'}</span>
+                            <span style="margin-left: 8px; font-size: 13px; text-decoration: line-through;">${team}</span>
+                            <span style="margin-left: 8px; font-size: 11px; color: #999;">❌ Đã loại</span>
+                        </div>
+                    `;
+                } else {
+                    // Team is still active, can be selected
+                    html += `
+                        <div class="team-checkbox-item" style="padding: 8px; border: 1px solid var(--stroke); border-radius: 8px; cursor: pointer; background: ${isSelectedThisRound ? 'rgba(239, 68, 68, 0.1)' : 'white'};" onclick="toggleEliminatedTeam('${team}')">
+                            <input type="checkbox" id="elim-${team}" ${isSelectedThisRound ? 'checked' : ''} style="margin-right: 8px;">
+                            <span style="font-size: 18px;">${countries[team]?.flag || '🏴'}</span>
+                            <span style="margin-left: 8px; font-size: 13px;">${team}</span>
+                        </div>
+                    `;
+                }
             });
             
             if (qualifiedTeams.length === 0) {
@@ -2793,7 +2820,8 @@
             }
             
             try {
-                // Update match with result - use 'minute' column (not 'first_goal_minute')
+                // STEP 1: Update match ONLY (separate transaction)
+                console.log('📝 Saving match result...');
                 const { error: matchError } = await supabase
                     .from('matches')
                     .update({
@@ -2804,27 +2832,53 @@
                     })
                     .eq('id', currentResultMatch.id);
                 
-                if (matchError) throw matchError;
+                if (matchError) {
+                    console.error('Match update error:', matchError);
+                    throw matchError;
+                }
                 
-                // Calculate/Recalculate points for all predictions
-                await calculateAndUpdatePoints(currentResultMatch.id, homeScore, awayScore, minute);
+                console.log('✅ Match result saved!');
                 
-                const successMsg = isEditing 
-                    ? '✅ Đã cập nhật kết quả và tính lại điểm thành công!'
-                    : '✅ Đã nhập kết quả và tính điểm thành công!';
-                
-                alert(successMsg);
-                
+                // Refresh UI immediately
                 await loadMatches();
-                await loadPredictions();
-                await loadPlayers();
                 renderMatchesTable();
                 renderDashboard();
+                
+                // Show success message for match save
+                const successMsg = isEditing 
+                    ? '✅ Đã cập nhật kết quả trận đấu!'
+                    : '✅ Đã lưu kết quả trận đấu!';
+                alert(successMsg);
+                
                 closeModal('enterResultModal');
+                
             } catch (error) {
-                console.error('Save result error:', error);
-                alert('Lỗi: ' + error.message);
+                console.error('❌ Save match result error:', error);
+                alert('Lỗi lưu kết quả: ' + error.message);
+                return; // Don't proceed to calculate points
             }
+            
+            // STEP 2: Calculate points AFTER match saved (separate operation)
+            // Use setTimeout to ensure it runs in separate execution context
+            setTimeout(async () => {
+                try {
+                    console.log('🔢 Starting points calculation...');
+                    await calculateAndUpdatePoints(currentResultMatch.id, homeScore, awayScore, minute);
+                    
+                    // Refresh data after points calculated
+                    await loadPredictions();
+                    await loadPlayers();
+                    renderDashboard();
+                    
+                    console.log('✅ Points calculation complete!');
+                    alert('✅ Đã tính điểm cho các dự đoán!');
+                    
+                } catch (pointsError) {
+                    console.error('⚠️ Points calculation error:', pointsError);
+                    console.error('Match result was saved, but points calculation failed.');
+                    alert('⚠️ Kết quả đã lưu nhưng tính điểm thất bại.\n\nVui lòng kiểm tra console hoặc tính lại điểm thủ công.');
+                }
+            }, 500); // Wait 500ms to ensure match transaction completed
         }
 
         async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
