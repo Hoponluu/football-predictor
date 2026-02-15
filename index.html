@@ -254,6 +254,126 @@
             opacity: 0.6;
         }
 
+        /* Mini Match Card */
+        .mini-match-card {
+            background: var(--white);
+            border: 1px solid var(--stroke);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            min-height: 56px;
+        }
+
+        .mini-match-card:hover {
+            border-color: var(--stroke-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .mini-match-card.not-open {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .mini-match-card.not-open:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .mini-match-datetime {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+            font-size: 10px;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .mini-match-datetime-date {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .mini-teams {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .mini-team {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mini-team.loser {
+            opacity: 0.5;
+        }
+
+        .mini-team-flag {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .mini-team-code {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-dark);
+            min-width: 30px;
+        }
+
+        .mini-match-vs {
+            font-size: 10px;
+            color: var(--text-light);
+            margin: 0 4px;
+        }
+
+        .mini-match-score {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .mini-match-score-minute {
+            font-size: 10px;
+            color: var(--text-light);
+        }
+
+        .mini-match-status {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            font-size: 16px;
+        }
+
+        .mini-match-status.predicted {
+            color: var(--primary-green);
+        }
+
+        .mini-match-status.finished {
+            font-size: 11px;
+            background: var(--yellow-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #92400E;
+        }
+
         /* Favorite Team Card */
         .favorite-team-card {
             width: var(--card-width);
@@ -1203,6 +1323,36 @@
             font-weight: 500;
         }
 
+        /* Group Stage Cards */
+        .group-card {
+            background: var(--white);
+            border: 1px solid var(--stroke);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .group-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--stroke);
+        }
+
+        .group-matches-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Chart Styles */
+        #chartCanvas {
+            max-width: 100%;
+            height: auto;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .matches-grid {
@@ -1306,30 +1456,53 @@
 
         <!-- Lịch thi đấu Page -->
         <div id="schedule" class="page-content">
+            <!-- Trận sắp diễn ra - Priority Open then Pending -->
             <section class="section">
                 <div class="section-header">
-                    <h2 class="section-title">🏟️ TRẬN ĐẤU SẮP DIỄN RA VÒNG NÀY</h2>
+                    <h2 class="section-title">🏟️ TRẬN ĐẤU SẮP DIỄN RA</h2>
                 </div>
-                <div class="matches-grid" id="scheduleMatches">
-                    <!-- Sẽ được tạo bằng JavaScript -->
+                <div id="scheduleUpcomingMatches" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- MiniCards will be rendered here -->
                 </div>
             </section>
 
             <!-- Stats summary -->
-            <div class="stats-row">
+            <div class="stats-row" id="scheduleStats">
                 <div class="stat-card">
-                    <div class="stat-number">16</div>
+                    <div class="stat-number" id="statsFinished">0</div>
                     <div class="stat-label">TRẬN</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">92</div>
+                    <div class="stat-number" id="statsRemaining">104</div>
                     <div class="stat-label">CÒN LẠI</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">140</div>
-                    <div class="stat-label">⚽ BÀN THẮNG</div>
+                    <div class="stat-number" id="statsPredictions">0</div>
+                    <div class="stat-label">DỰ ĐOÁN</div>
                 </div>
             </div>
+
+            <!-- Theo bảng thi đấu -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📋 THEO BẢNG THI ĐẤU</h2>
+                </div>
+                <div id="scheduleGroupStage" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                    <!-- Group cards will be rendered here -->
+                </div>
+            </section>
+
+            <!-- Knock-out Stage -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">🏆 LỊCH SỬ (KNOCK-OUT STAGE)</h2>
+                </div>
+                <div id="scheduleKnockout">
+                    <p style="text-align: center; color: var(--text-light); padding: 40px;">
+                        Bracket knockout sẽ được hiển thị khi có trận loại trực tiếp
+                    </p>
+                </div>
+            </section>
         </div>
 
         <!-- Bảng xếp hạng Page -->
@@ -1355,26 +1528,48 @@
                 </table>
             </section>
 
-            <div id="personalStatsSection">
-                <div class="stats-row">
+            <!-- Current User Stats Section -->
+            <section class="section" id="currentUserStatsSection" style="display: none;">
+                <div class="section-header">
+                    <h2 class="section-title">👤 THỐNG KÊ CỦA BẠN</h2>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="stats-row" id="userStatsCards">
                     <div class="stat-card">
-                        <div class="stat-number">2</div>
+                        <div class="stat-number" id="userRank">-</div>
                         <div class="stat-label">🏆 VỊ TRÍ</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">120</div>
+                        <div class="stat-number" id="userPoints">0</div>
                         <div class="stat-label">📊 ĐIỂM</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">4</div>
+                        <div class="stat-number" id="userExactScores">0</div>
                         <div class="stat-label">🎯 TỈ SỐ</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">4</div>
+                        <div class="stat-number" id="userTop1Count">0</div>
                         <div class="stat-label">🥇 NHẤT</div>
                     </div>
                 </div>
-            </div>
+
+                <!-- Performance Chart -->
+                <div style="margin-top: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">📈 PHONG ĐỘ CỦA BẠN</h3>
+                    <div id="performanceChart" style="background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--stroke);">
+                        <canvas id="chartCanvas" width="800" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent 5 Matches -->
+                <div style="margin-top: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">📊 5 TRẬN GẦN NHẤT</h3>
+                    <div id="recentMatches" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Recent matches mini cards will be rendered here -->
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 
@@ -2015,6 +2210,9 @@
         // ============================================
         
         const countries = {
+            // Special
+            'TBU': { flag: '🏴', color: '#E5E7EB' }, // To Be Updated
+            
             // WC 2026 Hosts
             'Canada': { flag: '🇨🇦', color: '#FEE2E2' },
             'Mexico': { flag: '🇲🇽', color: '#D1FAE5' },
@@ -2411,6 +2609,7 @@
             renderScheduleMatches();
             renderHistoryMatches();
             renderLeaderboard();
+            renderLeaderboardUserStats();
             renderPersonalStats();
             renderStats();
         }
@@ -2441,7 +2640,7 @@
             const awayData = countries[match.away];
 
             // Group badge
-            card.innerHTML = `<div class="match-group-badge">${match.group}</div>`;
+            card.innerHTML = `<div class="match-group-badge">${match.match_group || match.group || 'A'}</div>`;
 
             // Teams
             const teams = document.createElement('div');
@@ -2532,6 +2731,104 @@
                 card.onclick = () => openResultsModal(match);
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
+            }
+
+            return card;
+        }
+
+        function renderMiniMatchCard(match) {
+            const card = document.createElement('div');
+            card.className = 'mini-match-card';
+            
+            // Add not-open class if match not open
+            if (match.status === 'not-open') {
+                card.classList.add('not-open');
+            }
+
+            // Check if teams exist
+            if (!countries[match.home] || !countries[match.away]) {
+                console.error(`Team not found: ${match.home} or ${match.away}`);
+                return card;
+            }
+
+            const homeData = countries[match.home];
+            const awayData = countries[match.away];
+
+            // DateTime section
+            const datetime = document.createElement('div');
+            datetime.className = 'mini-match-datetime';
+            const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' });
+            const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            datetime.innerHTML = `
+                <span class="mini-match-datetime-date">${dateStr}</span>
+                <span>${timeStr}</span>
+            `;
+            card.appendChild(datetime);
+
+            // Teams section
+            const teams = document.createElement('div');
+            teams.className = 'mini-teams';
+
+            // Determine if match is finished and who lost (for opacity)
+            const isFinished = match.status === 'finished' && match.actualScore;
+            const homeIsLoser = isFinished && match.actualScore.homeScore < match.actualScore.awayScore;
+            const awayIsLoser = isFinished && match.actualScore.awayScore < match.actualScore.homeScore;
+
+            teams.innerHTML = `
+                <div class="mini-team ${homeIsLoser ? 'loser' : ''}">
+                    <div class="mini-team-flag" style="background: ${homeData.color}">${homeData.flag}</div>
+                    <span class="mini-team-code">${match.home}</span>
+                </div>
+                <span class="mini-match-vs">vs</span>
+                <div class="mini-team ${awayIsLoser ? 'loser' : ''}">
+                    <div class="mini-team-flag" style="background: ${awayData.color}">${awayData.flag}</div>
+                    <span class="mini-team-code">${match.away}</span>
+                </div>
+            `;
+            card.appendChild(teams);
+
+            // Score/Status
+            if (isFinished) {
+                const score = document.createElement('div');
+                score.className = 'mini-match-score';
+                score.innerHTML = `
+                    <span>${match.actualScore.homeScore}(${match.actualScore.homeScoreDetail || match.actualScore.homeScore})</span>
+                    <span class="mini-match-score-minute">${match.actualScore.minute}'</span>
+                    <span>${match.actualScore.awayScore}(${match.actualScore.awayScoreDetail || match.actualScore.awayScore})</span>
+                `;
+                card.appendChild(score);
+
+                // Points badge if user predicted
+                if (match.userPrediction && match.points) {
+                    const totalPoints = (match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0);
+                    const pointsBadge = document.createElement('div');
+                    pointsBadge.className = 'mini-match-status finished';
+                    pointsBadge.textContent = `+${totalPoints}`;
+                    card.appendChild(pointsBadge);
+                }
+            } else {
+                // Status icon
+                if (match.userPrediction) {
+                    const statusIcon = document.createElement('div');
+                    statusIcon.className = 'mini-match-status predicted';
+                    statusIcon.textContent = '✓';
+                    card.appendChild(statusIcon);
+                }
+            }
+
+            // Click handler
+            if (!currentPlayer) {
+                card.onclick = () => {
+                    alert('Vui lòng đăng nhập để dự đoán!');
+                    openLoginModal();
+                };
+            } else if (match.status === 'finished' && match.actualScore) {
+                card.onclick = () => openResultsModal(match);
+            } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
+                card.onclick = () => openModal(match);
+            } else if (match.status === 'not-open') {
+                card.onclick = null;
+                card.style.cursor = 'default';
             }
 
             return card;
@@ -2643,13 +2940,90 @@
         }
 
         function renderScheduleMatches() {
-            const container = document.getElementById('scheduleMatches');
+            // Render all schedule page sections
+            renderScheduleUpcoming();
+            renderScheduleStats();
+            renderScheduleGroupStage();
+        }
+
+        function renderScheduleUpcoming() {
+            const container = document.getElementById('scheduleUpcomingMatches');
             if (!container) return;
             
             container.innerHTML = '';
             
+            // Filter: Open first, then pending (future), ordered by date
+            const upcoming = matches
+                .filter(m => m.status !== 'finished')
+                .sort((a, b) => {
+                    // Priority: open > pending
+                    if (a.status === 'open' && b.status !== 'open') return -1;
+                    if (a.status !== 'open' && b.status === 'open') return 1;
+                    // Then by date
+                    return a.date - b.date;
+                })
+                .slice(0, 10); // Show top 10
+            
+            if (upcoming.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Không có trận sắp diễn ra</p>';
+                return;
+            }
+            
+            upcoming.forEach(match => {
+                container.appendChild(renderMiniMatchCard(match));
+            });
+        }
+
+        function renderScheduleStats() {
+            const finished = matches.filter(m => m.status === 'finished').length;
+            const remaining = matches.length - finished;
+            
+            // Count predictions in current group
+            let totalPredictions = 0;
+            if (currentPlayer && groupId) {
+                totalPredictions = Object.keys(myPredictions).length;
+            }
+            
+            document.getElementById('statsFinished').textContent = finished;
+            document.getElementById('statsRemaining').textContent = remaining;
+            document.getElementById('statsPredictions').textContent = totalPredictions;
+        }
+
+        function renderScheduleGroupStage() {
+            const container = document.getElementById('scheduleGroupStage');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Group matches by match_group
+            const groups = {};
             matches.forEach(match => {
-                container.appendChild(renderMatchCard(match));
+                const group = match.match_group || match.group || 'Other';
+                if (!groups[group]) groups[group] = [];
+                groups[group].push(match);
+            });
+            
+            // Render each group
+            Object.keys(groups).sort().forEach(groupName => {
+                const groupMatches = groups[groupName].sort((a, b) => a.date - b.date);
+                
+                const groupCard = document.createElement('div');
+                groupCard.className = 'group-card';
+                
+                const title = document.createElement('div');
+                title.className = 'group-card-title';
+                title.textContent = `Bảng ${groupName}`;
+                groupCard.appendChild(title);
+                
+                const matchesList = document.createElement('div');
+                matchesList.className = 'group-matches-list';
+                
+                groupMatches.forEach(match => {
+                    matchesList.appendChild(renderMiniMatchCard(match));
+                });
+                
+                groupCard.appendChild(matchesList);
+                container.appendChild(groupCard);
             });
         }
 
@@ -2725,6 +3099,186 @@
                     <div class="stat-label">🥇 NHẤT</div>
                 </div>
             `;
+        }
+
+        function renderLeaderboardUserStats() {
+            const section = document.getElementById('currentUserStatsSection');
+            if (!section) return;
+            
+            if (!currentPlayer) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            
+            const userStats = leaderboardData.find(p => p.id === currentPlayer.id);
+            
+            if (!userStats) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            // Update stats cards
+            document.getElementById('userRank').textContent = userStats.rank;
+            document.getElementById('userPoints').textContent = userStats.points;
+            document.getElementById('userExactScores').textContent = userStats.exactScore;
+            document.getElementById('userTop1Count').textContent = userStats.top1;
+            
+            // Render chart and recent matches
+            renderPerformanceChart();
+            renderRecentMatches();
+        }
+
+        function renderPerformanceChart() {
+            const canvas = document.getElementById('chartCanvas');
+            if (!canvas || !currentPlayer) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Calculate cumulative points per match (vòng)
+            const finishedMatches = matches
+                .filter(m => m.status === 'finished' && m.actualScore)
+                .sort((a, b) => a.date - b.date);
+            
+            if (finishedMatches.length === 0) {
+                ctx.fillStyle = '#6B7280';
+                ctx.font = '14px Montserrat';
+                ctx.textAlign = 'center';
+                ctx.fillText('Chưa có dữ liệu', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+            
+            // Build data for user and top 1
+            const userCumulative = [];
+            const top1Cumulative = [];
+            const rounds = [];
+            
+            let userTotal = 0;
+            let top1Total = 0;
+            const top1Player = leaderboardData[0]; // Current top 1
+            
+            finishedMatches.forEach((match, index) => {
+                const userPred = match.userPrediction;
+                const userPoints = match.points ? ((match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0)) : 0;
+                
+                userTotal += userPoints;
+                userCumulative.push(userTotal);
+                
+                // Top 1 player points for this match
+                // Note: We don't have their predictions in this data structure
+                // So we'll approximate based on their total
+                top1Total += (top1Player.points / finishedMatches.length); // Average distribution
+                top1Cumulative.push(Math.round(top1Total));
+                
+                rounds.push(index + 1);
+            });
+            
+            // Simple chart drawing (last 10 rounds)
+            const displayRounds = rounds.slice(-10);
+            const displayUserData = userCumulative.slice(-10);
+            const displayTop1Data = top1Cumulative.slice(-10);
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Chart dimensions
+            const padding = 40;
+            const chartWidth = canvas.width - padding * 2;
+            const chartHeight = canvas.height - padding * 2;
+            
+            // Max values
+            const maxY = Math.max(...displayUserData, ...displayTop1Data);
+            const scaleY = chartHeight / (maxY || 1);
+            const scaleX = chartWidth / (displayRounds.length - 1 || 1);
+            
+            // Draw axes
+            ctx.strokeStyle = '#E5E7EB';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, padding + chartHeight);
+            ctx.lineTo(padding + chartWidth, padding + chartHeight);
+            ctx.stroke();
+            
+            // Draw lines
+            function drawLine(data, color) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                data.forEach((value, index) => {
+                    const x = padding + index * scaleX;
+                    const y = padding + chartHeight - value * scaleY;
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+                
+                // Draw points
+                ctx.fillStyle = color;
+                data.forEach((value, index) => {
+                    const x = padding + index * scaleX;
+                    const y = padding + chartHeight - value * scaleY;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+            
+            // Draw user line (blue)
+            drawLine(displayUserData, '#3B82F6');
+            
+            // Draw top1 line (green)
+            drawLine(displayTop1Data, '#10B981');
+            
+            // Labels
+            ctx.fillStyle = '#6B7280';
+            ctx.font = '12px Montserrat';
+            ctx.textAlign = 'center';
+            
+            // X-axis labels (rounds)
+            displayRounds.forEach((round, index) => {
+                const x = padding + index * scaleX;
+                const y = padding + chartHeight + 20;
+                ctx.fillText(round, x, y);
+            });
+            
+            // Legend
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#3B82F6';
+            ctx.fillRect(padding, 10, 12, 12);
+            ctx.fillStyle = '#1F2937';
+            ctx.fillText('Bạn', padding + 20, 20);
+            
+            ctx.fillStyle = '#10B981';
+            ctx.fillRect(padding + 80, 10, 12, 12);
+            ctx.fillStyle = '#1F2937';
+            ctx.fillText('Top 1', padding + 100, 20);
+        }
+
+        function renderRecentMatches() {
+            const container = document.getElementById('recentMatches');
+            if (!container || !currentPlayer) return;
+            
+            container.innerHTML = '';
+            
+            // Get recent 5 finished matches where user predicted
+            const recentFinished = matches
+                .filter(m => m.status === 'finished' && m.actualScore && m.userPrediction)
+                .sort((a, b) => b.date - a.date)
+                .slice(0, 5);
+            
+            if (recentFinished.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Chưa có lịch sử</p>';
+                return;
+            }
+            
+            recentFinished.forEach(match => {
+                container.appendChild(renderMiniMatchCard(match));
+            });
         }
 
         function renderStats() {
@@ -3288,6 +3842,14 @@
                     tab.classList.add('active');
                 }
             });
+            
+            // Trigger page-specific renders
+            if (pageId === 'schedule') {
+                renderScheduleMatches();
+            } else if (pageId === 'leaderboard') {
+                renderLeaderboard();
+                renderLeaderboardUserStats();
+            }
         }
 
         // ============================================
