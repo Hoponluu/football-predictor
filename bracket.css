@@ -20,6 +20,28 @@
     padding: 20px;
 }
 
+/* SVG Connector Layer */
+.bracket-connectors-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bracket-connector-path {
+    stroke: #E0E0E0;
+    stroke-width: 2;
+    fill: none;
+}
+
+.bracket-connector-path.highlighted {
+    stroke: #4ADE80;
+    stroke-width: 3;
+}
+
 /* Bracket Grid Layout */
 .bracket-grid {
     display: grid;
@@ -28,6 +50,8 @@
     gap: 40px;
     align-items: start;
     justify-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 /* Column positioning */
@@ -36,6 +60,8 @@
     flex-direction: column;
     gap: 20px;
     width: 100%;
+    position: relative;
+    z-index: 1;
 }
 
 /* R32 Columns (leftmost and rightmost) */

@@ -1,5 +1,5 @@
 // ============================================
-// KNOCKOUT BRACKET RENDER FUNCTION
+// KNOCKOUT BRACKET RENDER WITH CONNECTORS
 // ============================================
 
 function renderKnockoutBracket() {
@@ -46,48 +46,53 @@ function renderKnockoutBracket() {
     const leftSF = rounds.SF.slice(0, 1);    // First SF match on left
     const rightSF = rounds.SF.slice(1, 2);   // Second SF match on right
     
-    // Build bracket HTML
+    // Build bracket HTML with unique IDs for positioning
     container.innerHTML = `
         <div class="bracket-container">
             <div class="bracket-scroll-hint">← Vuốt để xem toàn bộ sơ đồ →</div>
             <div class="bracket-scroll-wrapper">
+                <!-- SVG Connector Layer -->
+                <svg class="bracket-connectors-svg" id="bracketConnectorsSvg">
+                    <!-- Connectors will be drawn here -->
+                </svg>
+                
                 <div class="bracket-grid">
                     <!-- R32 Left Column -->
-                    <div class="bracket-column r32-left">
-                        ${leftR32.map(m => renderBracketMatch(m, 'R32')).join('')}
+                    <div class="bracket-column r32-left" id="col-r32-left">
+                        ${leftR32.map((m, i) => renderBracketMatch(m, 'R32', `r32-l-${i}`)).join('')}
                     </div>
                     
                     <!-- R16 Left Column -->
-                    <div class="bracket-column r16-left">
-                        ${leftR16.map(m => renderBracketMatch(m, 'R16')).join('')}
+                    <div class="bracket-column r16-left" id="col-r16-left">
+                        ${leftR16.map((m, i) => renderBracketMatch(m, 'R16', `r16-l-${i}`)).join('')}
                     </div>
                     
                     <!-- QF Left Column -->
-                    <div class="bracket-column qf-left">
-                        ${leftQF.map(m => renderBracketMatch(m, 'QF')).join('')}
+                    <div class="bracket-column qf-left" id="col-qf-left">
+                        ${leftQF.map((m, i) => renderBracketMatch(m, 'QF', `qf-l-${i}`)).join('')}
                     </div>
                     
                     <!-- Center Column (SF Left + Final + 3rd + SF Right) -->
-                    <div class="bracket-column center">
-                        ${leftSF.map(m => renderBracketMatch(m, 'SF')).join('')}
-                        ${rounds.FINAL.map(m => renderBracketMatch(m, 'FINAL')).join('')}
-                        ${rounds['3RD'].map(m => renderBracketMatch(m, '3RD')).join('')}
-                        ${rightSF.map(m => renderBracketMatch(m, 'SF')).join('')}
+                    <div class="bracket-column center" id="col-center">
+                        ${leftSF.map((m, i) => renderBracketMatch(m, 'SF', `sf-l-${i}`)).join('')}
+                        ${rounds.FINAL.map((m, i) => renderBracketMatch(m, 'FINAL', `final-${i}`)).join('')}
+                        ${rounds['3RD'].map((m, i) => renderBracketMatch(m, '3RD', `third-${i}`)).join('')}
+                        ${rightSF.map((m, i) => renderBracketMatch(m, 'SF', `sf-r-${i}`)).join('')}
                     </div>
                     
                     <!-- QF Right Column -->
-                    <div class="bracket-column qf-right">
-                        ${rightQF.map(m => renderBracketMatch(m, 'QF')).join('')}
+                    <div class="bracket-column qf-right" id="col-qf-right">
+                        ${rightQF.map((m, i) => renderBracketMatch(m, 'QF', `qf-r-${i}`)).join('')}
                     </div>
                     
                     <!-- R16 Right Column -->
-                    <div class="bracket-column r16-right">
-                        ${rightR16.map(m => renderBracketMatch(m, 'R16')).join('')}
+                    <div class="bracket-column r16-right" id="col-r16-right">
+                        ${rightR16.map((m, i) => renderBracketMatch(m, 'R16', `r16-r-${i}`)).join('')}
                     </div>
                     
                     <!-- R32 Right Column -->
-                    <div class="bracket-column r32-right">
-                        ${rightR32.map(m => renderBracketMatch(m, 'R32')).join('')}
+                    <div class="bracket-column r32-right" id="col-r32-right">
+                        ${rightR32.map((m, i) => renderBracketMatch(m, 'R32', `r32-r-${i}`)).join('')}
                     </div>
                 </div>
             </div>
@@ -96,9 +101,12 @@ function renderKnockoutBracket() {
     
     // Add click handlers to bracket matches
     attachBracketMatchHandlers();
+    
+    // Draw connectors after DOM is ready
+    setTimeout(() => drawBracketConnectors(), 100);
 }
 
-function renderBracketMatch(match, roundLabel) {
+function renderBracketMatch(match, roundLabel, uniqueId) {
     if (!countries[match.home] || !countries[match.away]) {
         console.error(`Team not found: ${match.home} or ${match.away}`);
         return '';
@@ -176,7 +184,7 @@ function renderBracketMatch(match, roundLabel) {
     if (hasPrediction) matchClasses.push('user-predicted');
     
     return `
-        <div class="${matchClasses.join(' ')}" data-match-id="${match.id}">
+        <div class="${matchClasses.join(' ')}" data-match-id="${match.id}" id="match-${uniqueId}">
             <div class="bracket-match-header">
                 <div class="bracket-match-date">${dateStr}</div>
                 <div class="bracket-match-round">${roundLabels[roundLabel] || roundLabel}</div>
@@ -207,6 +215,107 @@ function renderBracketMatch(match, roundLabel) {
     `;
 }
 
+function drawBracketConnectors() {
+    const svg = document.getElementById('bracketConnectorsSvg');
+    if (!svg) return;
+    
+    // Clear existing connectors
+    svg.innerHTML = '';
+    
+    // Define connector mappings (which matches connect to which)
+    const connections = [
+        // R32 Left -> R16 Left
+        { from: ['match-r32-l-0', 'match-r32-l-1'], to: 'match-r16-l-0' },
+        { from: ['match-r32-l-2', 'match-r32-l-3'], to: 'match-r16-l-1' },
+        { from: ['match-r32-l-4', 'match-r32-l-5'], to: 'match-r16-l-2' },
+        { from: ['match-r32-l-6', 'match-r32-l-7'], to: 'match-r16-l-3' },
+        
+        // R16 Left -> QF Left
+        { from: ['match-r16-l-0', 'match-r16-l-1'], to: 'match-qf-l-0' },
+        { from: ['match-r16-l-2', 'match-r16-l-3'], to: 'match-qf-l-1' },
+        
+        // QF Left -> SF Left
+        { from: ['match-qf-l-0', 'match-qf-l-1'], to: 'match-sf-l-0' },
+        
+        // R32 Right -> R16 Right
+        { from: ['match-r32-r-0', 'match-r32-r-1'], to: 'match-r16-r-0' },
+        { from: ['match-r32-r-2', 'match-r32-r-3'], to: 'match-r16-r-1' },
+        { from: ['match-r32-r-4', 'match-r32-r-5'], to: 'match-r16-r-2' },
+        { from: ['match-r32-r-6', 'match-r32-r-7'], to: 'match-r16-r-3' },
+        
+        // R16 Right -> QF Right
+        { from: ['match-r16-r-0', 'match-r16-r-1'], to: 'match-qf-r-0' },
+        { from: ['match-r16-r-2', 'match-r16-r-3'], to: 'match-qf-r-1' },
+        
+        // QF Right -> SF Right
+        { from: ['match-qf-r-0', 'match-qf-r-1'], to: 'match-sf-r-0' },
+        
+        // SF -> Final
+        { from: ['match-sf-l-0', 'match-sf-r-0'], to: 'match-final-0' }
+    ];
+    
+    // Draw each connection
+    connections.forEach(conn => {
+        drawConnector(svg, conn.from, conn.to);
+    });
+}
+
+function drawConnector(svg, fromIds, toId) {
+    // Get elements
+    const from1 = document.getElementById(fromIds[0]);
+    const from2 = document.getElementById(fromIds[1]);
+    const to = document.getElementById(toId);
+    
+    if (!from1 || !from2 || !to) {
+        console.warn('Connector elements not found:', fromIds, toId);
+        return;
+    }
+    
+    // Get positions relative to SVG container
+    const svgRect = svg.getBoundingClientRect();
+    const from1Rect = from1.getBoundingClientRect();
+    const from2Rect = from2.getBoundingClientRect();
+    const toRect = to.getBoundingClientRect();
+    
+    // Calculate positions
+    const from1X = from1Rect.right - svgRect.left;
+    const from1Y = from1Rect.top + from1Rect.height / 2 - svgRect.top;
+    
+    const from2X = from2Rect.right - svgRect.left;
+    const from2Y = from2Rect.top + from2Rect.height / 2 - svgRect.top;
+    
+    const toX = toRect.left - svgRect.left;
+    const toY = toRect.top + toRect.height / 2 - svgRect.top;
+    
+    // Calculate middle point
+    const midY = (from1Y + from2Y) / 2;
+    const connectorWidth = 30; // Width of connector
+    const midX = from1X + connectorWidth;
+    
+    // Create SVG path using the provided structure
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    
+    const pathData = `
+        M ${from1X} ${from1Y}
+        H ${midX - 8}
+        C ${midX - 4} ${from1Y} ${midX} ${from1Y + 4} ${midX} ${from1Y + 8}
+        V ${midY}
+        
+        M ${from2X} ${from2Y}
+        H ${midX - 8}
+        C ${midX - 4} ${from2Y} ${midX} ${from2Y - 4} ${midX} ${from2Y - 8}
+        V ${midY}
+        
+        M ${midX} ${midY}
+        H ${toX}
+    `.trim().replace(/\s+/g, ' ');
+    
+    path.setAttribute('d', pathData);
+    path.setAttribute('class', 'bracket-connector-path');
+    
+    svg.appendChild(path);
+}
+
 function attachBracketMatchHandlers() {
     const bracketMatches = document.querySelectorAll('.bracket-match');
     
@@ -231,16 +340,6 @@ function attachBracketMatchHandlers() {
             card.style.cursor = 'default';
         }
     });
-}
-
-// Update renderScheduleMatches to call bracket render
-// Modify the existing function:
-function renderScheduleMatchesUpdated() {
-    // Render all schedule sections
-    renderScheduleUpcoming();
-    renderScheduleStats();
-    renderScheduleGroupStageOnly(); // New function - only groups
-    renderKnockoutBracket();        // New function - bracket
 }
 
 // New function: Only render group stage (A-L)
