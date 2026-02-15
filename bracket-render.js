@@ -6,9 +6,9 @@ function renderKnockoutBracket() {
     const container = document.getElementById('scheduleKnockout');
     if (!container) return;
     
-    // Filter knockout matches
+    // Filter knockout matches - Use m.group (not m.match_group!)
     const knockoutMatches = matches.filter(m => 
-        ['R32', 'R16', 'QF', 'SF', '3RD', 'FINAL'].includes(m.match_group)
+        ['R32', 'R16', 'QF', 'SF', '3RD', 'FINAL'].includes(m.group || m.match_group)
     );
     
     if (knockoutMatches.length === 0) {
@@ -23,14 +23,14 @@ function renderKnockoutBracket() {
         return;
     }
     
-    // Group matches by round
+    // Group matches by round - Use m.group (not m.match_group!)
     const rounds = {
-        R32: knockoutMatches.filter(m => m.match_group === 'R32').sort((a, b) => a.date - b.date),
-        R16: knockoutMatches.filter(m => m.match_group === 'R16').sort((a, b) => a.date - b.date),
-        QF: knockoutMatches.filter(m => m.match_group === 'QF').sort((a, b) => a.date - b.date),
-        SF: knockoutMatches.filter(m => m.match_group === 'SF').sort((a, b) => a.date - b.date),
-        '3RD': knockoutMatches.filter(m => m.match_group === '3RD'),
-        FINAL: knockoutMatches.filter(m => m.match_group === 'FINAL')
+        R32: knockoutMatches.filter(m => (m.group || m.match_group) === 'R32').sort((a, b) => a.date - b.date),
+        R16: knockoutMatches.filter(m => (m.group || m.match_group) === 'R16').sort((a, b) => a.date - b.date),
+        QF: knockoutMatches.filter(m => (m.group || m.match_group) === 'QF').sort((a, b) => a.date - b.date),
+        SF: knockoutMatches.filter(m => (m.group || m.match_group) === 'SF').sort((a, b) => a.date - b.date),
+        '3RD': knockoutMatches.filter(m => (m.group || m.match_group) === '3RD'),
+        FINAL: knockoutMatches.filter(m => (m.group || m.match_group) === 'FINAL')
     };
     
     // Split matches into left and right brackets
@@ -252,14 +252,14 @@ function renderScheduleGroupStageOnly() {
     
     // Group matches by match_group - ONLY GROUP STAGE
     const groupStageMatches = matches.filter(m => {
-        const group = m.match_group || m.group || '';
+        const group = m.group || m.match_group || '';  // Prioritize m.group
         // Only include A-L groups (single letter or "GROUP X" format)
         return /^[A-L]$/.test(group) || /^GROUP [A-L]$/i.test(group) || /^Bảng [A-L]$/i.test(group);
     });
     
     const groups = {};
     groupStageMatches.forEach(match => {
-        const group = match.match_group || match.group || 'Other';
+        const group = match.group || match.match_group || 'Other';  // Prioritize m.group
         if (!groups[group]) groups[group] = [];
         groups[group].push(match);
     });
