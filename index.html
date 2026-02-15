@@ -2671,11 +2671,28 @@
             if (match.status === 'finished' && match.actualScore) {
                 const score = document.createElement('div');
                 score.className = 'match-score';
-                score.innerHTML = `
-                    <span class="score-number">${match.actualScore.homeScore}</span>
-                    <span class="score-minute">${match.actualScore.minute}'</span>
-                    <span class="score-number">${match.actualScore.awayScore}</span>
-                `;
+                
+                // Check if match has penalty shootout
+                const hasPenalty = match.actualScore.home_penalty !== null && 
+                                  match.actualScore.home_penalty !== undefined &&
+                                  match.actualScore.away_penalty !== null &&
+                                  match.actualScore.away_penalty !== undefined;
+                
+                if (hasPenalty) {
+                    // Display with penalty
+                    score.innerHTML = `
+                        <span class="score-number">${match.actualScore.homeScore}(${match.actualScore.home_penalty})</span>
+                        <span class="score-minute">${match.actualScore.minute}'</span>
+                        <span class="score-number">${match.actualScore.awayScore}(${match.actualScore.away_penalty})</span>
+                    `;
+                } else {
+                    // Display without penalty (regular)
+                    score.innerHTML = `
+                        <span class="score-number">${match.actualScore.homeScore}</span>
+                        <span class="score-minute">${match.actualScore.minute}'</span>
+                        <span class="score-number">${match.actualScore.awayScore}</span>
+                    `;
+                }
                 card.appendChild(score);
 
                 const result = document.createElement('div');
@@ -2791,11 +2808,28 @@
             if (isFinished) {
                 const score = document.createElement('div');
                 score.className = 'mini-match-score';
-                score.innerHTML = `
-                    <span>${match.actualScore.homeScore}(${match.actualScore.homeScoreDetail || match.actualScore.homeScore})</span>
-                    <span class="mini-match-score-minute">${match.actualScore.minute}'</span>
-                    <span>${match.actualScore.awayScore}(${match.actualScore.awayScoreDetail || match.actualScore.awayScore})</span>
-                `;
+                
+                // Check if match has penalty shootout
+                const hasPenalty = match.actualScore.home_penalty !== null && 
+                                  match.actualScore.home_penalty !== undefined &&
+                                  match.actualScore.away_penalty !== null &&
+                                  match.actualScore.away_penalty !== undefined;
+                
+                if (hasPenalty) {
+                    // Display with penalty: "1(4) 120' 1(2)"
+                    score.innerHTML = `
+                        <span>${match.actualScore.homeScore}(${match.actualScore.home_penalty})</span>
+                        <span class="mini-match-score-minute">${match.actualScore.minute}'</span>
+                        <span>${match.actualScore.awayScore}(${match.actualScore.away_penalty})</span>
+                    `;
+                } else {
+                    // Display without penalty: "2 85' 3"
+                    score.innerHTML = `
+                        <span>${match.actualScore.homeScore}</span>
+                        <span class="mini-match-score-minute">${match.actualScore.minute}'</span>
+                        <span>${match.actualScore.awayScore}</span>
+                    `;
+                }
                 card.appendChild(score);
 
                 // Points badge if user predicted
@@ -3520,8 +3554,19 @@
             document.getElementById('resultsHomeName').textContent = match.home;
             document.getElementById('resultsAwayName').textContent = match.away;
             
-            document.getElementById('resultsHomeScore').textContent = match.actualScore.homeScore;
-            document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
+            // Display scores with penalty support
+            const hasPenalty = match.actualScore.home_penalty !== null && 
+                              match.actualScore.home_penalty !== undefined &&
+                              match.actualScore.away_penalty !== null &&
+                              match.actualScore.away_penalty !== undefined;
+            
+            if (hasPenalty) {
+                document.getElementById('resultsHomeScore').textContent = `${match.actualScore.homeScore}(${match.actualScore.home_penalty})`;
+                document.getElementById('resultsAwayScore').textContent = `${match.actualScore.awayScore}(${match.actualScore.away_penalty})`;
+            } else {
+                document.getElementById('resultsHomeScore').textContent = match.actualScore.homeScore;
+                document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
+            }
             document.getElementById('resultsMinute').textContent = `${match.actualScore.minute}'`;
             
             // Load all predictions for this match from all players in group
