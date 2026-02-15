@@ -117,8 +117,8 @@
     border: 2px dashed var(--stroke);
 }
 
-/* Match Date/Time */
-.match-date-time {
+/* Match Date/Time - SCOPED TO SIMPLE-MATCH ONLY */
+.simple-match .match-date-time {
     display: flex;
     justify-content: space-between;
     font-size: 11px;
@@ -128,14 +128,14 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
-/* Match Teams */
-.match-teams {
+/* Match Teams - SCOPED TO SIMPLE-MATCH ONLY */
+.simple-match .match-teams {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.match-teams .team {
+.simple-match .match-teams .team {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -144,12 +144,12 @@
     transition: background 0.2s;
 }
 
-.match-teams .team.winner {
+.simple-match .match-teams .team.winner {
     background: rgba(74, 222, 128, 0.1);
     font-weight: 600;
 }
 
-.match-teams .team .flag {
+.simple-match .match-teams .team .flag {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -160,7 +160,7 @@
     flex-shrink: 0;
 }
 
-.match-teams .team .name {
+.simple-match .match-teams .team .name {
     flex: 1;
     font-size: 13px;
     font-weight: 500;
@@ -169,7 +169,7 @@
     text-overflow: ellipsis;
 }
 
-.match-teams .team .score {
+.simple-match .match-teams .team .score {
     font-size: 16px;
     font-weight: 700;
     min-width: 24px;
