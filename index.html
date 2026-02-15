@@ -81,13 +81,13 @@
 
         <!-- Lịch thi đấu Page -->
         <div id="schedule" class="page-content">
-            <!-- Trận sắp diễn ra - Priority Open then Pending -->
+            <!-- Trận sắp diễn ra - BIG CARDS like Home -->
             <section class="section">
                 <div class="section-header">
                     <h2 class="section-title">🏟️ TRẬN ĐẤU SẮP DIỄN RA</h2>
                 </div>
-                <div id="scheduleUpcomingMatches" style="display: flex; flex-direction: column; gap: 8px;">
-                    <!-- MiniCards will be rendered here -->
+                <div class="matches-scroll" id="scheduleUpcomingMatches">
+                    <!-- Big match cards will be rendered here -->
                 </div>
             </section>
 
@@ -126,6 +126,16 @@
                     <p style="text-align: center; color: var(--text-light); padding: 40px;">
                         Bracket knockout sẽ được hiển thị khi có trận loại trực tiếp
                     </p>
+                </div>
+            </section>
+            
+            <!-- Lịch sử - Finished Matches -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📊 NHỮNG TRẬN ĐÃ DIỄN RA</h2>
+                </div>
+                <div class="matches-scroll" id="scheduleHistoryMatches">
+                    <!-- Big match cards for finished matches -->
                 </div>
             </section>
         </div>
@@ -1608,6 +1618,7 @@
             renderScheduleStats();
             renderScheduleGroupStageOnly();  // From bracket-render.js - Groups A-L only
             renderKnockoutBracket();         // From bracket-render.js - Bracket tree
+            renderScheduleHistory();         // Finished matches section
         }
 
         function renderScheduleUpcoming() {
@@ -1633,8 +1644,31 @@
                 return;
             }
             
+            // Use BIG match cards like Home page
             upcoming.forEach(match => {
-                container.appendChild(renderMiniMatchCard(match));
+                container.appendChild(renderMatchCard(match));
+            });
+        }
+        
+        function renderScheduleHistory() {
+            const container = document.getElementById('scheduleHistoryMatches');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Show finished matches, most recent first
+            const history = matches
+                .filter(m => m.status === 'finished')
+                .sort((a, b) => b.date - a.date) // Most recent first
+                .slice(0, 10); // Show top 10
+            
+            if (history.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Chưa có trận đấu nào kết thúc</p>';
+                return;
+            }
+            
+            history.forEach(match => {
+                container.appendChild(renderMatchCard(match));
             });
         }
 
