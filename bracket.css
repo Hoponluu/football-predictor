@@ -42,60 +42,71 @@
     stroke-width: 3;
 }
 
-/* Bracket Grid Layout */
+/* Bracket Grid Layout - TOP/BOTTOM QUADRANT STRUCTURE */
 .bracket-grid {
     display: grid;
-    grid-template-columns: 200px 200px 200px 1fr 200px 200px 200px;
-    grid-template-rows: auto;
-    gap: 40px;
-    align-items: start;
+    grid-template-columns: 200px 200px 200px 200px 200px 200px 200px;
+    grid-template-rows: auto 60px auto;
+    gap: 20px 40px;
+    align-items: center;
     justify-items: center;
     position: relative;
     z-index: 1;
+}
+
+/* Row positioning */
+.bracket-row {
+    display: contents;
+}
+
+.bracket-row.top {
+    grid-row: 1;
+}
+
+.bracket-row.center {
+    grid-row: 2;
+}
+
+.bracket-row.bottom {
+    grid-row: 3;
 }
 
 /* Column positioning */
 .bracket-column {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
     position: relative;
     z-index: 1;
 }
 
+/* Column assignments */
+.bracket-column.col-1 { grid-column: 1; }
+.bracket-column.col-2 { grid-column: 2; }
+.bracket-column.col-3 { grid-column: 3; }
+.bracket-column.col-4 { grid-column: 4; }
+.bracket-column.col-5 { grid-column: 5; }
+.bracket-column.col-6 { grid-column: 6; }
+.bracket-column.col-7 { grid-column: 7; }
+
 /* R32 Columns (leftmost and rightmost) */
-.bracket-column.r32-left,
-.bracket-column.r32-right {
-    gap: 12px; /* Tighter spacing for many matches */
+.bracket-column.col-1,
+.bracket-column.col-7 {
+    gap: 12px; /* Tighter spacing for R32 matches */
 }
 
 /* R16 Columns */
-.bracket-column.r16-left,
-.bracket-column.r16-right {
-    gap: 48px; /* More spacing as matches reduce */
+.bracket-column.col-2,
+.bracket-column.col-6 {
+    gap: 16px;
 }
 
-/* QF Columns */
-.bracket-column.qf-left,
-.bracket-column.qf-right {
-    gap: 100px; /* Even more spacing */
-}
-
-/* SF Columns */
-.bracket-column.sf-left,
-.bracket-column.sf-right {
-    gap: 200px; /* Maximum spacing for semis */
-}
-
-/* Center Column (Final + 3rd) */
-.bracket-column.center {
-    display: flex;
-    flex-direction: column;
-    gap: 40px;
-    align-items: center;
-    justify-content: center;
-    min-height: 600px;
+/* QF and SF Columns */
+.bracket-column.col-3,
+.bracket-column.col-4,
+.bracket-column.col-5 {
+    gap: 20px;
 }
 
 /* Bracket Match Card */
