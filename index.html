@@ -154,9 +154,10 @@
                             <th>Hạng</th>
                             <th>Người chơi</th>
                             <th>Điểm</th>
+                            <th>⭐</th>
                             <th>Top 1</th>
                             <th>Đúng tỉ số</th>
-                            <th>Đúng số phút</th>
+                            <th>Đúng phút</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboardTable">
@@ -701,6 +702,8 @@
               .select(`
                 id,
                 name,
+                favorite_team,
+                favorite_points,
                 predictions (
                   total_points,
                   points_rank,
@@ -709,20 +712,25 @@
                 )
               `)
               .eq('group_id', groupId);
-            
+
             if (error) throw error;
-            
+
             const leaderboard = players.map(player => {
               const predictions = player.predictions || [];
-              const totalPoints = predictions.reduce((sum, p) => sum + (p.total_points || 0), 0);
+              const predictionPoints = predictions.reduce((sum, p) => sum + (p.total_points || 0), 0);
+              const favPoints = player.favorite_points || 0;
+              const totalPoints = predictionPoints + favPoints;
               const top1Count = predictions.filter(p => p.points_rank === 4).length;
               const exactScoreCount = predictions.filter(p => p.points_exact_score > 0).length;
               const exactMinuteCount = predictions.filter(p => p.points_minute > 0).length;
-              
+
               return {
                 id: player.id,
                 name: player.name,
                 points: totalPoints,
+                predictionPoints: predictionPoints,
+                favPoints: favPoints,
+                favoriteTeam: player.favorite_team,
                 top1: top1Count,
                 exactScore: exactScoreCount,
                 exactMinute: exactMinuteCount
@@ -1792,11 +1800,16 @@
                 const isCurrentUser = currentPlayer && player.id === currentPlayer.id;
                 const rowClass = isCurrentUser ? 'style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-left: 4px solid #F59E0B; font-weight: 600;"' : '';
                 
+                const favDisplay = player.favPoints > 0
+                    ? `<span style="color: #059669; font-weight: 600;">+${player.favPoints}</span>`
+                    : '<span style="color: #D1D5DB;">0</span>';
+
                 html += `
                     <tr ${rowClass}>
                         <td><span class="rank-badge ${rankClass}">${player.rank}</span></td>
                         <td><span class="player-name">${player.name}${isCurrentUser ? ' (Bạn)' : ''}</span></td>
                         <td><strong>${player.points}</strong></td>
+                        <td>${favDisplay}</td>
                         <td>${player.top1}</td>
                         <td>${player.exactScore}</td>
                         <td>${player.exactMinute}</td>
@@ -1804,7 +1817,7 @@
                 `;
             });
 
-            if (tbody) tbody.innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</td></tr>';
+            if (tbody) tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</td></tr>';
             if (preview) preview.innerHTML = html ? `<table class="leaderboard-table"><tbody>${html}</tbody></table>` : '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
         }
 

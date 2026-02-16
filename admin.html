@@ -964,9 +964,10 @@
                                     <th>Tên</th>
                                     <th>Email</th>
                                     <th>Nhóm</th>
-                                    <th>Điểm</th>
-                                    <th>Trận dự đoán</th>
-                                    <th>Top 1</th>
+                                    <th>Điểm DĐ</th>
+                                    <th>⭐ Fav</th>
+                                    <th>Tổng</th>
+                                    <th>Trận DĐ</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -1238,8 +1239,17 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h2 class="card-title">📋 Đội yêu thích của người chơi</h2>
+                        <button class="btn btn-primary" onclick="calculateAllFavoritePoints()" id="calcFavBtn">
+                            🔄 Tính điểm tự động
+                        </button>
+                    </div>
+                    <div class="alert info" style="margin: 0 16px;">
+                        <span class="alert-icon">ℹ️</span>
+                        <div class="alert-content">
+                            <div class="alert-text">Điểm được tính tự động dựa trên dữ liệu trận knockout. Nếu đội yêu thích xuất hiện (home/away) trong vòng tương ứng → cộng điểm. Đội thắng chung kết → cộng thêm điểm Vô địch.</div>
+                        </div>
                     </div>
                     <div class="table-wrapper">
                         <table class="table">
@@ -1247,13 +1257,18 @@
                                 <tr>
                                     <th>Người chơi</th>
                                     <th>Nhóm</th>
-                                    <th>Đội yêu thích</th>
-                                    <th>Thời gian chọn</th>
-                                    <th>Điểm hiện tại</th>
+                                    <th>Đội</th>
+                                    <th style="text-align:center">R32</th>
+                                    <th style="text-align:center">R16</th>
+                                    <th style="text-align:center">QF</th>
+                                    <th style="text-align:center">SF</th>
+                                    <th style="text-align:center">Final</th>
+                                    <th style="text-align:center">🏆</th>
+                                    <th style="text-align:center"><strong>Tổng</strong></th>
                                 </tr>
                             </thead>
                             <tbody id="favoritesTable">
-                                <tr><td colspan="5" class="loading"><div class="loading-spinner"></div><div>Đang tải...</div></td></tr>
+                                <tr><td colspan="10" class="loading"><div class="loading-spinner"></div><div>Đang tải...</div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2015,28 +2030,35 @@
 
         function renderPlayersTable() {
             const tbody = document.getElementById('playersTable');
-            
+
             if (allPlayers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Chưa có người chơi nào</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Chưa có người chơi nào</div></td></tr>';
                 return;
             }
-            
+
             let html = '';
             allPlayers.forEach(player => {
                 const groupName = player.groups?.name || 'N/A';
                 const playerPredictions = allPredictions.filter(p => p.player_id === player.id).length;
-                
-                // Use quotes for UUID strings
+                const predPts = player.total_points || 0;
+                const favPts = player.favorite_points || 0;
+                const totalPts = predPts + favPts;
+
                 const playerIdStr = `'${player.id}'`;
-                
+
+                const favTeamDisplay = player.favorite_team
+                    ? `<span title="${player.favorite_team}">${countries[player.favorite_team]?.flag || ''} ${favPts > 0 ? '+' + favPts : '0'}</span>`
+                    : '<span style="color:#D1D5DB;">-</span>';
+
                 html += `
                     <tr>
                         <td><strong>${player.name}</strong></td>
                         <td>${player.email}</td>
                         <td>${groupName}</td>
-                        <td><strong>${player.total_points || 0}</strong></td>
+                        <td>${predPts}</td>
+                        <td>${favTeamDisplay}</td>
+                        <td><strong>${totalPts}</strong></td>
                         <td>${playerPredictions}</td>
-                        <td>${player.top1_count || 0}</td>
                         <td>
                             <div class="action-btns">
                                 <button class="action-btn view" onclick="viewPlayerDetails(${playerIdStr})" title="Xem">👁️</button>
@@ -2047,7 +2069,7 @@
                     </tr>
                 `;
             });
-            
+
             tbody.innerHTML = html;
         }
 
@@ -2087,38 +2109,157 @@
             tbody.innerHTML = html;
         }
 
+        // ============================================
+        // FAVORITE TEAM POINTS - Auto-calculate from knockout matches
+        // Logic: If user's team appears in R32/R16/QF/SF/FINAL → award cumulative points
+        // If team WON the FINAL → also award champion points
+        // ============================================
+
+        function getTeamsInRound(roundKey) {
+            // Get all teams that appear in a specific knockout round
+            const roundMatches = allMatches.filter(m => m.match_group === roundKey);
+            const teams = new Set();
+            roundMatches.forEach(m => {
+                if (m.home_team) teams.add(m.home_team);
+                if (m.away_team) teams.add(m.away_team);
+            });
+            return teams;
+        }
+
+        function getChampionTeam() {
+            // Find the FINAL match(es) that are finished, determine the winner
+            const finalMatches = allMatches.filter(m => m.match_group === 'FINAL' && m.status === 'finished');
+            if (finalMatches.length === 0) return null;
+
+            const fm = finalMatches[0];
+            const hs = fm.home_penalty != null ? fm.home_penalty : fm.home_score;
+            const as = fm.away_penalty != null ? fm.away_penalty : fm.away_score;
+
+            if (hs > as) return fm.home_team;
+            if (as > hs) return fm.away_team;
+            return null; // draw shouldn't happen in final after penalties
+        }
+
+        function calculateFavPointsForTeam(teamName) {
+            // Calculate how many favorite team points this team has earned so far
+            const rules = scoringRules || {};
+            let total = 0;
+            const breakdown = { r32: 0, r16: 0, qf: 0, sf: 0, finals: 0, champion: 0 };
+
+            // Check each round
+            const roundMapping = [
+                { key: 'R32', field: 'fav_r32', breakdownKey: 'r32' },
+                { key: 'R16', field: 'fav_r16', breakdownKey: 'r16' },
+                { key: 'QF', field: 'fav_quarter', breakdownKey: 'qf' },
+                { key: 'SF', field: 'fav_semi', breakdownKey: 'sf' },
+                { key: 'FINAL', field: 'fav_finals', breakdownKey: 'finals' }
+            ];
+
+            for (const round of roundMapping) {
+                const teamsInRound = getTeamsInRound(round.key);
+                if (teamsInRound.has(teamName)) {
+                    const pts = rules[round.field] || 0;
+                    breakdown[round.breakdownKey] = pts;
+                    total += pts;
+                }
+            }
+
+            // Champion check
+            const champion = getChampionTeam();
+            if (champion === teamName) {
+                const pts = rules.fav_champion || 0;
+                breakdown.champion = pts;
+                total += pts;
+            }
+
+            return { total, breakdown };
+        }
+
         function renderFavoritesTable() {
             const tbody = document.getElementById('favoritesTable');
-            
+
             const playersWithFav = allPlayers.filter(p => p.favorite_team);
-            
+
             if (playersWithFav.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-icon">⭐</div><div class="empty-text">Chưa có ai chọn đội yêu thích</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><div class="empty-icon">⭐</div><div class="empty-text">Chưa có ai chọn đội yêu thích</div></td></tr>';
             } else {
                 let html = '';
+                playersWithFav.sort((a, b) => (b.favorite_points || 0) - (a.favorite_points || 0));
+
                 playersWithFav.forEach(player => {
                     const groupName = player.groups?.name || 'N/A';
-                    const selectedDate = player.favorite_selected_at 
-                        ? new Date(player.favorite_selected_at).toLocaleString('vi-VN')
-                        : 'N/A';
-                    
+                    const teamName = player.favorite_team;
+                    const teamData = countries[teamName];
+                    const flag = teamData ? teamData.flag : '🏴';
+
+                    // Calculate current points from match data
+                    const { total, breakdown } = calculateFavPointsForTeam(teamName);
+
+                    const cellStyle = (pts) => pts > 0
+                        ? 'text-align:center; color: #059669; font-weight: 700;'
+                        : 'text-align:center; color: #D1D5DB;';
+
                     html += `
                         <tr>
                             <td><strong>${player.name}</strong></td>
                             <td>${groupName}</td>
-                            <td>${player.favorite_team}</td>
-                            <td>${selectedDate}</td>
-                            <td>${player.favorite_points || 0} điểm</td>
+                            <td>${flag} ${teamName}</td>
+                            <td style="${cellStyle(breakdown.r32)}">${breakdown.r32 > 0 ? '+' + breakdown.r32 : '-'}</td>
+                            <td style="${cellStyle(breakdown.r16)}">${breakdown.r16 > 0 ? '+' + breakdown.r16 : '-'}</td>
+                            <td style="${cellStyle(breakdown.qf)}">${breakdown.qf > 0 ? '+' + breakdown.qf : '-'}</td>
+                            <td style="${cellStyle(breakdown.sf)}">${breakdown.sf > 0 ? '+' + breakdown.sf : '-'}</td>
+                            <td style="${cellStyle(breakdown.finals)}">${breakdown.finals > 0 ? '+' + breakdown.finals : '-'}</td>
+                            <td style="${cellStyle(breakdown.champion)}">${breakdown.champion > 0 ? '+' + breakdown.champion : '−'}</td>
+                            <td style="text-align:center; font-weight: 700; font-size: 16px; color: ${total > 0 ? '#059669' : '#9CA3AF'};">${total}</td>
                         </tr>
                     `;
                 });
-                
+
                 tbody.innerHTML = html;
             }
-            
+
             // Also render qualified and eliminated teams lists
             renderQualifiedTeamsList();
             renderEliminatedTeamsList();
+        }
+
+        async function calculateAllFavoritePoints() {
+            const btn = document.getElementById('calcFavBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang tính...';
+
+            try {
+                const playersWithFav = allPlayers.filter(p => p.favorite_team);
+                let updated = 0;
+
+                for (const player of playersWithFav) {
+                    const { total } = calculateFavPointsForTeam(player.favorite_team);
+
+                    // Only update if changed
+                    if ((player.favorite_points || 0) !== total) {
+                        const { error } = await supabase
+                            .from('players')
+                            .update({ favorite_points: total })
+                            .eq('id', player.id);
+
+                        if (error) {
+                            console.error(`Error updating ${player.name}:`, error);
+                        } else {
+                            player.favorite_points = total;
+                            updated++;
+                        }
+                    }
+                }
+
+                renderFavoritesTable();
+                alert(`✅ Đã cập nhật điểm cho ${updated} người chơi!`);
+            } catch (error) {
+                console.error('Calculate favorite points error:', error);
+                alert('Lỗi: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Tính điểm tự động';
+            }
         }
 
         // Page Navigation
