@@ -1,7 +1,6 @@
 // ============================================
-// SIMPLE TOURNAMENT BRACKET
-// Optimized for Supabase structure
-// home_team, away_team + countries object
+// BRACKET RENDER - FINAL FIX
+// Dùng actualScore.homeScore và actualScore.awayScore
 // ============================================
 
 function renderKnockoutBracket() {
@@ -33,13 +32,11 @@ function renderKnockoutBracket() {
         FINAL: knockoutMatches.filter(m => (m.group || m.match_group) === 'FINAL')
     };
     
-    // Simple HTML structure
     container.innerHTML = `
         <div class="tournament-bracket">
             <div class="bracket-hint">← Vuốt ngang để xem toàn bộ →</div>
             
             <div class="bracket-wrapper">
-                <!-- Round of 32 -->
                 <div class="bracket-round" data-round="r32">
                     <div class="round-title">Vòng 1/32</div>
                     <div class="round-matches">
@@ -47,7 +44,6 @@ function renderKnockoutBracket() {
                     </div>
                 </div>
                 
-                <!-- Round of 16 -->
                 <div class="bracket-round" data-round="r16">
                     <div class="round-title">Vòng 1/16</div>
                     <div class="round-matches">
@@ -55,7 +51,6 @@ function renderKnockoutBracket() {
                     </div>
                 </div>
                 
-                <!-- Quarter Finals -->
                 <div class="bracket-round" data-round="qf">
                     <div class="round-title">Tứ kết</div>
                     <div class="round-matches">
@@ -63,7 +58,6 @@ function renderKnockoutBracket() {
                     </div>
                 </div>
                 
-                <!-- Semi Finals -->
                 <div class="bracket-round" data-round="sf">
                     <div class="round-title">Bán kết</div>
                     <div class="round-matches">
@@ -71,7 +65,6 @@ function renderKnockoutBracket() {
                     </div>
                 </div>
                 
-                <!-- Finals -->
                 <div class="bracket-round final-round" data-round="final">
                     <div class="round-title">Chung kết</div>
                     <div class="round-matches">
@@ -87,11 +80,10 @@ function renderKnockoutBracket() {
 }
 
 function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false) {
-    // ✅ Dùng home_team và away_team từ Supabase
-    const homeTeam = match.home_team || match.home || 'TBD';
-    const awayTeam = match.away_team || match.away || 'TBD';
+    // ✅ Dùng match.home và match.away (theo console log)
+    const homeTeam = match.home || 'TBD';
+    const awayTeam = match.away || 'TBD';
     
-    // Check countries object
     if (!countries[homeTeam] || !countries[awayTeam]) {
         return '';
     }
@@ -181,18 +173,21 @@ function attachBracketMatchHandlers() {
 }
 
 // ============================================
-// ⭐ MINI MATCH CARD - OPTIMIZED FOR SUPABASE
+// ⭐ MINI MATCH CARD - FINAL FIX
 // ============================================
 function renderMiniMatchCard(match) {
-    // ✅ Dùng home_team và away_team từ Supabase
-    const homeTeam = match.home_team || 'TBD';
-    const awayTeam = match.away_team || 'TBD';
+    // ✅ Team names - dùng match.home và match.away (theo console)
+    const homeTeam = match.home || 'TBD';
+    const awayTeam = match.away || 'TBD';
     
-    // ✅ Lấy score từ Supabase (home_score, away_score)
-    const homeScore = match.home_score !== null && match.home_score !== undefined 
-                      ? match.home_score : '-';
-    const awayScore = match.away_score !== null && match.away_score !== undefined 
-                      ? match.away_score : '-';
+    // ✅ SCORES - Dùng actualScore object (theo console log!)
+    let homeScore = '-';
+    let awayScore = '-';
+    
+    if (match.actualScore && match.actualScore.homeScore !== undefined) {
+        homeScore = match.actualScore.homeScore;
+        awayScore = match.actualScore.awayScore;
+    }
     
     // ✅ Lấy flag và color từ countries object
     const homeData = countries[homeTeam] || { flag: '🏴', color: '#f0f0f0' };
@@ -207,7 +202,7 @@ function renderMiniMatchCard(match) {
     const timeStr = `${hours}:${minutes}`;
     
     // User points
-    const userPoints = match.user_points || 0;
+    const userPoints = match.points || 0;
     const hasPrediction = match.userPrediction || userPoints > 0;
     
     // Create card element
@@ -250,7 +245,6 @@ function renderMiniMatchCard(match) {
         card.onclick = null;
         card.style.cursor = 'default';
     } else {
-        // Default click handler
         card.onclick = () => openModal(match);
     }
     
@@ -288,7 +282,7 @@ function renderScheduleGroupStageOnly() {
         title.textContent = `Bảng ${groupName.replace(/^GROUP /i, '').replace(/^Bảng /i, '')}`;
         groupCard.appendChild(title);
         
-        // Matches in columns (2 matches per column)
+        // Matches in columns
         const matchesGrid = document.createElement('div');
         matchesGrid.className = 'compact-group-grid';
         
