@@ -1,6 +1,6 @@
 // ============================================
-// BRACKET RENDER - FINAL FIX
-// Dùng actualScore.homeScore và actualScore.awayScore
+// BRACKET RENDER - CORRECT FIX
+// Dùng match.home_score và match.away_score (CÓ UNDERSCORE)
 // ============================================
 
 function renderKnockoutBracket() {
@@ -80,7 +80,6 @@ function renderKnockoutBracket() {
 }
 
 function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false) {
-    // ✅ Dùng match.home và match.away (theo console log)
     const homeTeam = match.home || 'TBD';
     const awayTeam = match.away || 'TBD';
     
@@ -173,23 +172,21 @@ function attachBracketMatchHandlers() {
 }
 
 // ============================================
-// ⭐ MINI MATCH CARD - FINAL FIX
+// ⭐ MINI MATCH CARD - CORRECT FIX
+// Dùng match.home_score và match.away_score (CÓ UNDERSCORE!)
 // ============================================
 function renderMiniMatchCard(match) {
-    // ✅ Team names - dùng match.home và match.away (theo console)
+    // Team names
     const homeTeam = match.home || 'TBD';
     const awayTeam = match.away || 'TBD';
     
-    // ✅ SCORES - Dùng actualScore object (theo console log!)
-    let homeScore = '-';
-    let awayScore = '-';
+    // ✅ CORRECT: Dùng home_score và away_score (CÓ UNDERSCORE!)
+    const homeScore = match.home_score !== null && match.home_score !== undefined 
+                      ? match.home_score : '-';
+    const awayScore = match.away_score !== null && match.away_score !== undefined 
+                      ? match.away_score : '-';
     
-    if (match.actualScore && match.actualScore.homeScore !== undefined) {
-        homeScore = match.actualScore.homeScore;
-        awayScore = match.actualScore.awayScore;
-    }
-    
-    // ✅ Lấy flag và color từ countries object
+    // Lấy flag và color từ countries object
     const homeData = countries[homeTeam] || { flag: '🏴', color: '#f0f0f0' };
     const awayData = countries[awayTeam] || { flag: '🏴', color: '#f0f0f0' };
     
