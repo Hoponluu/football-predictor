@@ -1295,7 +1295,31 @@
                 
                 <div class="form-group">
                     <label class="form-label">Bảng đấu</label>
-                    <input type="text" class="form-input" id="matchGroup" placeholder="VD: Bảng A, Vòng 1/8, Tứ kết...">
+                    <select class="form-select" id="matchGroup">
+                        <option value="">Chọn bảng/vòng đấu</option>
+                        <optgroup label="Vòng bảng">
+                            <option value="A">Bảng A</option>
+                            <option value="B">Bảng B</option>
+                            <option value="C">Bảng C</option>
+                            <option value="D">Bảng D</option>
+                            <option value="E">Bảng E</option>
+                            <option value="F">Bảng F</option>
+                            <option value="G">Bảng G</option>
+                            <option value="H">Bảng H</option>
+                            <option value="I">Bảng I</option>
+                            <option value="J">Bảng J</option>
+                            <option value="K">Bảng K</option>
+                            <option value="L">Bảng L</option>
+                        </optgroup>
+                        <optgroup label="Vòng loại trực tiếp">
+                            <option value="R32">Vòng 1/32</option>
+                            <option value="R16">Vòng 1/16</option>
+                            <option value="QF">Tứ kết</option>
+                            <option value="SF">Bán kết</option>
+                            <option value="3RD">Tranh hạng 3</option>
+                            <option value="FINAL">Chung kết</option>
+                        </optgroup>
+                    </select>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -2564,7 +2588,8 @@
             'Costa Rica': { flag: '🇨🇷', color: '#002B7F' },
             'Serbia': { flag: '🇷🇸', color: '#C6363C' },
             'Cameroon': { flag: '🇨🇲', color: '#007A5E' },
-            'Nigeria': { flag: '🇳🇬', color: '#008751' }
+            'Nigeria': { flag: '🇳🇬', color: '#008751' },
+            'TBU': { flag: '🏴', color: '#E5E7EB' }
         };
 
         // ============================================
@@ -2663,8 +2688,7 @@
             const matchData = {
                 home_team: homeTeam,
                 away_team: awayTeam,
-                match_group: group || '',  // Use match_group (database column)
-                group_name: group || '',   // Also set group_name for compatibility
+                match_group: group || '',
                 match_date: matchDate.toISOString(),
                 status: status
             };
