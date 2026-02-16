@@ -1030,7 +1030,9 @@
                     actualScore: m.status === 'finished' ? {
                         homeScore: m.home_score,
                         awayScore: m.away_score,
-                        minute: m.minute
+                        minute: m.minute,
+                        home_penalty: m.home_penalty ?? null,
+                        away_penalty: m.away_penalty ?? null
                     } : null,
                     userPrediction: null, // Will be loaded after login
                     points: null
@@ -1433,8 +1435,8 @@
             let awayIsLoser = false;
             
             if (isFinished) {
-                const homeScore = match.actualScore.home_penalty !== null ? match.actualScore.home_penalty : match.actualScore.homeScore;
-                const awayScore = match.actualScore.away_penalty !== null ? match.actualScore.away_penalty : match.actualScore.awayScore;
+                const homeScore = match.actualScore.home_penalty != null ? match.actualScore.home_penalty : match.actualScore.homeScore;
+                const awayScore = match.actualScore.away_penalty != null ? match.actualScore.away_penalty : match.actualScore.awayScore;
                 homeIsLoser = homeScore < awayScore;
                 awayIsLoser = awayScore < homeScore;
             }
@@ -1464,9 +1466,9 @@
                 const score = document.createElement('div');
                 score.className = 'mini-match-score';
                 
-                const homeScore = match.actualScore.home_penalty !== null ? match.actualScore.home_penalty : match.actualScore.homeScore;
-                const awayScore = match.actualScore.away_penalty !== null ? match.actualScore.away_penalty : match.actualScore.awayScore;
-                
+                const homeScore = match.actualScore.home_penalty != null ? match.actualScore.home_penalty : match.actualScore.homeScore;
+                const awayScore = match.actualScore.away_penalty != null ? match.actualScore.away_penalty : match.actualScore.awayScore;
+
                 score.innerHTML = `
                     <span>${homeScore}</span>
                     <span>${awayScore}</span>
