@@ -1412,7 +1412,7 @@
             const homeData = countries[match.home];
             const awayData = countries[match.away];
 
-            // DateTime section
+            // DateTime header - horizontal layout with soccer icon
             const datetime = document.createElement('div');
             datetime.className = 'mini-match-datetime';
             const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' });
@@ -1423,54 +1423,54 @@
             `;
             card.appendChild(datetime);
 
-            // Teams section
+            // Teams section - vertical stack
             const teams = document.createElement('div');
             teams.className = 'mini-teams';
 
-            // Determine if match is finished and who lost (for opacity)
+            // Determine if match is finished and who lost
             const isFinished = match.status === 'finished' && match.actualScore;
-            const homeIsLoser = isFinished && match.actualScore.homeScore < match.actualScore.awayScore;
-            const awayIsLoser = isFinished && match.actualScore.awayScore < match.actualScore.homeScore;
+            let homeIsLoser = false;
+            let awayIsLoser = false;
+            
+            if (isFinished) {
+                const homeScore = match.actualScore.home_penalty !== null ? match.actualScore.home_penalty : match.actualScore.homeScore;
+                const awayScore = match.actualScore.away_penalty !== null ? match.actualScore.away_penalty : match.actualScore.awayScore;
+                homeIsLoser = homeScore < awayScore;
+                awayIsLoser = awayScore < homeScore;
+            }
 
-            teams.innerHTML = `
-                <div class="mini-team ${homeIsLoser ? 'loser' : ''}">
-                    <div class="mini-team-flag" style="background: ${homeData.color}">${homeData.flag}</div>
-                    <span class="mini-team-code">${match.home}</span>
-                </div>
-                <span class="mini-match-vs">vs</span>
-                <div class="mini-team ${awayIsLoser ? 'loser' : ''}">
-                    <div class="mini-team-flag" style="background: ${awayData.color}">${awayData.flag}</div>
-                    <span class="mini-team-code">${match.away}</span>
-                </div>
+            // Home team
+            const homeTeam = document.createElement('div');
+            homeTeam.className = `mini-team ${homeIsLoser ? 'loser' : ''}`;
+            homeTeam.innerHTML = `
+                <div class="mini-team-flag" style="background: ${homeData.color}">${homeData.flag}</div>
+                <span class="mini-team-code">${match.home}</span>
             `;
+            teams.appendChild(homeTeam);
+
+            // Away team
+            const awayTeam = document.createElement('div');
+            awayTeam.className = `mini-team ${awayIsLoser ? 'loser' : ''}`;
+            awayTeam.innerHTML = `
+                <div class="mini-team-flag" style="background: ${awayData.color}">${awayData.flag}</div>
+                <span class="mini-team-code">${match.away}</span>
+            `;
+            teams.appendChild(awayTeam);
+
             card.appendChild(teams);
 
-            // Score/Status
+            // Score display - positioned on right side
             if (isFinished) {
                 const score = document.createElement('div');
                 score.className = 'mini-match-score';
                 
-                // Check if match has penalty shootout
-                const hasPenalty = match.actualScore.home_penalty !== null && 
-                                  match.actualScore.home_penalty !== undefined &&
-                                  match.actualScore.away_penalty !== null &&
-                                  match.actualScore.away_penalty !== undefined;
+                const homeScore = match.actualScore.home_penalty !== null ? match.actualScore.home_penalty : match.actualScore.homeScore;
+                const awayScore = match.actualScore.away_penalty !== null ? match.actualScore.away_penalty : match.actualScore.awayScore;
                 
-                if (hasPenalty) {
-                    // Display with penalty: "1(4) 120' 1(2)"
-                    score.innerHTML = `
-                        <span>${match.actualScore.homeScore}(${match.actualScore.home_penalty})</span>
-                        <span class="mini-match-score-minute">${match.actualScore.minute}'</span>
-                        <span>${match.actualScore.awayScore}(${match.actualScore.away_penalty})</span>
-                    `;
-                } else {
-                    // Display without penalty: "2 85' 3"
-                    score.innerHTML = `
-                        <span>${match.actualScore.homeScore}</span>
-                        <span class="mini-match-score-minute">${match.actualScore.minute}'</span>
-                        <span>${match.actualScore.awayScore}</span>
-                    `;
-                }
+                score.innerHTML = `
+                    <span>${homeScore}</span>
+                    <span>${awayScore}</span>
+                `;
                 card.appendChild(score);
 
                 // Points badge if user predicted
@@ -1482,7 +1482,7 @@
                     card.appendChild(pointsBadge);
                 }
             } else {
-                // Status icon
+                // Status icon for predicted matches
                 if (match.userPrediction) {
                     const statusIcon = document.createElement('div');
                     statusIcon.className = 'mini-match-status predicted';
