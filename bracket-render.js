@@ -1,7 +1,7 @@
 // ============================================
-// BRACKET RENDER - FINAL CORRECT FIX
-// Mini card dùng CÙNG LOGIC với Big card
-// Cùng data → Cùng cách lấy!
+// BRACKET RENDER - ULTIMATE FIX
+// Support CẢ HAI: actualScore.homeScore VÀ home_score
+// Dựa trên cấu trúc Supabase thực tế
 // ============================================
 
 function renderKnockoutBracket() {
@@ -80,9 +80,43 @@ function renderKnockoutBracket() {
     attachBracketMatchHandlers();
 }
 
+// ============================================
+// HELPER: Lấy scores từ match object
+// Support cả actualScore và home_score trực tiếp
+// ============================================
+function getMatchScores(match) {
+    // Option 1: Nếu có actualScore object (đã được transform)
+    if (match.actualScore && match.actualScore.homeScore !== undefined) {
+        return {
+            homeScore: match.actualScore.homeScore,
+            awayScore: match.actualScore.awayScore,
+            homePenalty: match.actualScore.home_penalty || null,
+            awayPenalty: match.actualScore.away_penalty || null
+        };
+    }
+    
+    // Option 2: Dùng trực tiếp từ Supabase (home_score, away_score)
+    if (match.home_score !== undefined) {
+        return {
+            homeScore: match.home_score,
+            awayScore: match.away_score,
+            homePenalty: match.home_penalty || null,
+            awayPenalty: match.away_penalty || null
+        };
+    }
+    
+    // Option 3: Không có score
+    return {
+        homeScore: null,
+        awayScore: null,
+        homePenalty: null,
+        awayPenalty: null
+    };
+}
+
 function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false) {
-    const homeTeam = match.home || 'TBD';
-    const awayTeam = match.away || 'TBD';
+    const homeTeam = match.home || match.home_team || 'TBD';
+    const awayTeam = match.away || match.away_team || 'TBD';
     
     if (!countries[homeTeam] || !countries[awayTeam]) {
         return '';
@@ -90,30 +124,33 @@ function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false
     
     const homeData = countries[homeTeam];
     const awayData = countries[awayTeam];
-    const isFinished = match.status === 'finished' && match.actualScore;
+    const isFinished = match.status === 'finished';
     const hasPrediction = match.userPrediction;
     const notOpen = match.status === 'not-open';
+    
+    // Lấy scores
+    const scores = getMatchScores(match);
     
     let homeWinner = false;
     let awayWinner = false;
     
-    if (isFinished) {
-        const homeScore = match.actualScore.home_penalty !== null ? match.actualScore.home_penalty : match.actualScore.homeScore;
-        const awayScore = match.actualScore.away_penalty !== null ? match.actualScore.away_penalty : match.actualScore.awayScore;
+    if (isFinished && scores.homeScore !== null) {
+        const homeScore = scores.homePenalty !== null ? scores.homePenalty : scores.homeScore;
+        const awayScore = scores.awayPenalty !== null ? scores.awayPenalty : scores.awayScore;
         homeWinner = homeScore > awayScore;
         awayWinner = awayScore > homeScore;
     }
     
-    const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' });
-    const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = match.date ? match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' }) : '';
+    const timeStr = match.date ? match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
     
     let scoreDisplay = '';
-    if (isFinished) {
-        const hasPenalty = match.actualScore.home_penalty !== null;
+    if (isFinished && scores.homeScore !== null) {
+        const hasPenalty = scores.homePenalty !== null;
         if (hasPenalty) {
-            scoreDisplay = `${match.actualScore.homeScore}(${match.actualScore.home_penalty}) - ${match.actualScore.awayScore}(${match.actualScore.away_penalty})`;
+            scoreDisplay = `${scores.homeScore}(${scores.homePenalty}) - ${scores.awayScore}(${scores.awayPenalty})`;
         } else {
-            scoreDisplay = `${match.actualScore.homeScore} - ${match.actualScore.awayScore}`;
+            scoreDisplay = `${scores.homeScore} - ${scores.awayScore}`;
         }
     }
     
@@ -134,18 +171,18 @@ function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false
                 <div class="team ${homeWinner ? 'winner' : ''}">
                     <span class="flag" style="background: ${homeData.color}">${homeData.flag}</span>
                     <span class="name">${homeTeam}</span>
-                    ${isFinished ? `<span class="score">${match.actualScore.homeScore}</span>` : ''}
+                    ${isFinished && scores.homeScore !== null ? `<span class="score">${scores.homeScore}</span>` : ''}
                 </div>
                 
                 <div class="team ${awayWinner ? 'winner' : ''}">
                     <span class="flag" style="background: ${awayData.color}">${awayData.flag}</span>
                     <span class="name">${awayTeam}</span>
-                    ${isFinished ? `<span class="score">${match.actualScore.awayScore}</span>` : ''}
+                    ${isFinished && scores.awayScore !== null ? `<span class="score">${scores.awayScore}</span>` : ''}
                 </div>
             </div>
             
             ${hasPrediction ? '<div class="match-status">✓</div>' : ''}
-            ${scoreDisplay && match.actualScore.home_penalty !== null ? '<div class="penalty-note">(Penalty)</div>' : ''}
+            ${scoreDisplay && scores.homePenalty !== null ? '<div class="penalty-note">(Penalty)</div>' : ''}
         </div>
     `;
 }
@@ -161,9 +198,9 @@ function attachBracketMatchHandlers() {
                 alert('Vui lòng đăng nhập để dự đoán!');
                 openLoginModal();
             };
-        } else if (match.status === 'finished' && match.actualScore) {
+        } else if (match.status === 'finished') {
             card.onclick = () => openResultsModal(match);
-        } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
+        } else if (match.status === 'open' || match.userPrediction) {
             card.onclick = () => openModal(match);
         } else if (match.status === 'not-open') {
             card.onclick = null;
@@ -173,33 +210,27 @@ function attachBracketMatchHandlers() {
 }
 
 // ============================================
-// ⭐ MINI MATCH CARD - COPY LOGIC TỪ BIG CARD
-// Dùng CÙNG actualScore.homeScore như big card!
+// ⭐ MINI MATCH CARD - UNIVERSAL VERSION
+// Support CẢ HAI: actualScore VÀ home_score trực tiếp
 // ============================================
 function renderMiniMatchCard(match) {
-    // ✅ Team names - GIỐNG big card
-    const homeTeam = match.home || 'TBD';
-    const awayTeam = match.away || 'TBD';
+    // Team names - theo Supabase: home_team, away_team
+    const homeTeam = match.home || match.home_team || 'TBD';
+    const awayTeam = match.away || match.away_team || 'TBD';
     
-    // ✅ SCORES - COPY LOGIC TỪ BIG CARD!
-    // Dùng actualScore.homeScore/awayScore giống big card
-    let homeScore = '-';
-    let awayScore = '-';
+    // ✅ Lấy scores - support cả 2 formats
+    const scores = getMatchScores(match);
+    const homeScore = scores.homeScore !== null && scores.homeScore !== undefined 
+                      ? scores.homeScore : '-';
+    const awayScore = scores.awayScore !== null && scores.awayScore !== undefined 
+                      ? scores.awayScore : '-';
     
-    // Check status và actualScore giống big card
-    const isFinished = match.status === 'finished' && match.actualScore;
-    
-    if (isFinished && match.actualScore) {
-        homeScore = match.actualScore.homeScore;
-        awayScore = match.actualScore.awayScore;
-    }
-    
-    // ✅ Countries - GIỐNG big card
+    // Countries
     const homeData = countries[homeTeam] || { flag: '🏴', color: '#f0f0f0' };
     const awayData = countries[awayTeam] || { flag: '🏴', color: '#f0f0f0' };
     
-    // Format date and time
-    const matchDate = match.date || new Date(match.match_date);
+    // Format date and time - theo Supabase: match_date
+    const matchDate = match.date || (match.match_date ? new Date(match.match_date) : new Date());
     const day = matchDate.getDate();
     const month = matchDate.getMonth() + 1;
     const hours = String(matchDate.getHours()).padStart(2, '0');
@@ -236,15 +267,15 @@ function renderMiniMatchCard(match) {
         ${userPoints > 0 ? `<div class="mini-match-points">+${userPoints}</div>` : ''}
     `;
     
-    // Add click handler - GIỐNG big card
+    // Add click handler
     if (!currentPlayer) {
         card.onclick = () => {
             alert('Vui lòng đăng nhập để dự đoán!');
             openLoginModal();
         };
-    } else if (match.status === 'finished' && match.actualScore) {
+    } else if (match.status === 'finished') {
         card.onclick = () => openResultsModal(match);
-    } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
+    } else if (match.status === 'open' || match.userPrediction) {
         card.onclick = () => openModal(match);
     } else if (match.status === 'not-open') {
         card.onclick = null;
@@ -276,7 +307,11 @@ function renderScheduleGroupStageOnly() {
     
     // Render each group as compact card
     Object.keys(groups).sort().forEach(groupName => {
-        const groupMatches = groups[groupName].sort((a, b) => a.date - b.date);
+        const groupMatches = groups[groupName].sort((a, b) => {
+            const aDate = a.date || new Date(a.match_date);
+            const bDate = b.date || new Date(b.match_date);
+            return aDate - bDate;
+        });
         
         const groupCard = document.createElement('div');
         groupCard.className = 'compact-group-card';
