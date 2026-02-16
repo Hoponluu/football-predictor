@@ -1,6 +1,6 @@
 /* ============================================
-   SIMPLE TOURNAMENT BRACKET
-   Rounds displayed left to right
+   TOURNAMENT BRACKET - v3
+   Knockout mini-cards with round-colored borders
    ============================================ */
 
 .tournament-bracket {
@@ -28,204 +28,230 @@
 
 .bracket-wrapper {
     display: flex;
-    gap: 40px;
+    gap: 32px;
     min-width: max-content;
-    padding: 20px;
+    padding: 16px;
+}
+
+.bracket-empty {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.bracket-empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.bracket-empty-text {
+    color: var(--text-light);
+    font-size: 14px;
 }
 
 /* Each Round Column */
 .bracket-round {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    min-width: 200px;
+    gap: 12px;
+    min-width: 140px;
 }
 
 .round-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--text-dark);
     text-align: center;
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--primary-green);
+    padding-bottom: 10px;
+    border-bottom: 3px solid var(--primary-green);
 }
 
 .round-matches {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 12px;
     flex: 1;
     justify-content: space-around;
 }
 
 /* Increase spacing as rounds progress */
 .bracket-round[data-round="r16"] .round-matches {
-    gap: 60px;
+    gap: 40px;
 }
 
 .bracket-round[data-round="qf"] .round-matches {
-    gap: 140px;
+    gap: 100px;
 }
 
 .bracket-round[data-round="sf"] .round-matches {
-    gap: 300px;
+    gap: 240px;
 }
 
 .bracket-round.final-round .round-matches {
     justify-content: center;
-    gap: 20px;
+    gap: 16px;
 }
 
-/* Simple Match Card */
-.simple-match {
+/* ===== Bracket Mini Card ===== */
+.bracket-mini-card {
     background: var(--white);
-    border: 2px solid var(--stroke);
     border-radius: 8px;
-    padding: 12px;
+    border-top: 3px solid #46FF6F;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 0;
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    width: 130px;
 }
 
-.simple-match:hover {
-    border-color: var(--primary-green);
+.bracket-mini-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-.simple-match.not-open {
+.bracket-mini-card.not-open {
     opacity: 0.5;
     cursor: default;
 }
 
-.simple-match.not-open:hover {
+.bracket-mini-card.not-open:hover {
     transform: none;
-    box-shadow: none;
-    border-color: var(--stroke);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.simple-match.predicted {
-    border-color: var(--primary-green);
-    background: rgba(74, 222, 128, 0.05);
+.bracket-mini-card.predicted {
+    box-shadow: 0 0 0 1px var(--primary-green), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.simple-match.final-match {
+.bracket-mini-card.final-match {
     background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-    border: 2px solid #F59E0B;
+    border-top: 3px solid #F59E0B;
 }
 
-.simple-match.third-match {
-    border: 2px dashed var(--stroke);
+.bracket-mini-card.third-match {
+    border-top: 3px dashed #6B7280;
 }
 
-/* Match Date/Time - SCOPED TO SIMPLE-MATCH ONLY */
-.simple-match .match-date-time {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: var(--text-light);
-    margin-bottom: 8px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-/* Match Teams - SCOPED TO SIMPLE-MATCH ONLY */
-.simple-match .match-teams {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.simple-match .match-teams .team {
+/* Datetime header */
+.bracket-mini-datetime {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background 0.2s;
+    padding: 5px 8px;
+    gap: 6px;
+    font-size: 10px;
+    color: #9CA3AF;
 }
 
-.simple-match .match-teams .team.winner {
-    background: rgba(74, 222, 128, 0.1);
+.bracket-mini-datetime span:first-child {
     font-weight: 600;
+    color: #6B7280;
 }
 
-.simple-match .match-teams .team .flag {
-    width: 24px;
-    height: 24px;
+/* Teams section */
+.bracket-mini-teams {
+    display: flex;
+    flex-direction: column;
+    padding: 0 8px 8px;
+    gap: 4px;
+}
+
+.bracket-mini-team {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.bracket-mini-team.loser {
+    opacity: 0.45;
+}
+
+.bracket-mini-flag {
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 12px;
     flex-shrink: 0;
 }
 
-.simple-match .match-teams .team .name {
+.bracket-mini-code {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dark);
     flex: 1;
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.simple-match .match-teams .team .score {
-    font-size: 16px;
+.bracket-mini-score {
+    font-size: 13px;
     font-weight: 700;
-    min-width: 24px;
+    color: var(--text-dark);
+    min-width: 14px;
     text-align: right;
 }
 
-/* Match Status */
-.match-status {
-    margin-top: 8px;
-    padding-top: 6px;
-    border-top: 1px solid #f0f0f0;
-    text-align: center;
-    color: var(--primary-green);
+/* Points/Status badges */
+.bracket-mini-points {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: #FEF3C7;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #92400E;
+}
+
+.bracket-mini-predicted {
+    position: absolute;
+    top: 4px;
+    right: 6px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--primary-green);
 }
 
-.penalty-note {
-    margin-top: 4px;
+.bracket-mini-penalty {
     text-align: center;
-    font-size: 10px;
+    font-size: 9px;
     color: var(--text-light);
-    font-style: italic;
+    font-weight: 600;
+    padding-bottom: 4px;
 }
 
-/* Mobile Responsiveness */
+/* Mobile */
 @media (max-width: 768px) {
     .tournament-bracket {
         padding: 12px;
     }
-    
+
     .bracket-wrapper {
-        gap: 24px;
-        padding: 12px;
-    }
-    
-    .bracket-round {
-        min-width: 180px;
-    }
-    
-    .simple-match {
+        gap: 20px;
         padding: 8px;
     }
-    
-    .match-teams .team .name {
-        font-size: 12px;
+
+    .bracket-round {
+        min-width: 120px;
+    }
+
+    .bracket-mini-card {
+        width: 115px;
     }
 }
 
-/* Very small mobile */
 @media (max-width: 480px) {
     .bracket-round {
-        min-width: 160px;
+        min-width: 110px;
     }
-    
+
+    .bracket-mini-card {
+        width: 105px;
+    }
+
     .bracket-wrapper {
-        gap: 16px;
+        gap: 14px;
     }
 }
