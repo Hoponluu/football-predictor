@@ -90,8 +90,8 @@ function getMatchScores(match) {
         return {
             homeScore: match.actualScore.homeScore,
             awayScore: match.actualScore.awayScore,
-            homePenalty: match.actualScore.home_penalty || null,
-            awayPenalty: match.actualScore.away_penalty || null
+            homePenalty: match.actualScore.home_penalty ?? null,
+            awayPenalty: match.actualScore.away_penalty ?? null
         };
     }
     
@@ -100,8 +100,8 @@ function getMatchScores(match) {
         return {
             homeScore: match.home_score,
             awayScore: match.away_score,
-            homePenalty: match.home_penalty || null,
-            awayPenalty: match.away_penalty || null
+            homePenalty: match.home_penalty ?? null,
+            awayPenalty: match.away_penalty ?? null
         };
     }
     
@@ -135,8 +135,8 @@ function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false
     let awayWinner = false;
     
     if (isFinished && scores.homeScore !== null) {
-        const homeScore = scores.homePenalty !== null ? scores.homePenalty : scores.homeScore;
-        const awayScore = scores.awayPenalty !== null ? scores.awayPenalty : scores.awayScore;
+        const homeScore = scores.homePenalty != null ? scores.homePenalty : scores.homeScore;
+        const awayScore = scores.awayPenalty != null ? scores.awayPenalty : scores.awayScore;
         homeWinner = homeScore > awayScore;
         awayWinner = awayScore > homeScore;
     }
@@ -146,7 +146,7 @@ function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false
     
     let scoreDisplay = '';
     if (isFinished && scores.homeScore !== null) {
-        const hasPenalty = scores.homePenalty !== null;
+        const hasPenalty = scores.homePenalty != null;
         if (hasPenalty) {
             scoreDisplay = `${scores.homeScore}(${scores.homePenalty}) - ${scores.awayScore}(${scores.awayPenalty})`;
         } else {
@@ -182,7 +182,7 @@ function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false
             </div>
             
             ${hasPrediction ? '<div class="match-status">✓</div>' : ''}
-            ${scoreDisplay && scores.homePenalty !== null ? '<div class="penalty-note">(Penalty)</div>' : ''}
+            ${scoreDisplay && scores.homePenalty != null ? '<div class="penalty-note">(Penalty)</div>' : ''}
         </div>
     `;
 }
