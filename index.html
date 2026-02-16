@@ -940,6 +940,45 @@
             'South Africa': { flag: '🇿🇦', color: '#FEF3C7' }
         };
 
+        // FIFA-style country abbreviations
+        const countryAbbr = {
+            'TBU': 'TBU',
+            'Canada': 'CAN', 'Mexico': 'MEX', 'United States': 'USA',
+            'Austria': 'AUT', 'Belgium': 'BEL', 'Croatia': 'CRO', 'England': 'ENG',
+            'France': 'FRA', 'Germany': 'GER', 'Netherlands': 'NED', 'Norway': 'NOR',
+            'Portugal': 'POR', 'Scotland': 'SCO', 'Spain': 'ESP', 'Switzerland': 'SUI',
+            'Italy': 'ITA', 'Poland': 'POL', 'Ukraine': 'UKR', 'Sweden': 'SWE',
+            'Albania': 'ALB', 'Wales': 'WAL', 'Turkey': 'TUR', 'Romania': 'ROU',
+            'Australia': 'AUS', 'Iran': 'IRN', 'Japan': 'JPN', 'Jordan': 'JOR',
+            'Qatar': 'QAT', 'Saudi Arabia': 'KSA', 'South Korea': 'KOR', 'Uzbekistan': 'UZB',
+            'Cape Verde': 'CPV', 'Morocco': 'MAR', 'Nigeria': 'NGA', 'Senegal': 'SEN',
+            'Tunisia': 'TUN', 'Egypt': 'EGY', 'Ghana': 'GHA', 'Cameroon': 'CMR',
+            'Ivory Coast': 'CIV',
+            'Curaçao': 'CUW', 'Haiti': 'HAI', 'Panama': 'PAN',
+            'New Zealand': 'NZL',
+            'Argentina': 'ARG', 'Brasil': 'BRA', 'Uruguay': 'URU', 'Colombia': 'COL',
+            'Chile': 'CHI', 'Ecuador': 'ECU', 'Peru': 'PER', 'Venezuela': 'VEN',
+            'Vietnam': 'VIE', 'Thailand': 'THA', 'Indonesia': 'IDN', 'Malaysia': 'MAS',
+            'China': 'CHN', 'India': 'IND', 'Denmark': 'DEN', 'Greece': 'GRE',
+            'Czech Republic': 'CZE', 'Hungary': 'HUN', 'Serbia': 'SRB', 'Iceland': 'ISL',
+            'Ireland': 'IRL', 'Russia': 'RUS', 'South Africa': 'RSA',
+            'Paraguay': 'PAR', 'Bolivia': 'BOL', 'Honduras': 'HON',
+            'Costa Rica': 'CRC', 'Jamaica': 'JAM', 'El Salvador': 'SLV',
+            'Trinidad and Tobago': 'TRI', 'Guatemala': 'GUA',
+            'Congo DR': 'COD', 'Mali': 'MLI', 'Burkina Faso': 'BFA',
+            'Algeria': 'ALG', 'Tanzania': 'TAN', 'Mozambique': 'MOZ',
+            'Benin': 'BEN', 'Comoros': 'COM', 'Zambia': 'ZAM',
+            'Zimbabwe': 'ZIM', 'Uganda': 'UGA', 'Gabon': 'GAB',
+            'Angola': 'ANG', 'Libya': 'LBY', 'Kenya': 'KEN',
+            'Bahrain': 'BHR', 'Oman': 'OMA', 'Iraq': 'IRQ',
+            'Palestine': 'PLE', 'Kuwait': 'KUW', 'North Korea': 'PRK',
+            'Philippines': 'PHI', 'Singapore': 'SIN', 'Myanmar': 'MYA'
+        };
+
+        function getCountryCode(name) {
+            return countryAbbr[name] || name.substring(0, 3).toUpperCase();
+        }
+
         // Global state
         let matches = [];
         let myPredictions = {};
@@ -1441,45 +1480,41 @@
                 awayIsLoser = awayScore < homeScore;
             }
 
-            // Home team
+            // Compute scores for display
+            let homeScoreVal = null, awayScoreVal = null;
+            if (isFinished) {
+                homeScoreVal = match.actualScore.home_penalty != null ? match.actualScore.home_penalty : match.actualScore.homeScore;
+                awayScoreVal = match.actualScore.away_penalty != null ? match.actualScore.away_penalty : match.actualScore.awayScore;
+            }
+
+            // Home team row (flag + abbr + score)
             const homeTeam = document.createElement('div');
             homeTeam.className = `mini-team ${homeIsLoser ? 'loser' : ''}`;
             homeTeam.innerHTML = `
                 <div class="mini-team-flag" style="background: ${homeData.color}">${homeData.flag}</div>
-                <span class="mini-team-code">${match.home}</span>
+                <span class="mini-team-code">${getCountryCode(match.home)}</span>
+                ${isFinished ? `<span class="mini-team-score">${homeScoreVal}</span>` : ''}
             `;
             teams.appendChild(homeTeam);
 
-            // Away team
+            // Away team row (flag + abbr + score)
             const awayTeam = document.createElement('div');
             awayTeam.className = `mini-team ${awayIsLoser ? 'loser' : ''}`;
             awayTeam.innerHTML = `
                 <div class="mini-team-flag" style="background: ${awayData.color}">${awayData.flag}</div>
-                <span class="mini-team-code">${match.away}</span>
+                <span class="mini-team-code">${getCountryCode(match.away)}</span>
+                ${isFinished ? `<span class="mini-team-score">${awayScoreVal}</span>` : ''}
             `;
             teams.appendChild(awayTeam);
 
             card.appendChild(teams);
 
-            // Score display - positioned on right side
+            // Points badge (top-right) or predicted checkmark (top-right)
             if (isFinished) {
-                const score = document.createElement('div');
-                score.className = 'mini-match-score';
-                
-                const homeScore = match.actualScore.home_penalty != null ? match.actualScore.home_penalty : match.actualScore.homeScore;
-                const awayScore = match.actualScore.away_penalty != null ? match.actualScore.away_penalty : match.actualScore.awayScore;
-
-                score.innerHTML = `
-                    <span>${homeScore}</span>
-                    <span>${awayScore}</span>
-                `;
-                card.appendChild(score);
-
-                // Points badge if user predicted
                 if (match.userPrediction && match.points) {
                     const totalPoints = (match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0);
                     const pointsBadge = document.createElement('div');
-                    pointsBadge.className = 'mini-match-status finished';
+                    pointsBadge.className = 'mini-match-points';
                     pointsBadge.textContent = `+${totalPoints}`;
                     card.appendChild(pointsBadge);
                 }

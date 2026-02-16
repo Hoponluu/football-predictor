@@ -253,7 +253,8 @@
             border-radius: 10px;
             border-top: 2px solid #46FF6F;
             box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.05);
-            width: 131px;
+            width: 120px;
+            min-width: 120px;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -282,27 +283,24 @@
         .mini-match-datetime {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             width: 100%;
-            padding: 8px 12px;
-            gap: 8px;
+            padding: 6px 10px;
+            gap: 6px;
         }
 
         .mini-match-datetime-date {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: #6B7280;
         }
 
         .mini-match-datetime span:last-child {
-            font-size: 11px;
+            font-size: 10px;
             color: #9CA3AF;
         }
 
         .mini-match-datetime::after {
-            content: '⚽';
-            font-size: 14px;
-            margin-left: auto;
+            content: '';
         }
 
         /* Teams Section - Vertical Stack */
@@ -310,14 +308,14 @@
             display: flex;
             flex-direction: column;
             width: 100%;
-            padding: 0 12px 8px 12px;
-            gap: 8px;
+            padding: 0 10px 8px 10px;
+            gap: 6px;
         }
 
         .mini-team {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             width: 100%;
         }
 
@@ -326,64 +324,60 @@
         }
 
         .mini-team-flag {
-            width: 32px;
-            height: 32px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 14px;
             flex-shrink: 0;
         }
 
         .mini-team-code {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: var(--text-dark);
             flex: 1;
         }
 
-        .mini-match-vs {
-            display: none; /* Hide vs in vertical layout */
-        }
-
-        /* Score Display - Right Side */
-        .mini-match-score {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .mini-match-score > span {
-            font-size: 20px;
+        .mini-team-score {
+            font-size: 14px;
             font-weight: 700;
             color: var(--text-dark);
-            line-height: 1;
+            min-width: 16px;
+            text-align: right;
         }
 
-        .mini-match-score-minute {
-            font-size: 9px;
-            color: var(--text-light);
-            font-weight: 600;
+        .mini-match-vs {
+            display: none;
+        }
+
+        /* Points badge - top right corner */
+        .mini-match-points {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            background: #FEF3C7;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #92400E;
         }
 
         /* Status Icons */
         .mini-match-status {
             position: absolute;
-            bottom: 8px;
-            right: 12px;
+            top: 6px;
+            right: 8px;
             font-size: 11px;
             font-weight: 700;
         }
 
         .mini-match-status.predicted {
             color: var(--primary-green);
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .mini-match-status.finished {
@@ -391,6 +385,12 @@
             padding: 2px 6px;
             border-radius: 4px;
             color: #92400E;
+        }
+
+        /* Mini match card in vertical list (leaderboard recent matches) */
+        #recentMatches .mini-match-card {
+            width: 100%;
+            min-width: unset;
         }
 
         /* Favorite Team Card */
