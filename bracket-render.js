@@ -192,25 +192,28 @@ function renderScheduleGroupStageOnly() {
         groups[group].push(match);
     });
     
+    // Render each group as compact card
     Object.keys(groups).sort().forEach(groupName => {
         const groupMatches = groups[groupName].sort((a, b) => a.date - b.date);
         
         const groupCard = document.createElement('div');
-        groupCard.className = 'group-card';
+        groupCard.className = 'compact-group-card';
         
+        // Group title
         const title = document.createElement('div');
-        title.className = 'group-card-title';
+        title.className = 'compact-group-title';
         title.textContent = `Bảng ${groupName.replace(/^GROUP /i, '').replace(/^Bảng /i, '')}`;
         groupCard.appendChild(title);
         
-        const matchesList = document.createElement('div');
-        matchesList.className = 'group-matches-list';
+        // Matches in columns (2 matches per column)
+        const matchesGrid = document.createElement('div');
+        matchesGrid.className = 'compact-group-grid';
         
         groupMatches.forEach(match => {
-            matchesList.appendChild(renderMiniMatchCard(match));
+            matchesGrid.appendChild(renderMiniMatchCard(match));
         });
         
-        groupCard.appendChild(matchesList);
+        groupCard.appendChild(matchesGrid);
         container.appendChild(groupCard);
     });
 }

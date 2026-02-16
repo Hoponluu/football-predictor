@@ -1339,6 +1339,71 @@
             gap: 8px;
         }
 
+        /* Compact Group Cards - Horizontal Scroll */
+        .groups-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -24px;
+            padding: 0 24px;
+        }
+
+        .groups-container {
+            display: flex;
+            gap: 16px;
+            width: max-content;
+            padding-bottom: 8px;
+        }
+
+        .compact-group-card {
+            background: var(--white);
+            border: 1px solid var(--stroke);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            width: 400px;
+            flex-shrink: 0;
+        }
+
+        .compact-group-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary-green);
+        }
+
+        .compact-group-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            grid-auto-flow: column;
+            grid-template-rows: repeat(3, auto);
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .compact-group-card {
+                width: 350px;
+            }
+
+            .groups-scroll {
+                margin: 0 -12px;
+                padding: 0 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .compact-group-card {
+                width: 300px;
+            }
+
+            .compact-group-grid {
+                gap: 6px;
+            }
+        }
+
         /* Chart Styles */
         #chartCanvas {
             max-width: 100%;
