@@ -1,6 +1,7 @@
 // ============================================
-// BRACKET RENDER - CORRECT FIX
-// Dùng match.home_score và match.away_score (CÓ UNDERSCORE)
+// BRACKET RENDER - FINAL CORRECT FIX
+// Mini card dùng CÙNG LOGIC với Big card
+// Cùng data → Cùng cách lấy!
 // ============================================
 
 function renderKnockoutBracket() {
@@ -172,21 +173,28 @@ function attachBracketMatchHandlers() {
 }
 
 // ============================================
-// ⭐ MINI MATCH CARD - CORRECT FIX
-// Dùng match.home_score và match.away_score (CÓ UNDERSCORE!)
+// ⭐ MINI MATCH CARD - COPY LOGIC TỪ BIG CARD
+// Dùng CÙNG actualScore.homeScore như big card!
 // ============================================
 function renderMiniMatchCard(match) {
-    // Team names
+    // ✅ Team names - GIỐNG big card
     const homeTeam = match.home || 'TBD';
     const awayTeam = match.away || 'TBD';
     
-    // ✅ CORRECT: Dùng home_score và away_score (CÓ UNDERSCORE!)
-    const homeScore = match.home_score !== null && match.home_score !== undefined 
-                      ? match.home_score : '-';
-    const awayScore = match.away_score !== null && match.away_score !== undefined 
-                      ? match.away_score : '-';
+    // ✅ SCORES - COPY LOGIC TỪ BIG CARD!
+    // Dùng actualScore.homeScore/awayScore giống big card
+    let homeScore = '-';
+    let awayScore = '-';
     
-    // Lấy flag và color từ countries object
+    // Check status và actualScore giống big card
+    const isFinished = match.status === 'finished' && match.actualScore;
+    
+    if (isFinished && match.actualScore) {
+        homeScore = match.actualScore.homeScore;
+        awayScore = match.actualScore.awayScore;
+    }
+    
+    // ✅ Countries - GIỐNG big card
     const homeData = countries[homeTeam] || { flag: '🏴', color: '#f0f0f0' };
     const awayData = countries[awayTeam] || { flag: '🏴', color: '#f0f0f0' };
     
@@ -228,7 +236,7 @@ function renderMiniMatchCard(match) {
         ${userPoints > 0 ? `<div class="mini-match-points">+${userPoints}</div>` : ''}
     `;
     
-    // Add click handler
+    // Add click handler - GIỐNG big card
     if (!currentPlayer) {
         card.onclick = () => {
             alert('Vui lòng đăng nhập để dự đoán!');
