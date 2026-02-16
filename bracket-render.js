@@ -1,219 +1,393 @@
 // ============================================
-// SIMPLE TOURNAMENT BRACKET
-// Standard structure like Google/ESPN/FIFA
+// BRACKET RENDER - FIXED VERSION
+// Fix lỗi "undefined" bằng cách dùng đúng field names từ Supabase
+// Database fields: home_team, away_team, home_score, away_score
 // ============================================
 
-function renderKnockoutBracket() {
-    const container = document.getElementById('scheduleKnockout');
-    if (!container) return;
+// ============================================
+// MAIN FUNCTION - RENDER MINI MATCH CARD (FIXED)
+// ============================================
+function renderMiniMatchCard(match) {
+    // ✅ FIX: Dùng match.home_team và match.away_team (ĐÚNG với database)
+    // ❌ KHÔNG DÙNG: match.home_team_name, match.homeTeam (không tồn tại)
+    const homeTeamName = match.home_team || 'TBD';
+    const awayTeamName = match.away_team || 'TBD';
     
-    const knockoutMatches = matches.filter(m => 
-        ['R32', 'R16', 'QF', 'SF', '3RD', 'FINAL'].includes(m.group || m.match_group)
-    );
+    // Tỉ số - check null/undefined
+    const homeScore = match.home_score !== null && match.home_score !== undefined 
+                      ? match.home_score : '-';
+    const awayScore = match.away_score !== null && match.away_score !== undefined 
+                      ? match.away_score : '-';
     
-    if (knockoutMatches.length === 0) {
-        container.innerHTML = `
-            <div class="bracket-empty">
-                <div class="bracket-empty-icon">🏆</div>
-                <div class="bracket-empty-text">
-                    Sơ đồ knockout sẽ xuất hiện khi có trận loại trực tiếp
+    // User points (nếu có)
+    const userPoints = match.user_points || 0;
+    
+    // Format date and time
+    const matchDate = new Date(match.match_date);
+    const day = matchDate.getDate();
+    const month = matchDate.getMonth() + 1;
+    const hours = String(matchDate.getHours()).padStart(2, '0');
+    const minutes = String(matchDate.getMinutes()).padStart(2, '0');
+    const timeStr = `${hours}:${minutes}`;
+    
+    // Get flag emojis
+    const homeFlag = getTeamFlag(homeTeamName);
+    const awayFlag = getTeamFlag(awayTeamName);
+    
+    return `
+        <div class="mini-match-card">
+            <div class="mini-match-header">
+                <span class="mini-match-date">${day} thg ${month}</span>
+                <span class="mini-match-time">${timeStr}</span>
+                <span class="mini-match-icon">⚽</span>
+            </div>
+            <div class="mini-match-teams">
+                <div class="mini-team-row">
+                    <span class="team-flag">${homeFlag}</span>
+                    <span class="team-name">${homeTeamName}</span>
+                    <span class="team-score">${homeScore}</span>
+                </div>
+                <div class="mini-team-row">
+                    <span class="team-flag">${awayFlag}</span>
+                    <span class="team-name">${awayTeamName}</span>
+                    <span class="team-score">${awayScore}</span>
+                </div>
+            </div>
+            ${userPoints > 0 ? `<div class="mini-match-points">+${userPoints}</div>` : ''}
+        </div>
+    `;
+}
+
+// ============================================
+// HELPER FUNCTION - GET TEAM FLAG
+// ============================================
+function getTeamFlag(teamName) {
+    if (!teamName || teamName === 'TBD') return '🏴';
+    
+    const flagMap = {
+        // Group A-H (48 teams World Cup 2026)
+        'Italy': '🇮🇹',
+        'Vietnam': '🇻🇳',
+        'France': '🇫🇷',
+        'Netherlands': '🇳🇱',
+        'Brasil': '🇧🇷',
+        'Brazil': '🇧🇷',
+        'Ecuador': '🇪🇨',
+        'Germany': '🇩🇪',
+        'Spain': '🇪🇸',
+        'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+        'Argentina': '🇦🇷',
+        'Portugal': '🇵🇹',
+        'Belgium': '🇧🇪',
+        'Mexico': '🇲🇽',
+        'USA': '🇺🇸',
+        'Canada': '🇨🇦',
+        'Japan': '🇯🇵',
+        'South Korea': '🇰🇷',
+        'Korea Republic': '🇰🇷',
+        'Australia': '🇦🇺',
+        'Uruguay': '🇺🇾',
+        'Colombia': '🇨🇴',
+        'Chile': '🇨🇱',
+        'Peru': '🇵🇪',
+        'Costa Rica': '🇨🇷',
+        'Jamaica': '🇯🇲',
+        'Morocco': '🇲🇦',
+        'Senegal': '🇸🇳',
+        'Tunisia': '🇹🇳',
+        'Egypt': '🇪🇬',
+        'Nigeria': '🇳🇬',
+        'Ghana': '🇬🇭',
+        'Cameroon': '🇨🇲',
+        'Switzerland': '🇨🇭',
+        'Denmark': '🇩🇰',
+        'Croatia': '🇭🇷',
+        'Poland': '🇵🇱',
+        'Sweden': '🇸🇪',
+        'Austria': '🇦🇹',
+        'Czech Republic': '🇨🇿',
+        'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+        'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+        'Serbia': '🇷🇸',
+        'Ukraine': '🇺🇦',
+        'Turkey': '🇹🇷',
+        'IR Iran': '🇮🇷',
+        'Iran': '🇮🇷',
+        'Saudi Arabia': '🇸🇦',
+        'Qatar': '🇶🇦',
+        'Iraq': '🇮🇶',
+        'China': '🇨🇳',
+        'Thailand': '🇹🇭',
+        'Indonesia': '🇮🇩',
+        'Malaysia': '🇲🇾',
+        'New Zealand': '🇳🇿',
+    };
+    
+    return flagMap[teamName] || '🏴';
+}
+
+// ============================================
+// HELPER FUNCTION - GET FLAG EMOJI FROM CODE
+// ============================================
+function getFlagEmoji(countryCode) {
+    if (!countryCode || countryCode.length < 2) return '🏴';
+    
+    // Convert 3-letter ISO code to 2-letter if needed
+    const iso2Map = {
+        'ITA': 'IT',
+        'VNM': 'VN',
+        'FRA': 'FR',
+        'NLD': 'NL',
+        'BRA': 'BR',
+        'ECU': 'EC',
+        'DEU': 'DE',
+        'GER': 'DE',
+        'ESP': 'ES',
+        'ENG': 'GB',
+        'ARG': 'AR',
+        'POR': 'PT',
+        'BEL': 'BE',
+        'MEX': 'MX',
+        'USA': 'US',
+        'CAN': 'CA',
+        'JPN': 'JP',
+        'KOR': 'KR',
+        'AUS': 'AU',
+        'URU': 'UY',
+        'COL': 'CO',
+        'CHI': 'CL',
+        'PER': 'PE',
+        'CRC': 'CR',
+        'JAM': 'JM',
+        'MAR': 'MA',
+        'SEN': 'SN',
+        'TUN': 'TN',
+        'EGY': 'EG',
+        'NGA': 'NG',
+        'GHA': 'GH',
+        'CMR': 'CM',
+        'SUI': 'CH',
+        'DEN': 'DK',
+        'CRO': 'HR',
+        'POL': 'PL',
+        'SWE': 'SE',
+        'AUT': 'AT',
+        'CZE': 'CZ',
+        'WAL': 'GB',
+        'SCO': 'GB',
+        'SRB': 'RS',
+        'UKR': 'UA',
+        'TUR': 'TR',
+        'IRN': 'IR',
+        'KSA': 'SA',
+        'QAT': 'QA',
+        'IRQ': 'IQ',
+        'CHN': 'CN',
+        'THA': 'TH',
+        'IDN': 'ID',
+        'MAS': 'MY',
+        'NZL': 'NZ',
+    };
+    
+    const code2 = iso2Map[countryCode.toUpperCase()] || countryCode.substring(0, 2);
+    
+    const codePoints = code2
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt());
+    
+    return String.fromCodePoint(...codePoints);
+}
+
+// ============================================
+// RENDER BIG MATCH CARD (unchanged from before)
+// ============================================
+function renderMatchCard(match) {
+    const homeTeamName = match.home_team || 'TBD';
+    const awayTeamName = match.away_team || 'TBD';
+    const homeScore = match.home_score !== null && match.home_score !== undefined 
+                      ? match.home_score : '-';
+    const awayScore = match.away_score !== null && match.away_score !== undefined 
+                      ? match.away_score : '-';
+    const userPoints = match.user_points || 0;
+    
+    const matchDate = new Date(match.match_date);
+    const day = matchDate.getDate();
+    const month = matchDate.getMonth() + 1;
+    const hours = String(matchDate.getHours()).padStart(2, '0');
+    const minutes = String(matchDate.getMinutes()).padStart(2, '0');
+    
+    const homeFlag = getTeamFlag(homeTeamName);
+    const awayFlag = getTeamFlag(awayTeamName);
+    
+    return `
+        <div class="match-card">
+            <div class="match-header">
+                <span class="match-date">${day} tháng ${month}</span>
+                <span class="match-time">${hours}:${minutes}</span>
+                <span class="match-location">${match.location || 'TBD'}</span>
+            </div>
+            <div class="match-teams">
+                <div class="team">
+                    <span class="team-flag">${homeFlag}</span>
+                    <span class="team-name">${homeTeamName}</span>
+                    <span class="team-score">${homeScore}</span>
+                </div>
+                <div class="vs">vs</div>
+                <div class="team">
+                    <span class="team-flag">${awayFlag}</span>
+                    <span class="team-name">${awayTeamName}</span>
+                    <span class="team-score">${awayScore}</span>
+                </div>
+            </div>
+            ${userPoints > 0 ? `<div class="match-points">Điểm dự đoán: +${userPoints}</div>` : ''}
+        </div>
+    `;
+}
+
+// ============================================
+// RENDER KNOCKOUT BRACKET (Simple version)
+// ============================================
+function renderKnockoutBracket(matches) {
+    // Organize matches by round
+    const rounds = {
+        'R32': matches.filter(m => m.round === 'R32' || m.round === 'Round of 32'),
+        'R16': matches.filter(m => m.round === 'R16' || m.round === 'Round of 16'),
+        'QF': matches.filter(m => m.round === 'QF' || m.round === 'Quarter-finals'),
+        'SF': matches.filter(m => m.round === 'SF' || m.round === 'Semi-finals'),
+        'FINAL': matches.filter(m => m.round === 'FINAL' || m.round === 'Final'),
+    };
+    
+    let html = '<div class="bracket-container">';
+    
+    // Render each round
+    for (const [roundName, roundMatches] of Object.entries(rounds)) {
+        if (roundMatches.length === 0) continue;
+        
+        html += `
+            <div class="bracket-round" data-round="${roundName}">
+                <h3 class="round-title">${getRoundTitle(roundName)}</h3>
+                <div class="round-matches">
+        `;
+        
+        roundMatches.forEach(match => {
+            html += renderSimpleMatch(match);
+        });
+        
+        html += `
                 </div>
             </div>
         `;
-        return;
     }
     
-    const rounds = {
-        R32: knockoutMatches.filter(m => (m.group || m.match_group) === 'R32').sort((a, b) => a.date - b.date),
-        R16: knockoutMatches.filter(m => (m.group || m.match_group) === 'R16').sort((a, b) => a.date - b.date),
-        QF: knockoutMatches.filter(m => (m.group || m.match_group) === 'QF').sort((a, b) => a.date - b.date),
-        SF: knockoutMatches.filter(m => (m.group || m.match_group) === 'SF').sort((a, b) => a.date - b.date),
-        '3RD': knockoutMatches.filter(m => (m.group || m.match_group) === '3RD'),
-        FINAL: knockoutMatches.filter(m => (m.group || m.match_group) === 'FINAL')
-    };
-    
-    // Simple HTML structure
-    container.innerHTML = `
-        <div class="tournament-bracket">
-            <div class="bracket-hint">← Vuốt ngang để xem toàn bộ →</div>
-            
-            <div class="bracket-wrapper">
-                <!-- Round of 32 -->
-                <div class="bracket-round" data-round="r32">
-                    <div class="round-title">Vòng 1/32</div>
-                    <div class="round-matches">
-                        ${rounds.R32.map((m, i) => renderSimpleBracketMatch(m, i)).join('')}
-                    </div>
-                </div>
-                
-                <!-- Round of 16 -->
-                <div class="bracket-round" data-round="r16">
-                    <div class="round-title">Vòng 1/16</div>
-                    <div class="round-matches">
-                        ${rounds.R16.map((m, i) => renderSimpleBracketMatch(m, i)).join('')}
-                    </div>
-                </div>
-                
-                <!-- Quarter Finals -->
-                <div class="bracket-round" data-round="qf">
-                    <div class="round-title">Tứ kết</div>
-                    <div class="round-matches">
-                        ${rounds.QF.map((m, i) => renderSimpleBracketMatch(m, i)).join('')}
-                    </div>
-                </div>
-                
-                <!-- Semi Finals -->
-                <div class="bracket-round" data-round="sf">
-                    <div class="round-title">Bán kết</div>
-                    <div class="round-matches">
-                        ${rounds.SF.map((m, i) => renderSimpleBracketMatch(m, i)).join('')}
-                    </div>
-                </div>
-                
-                <!-- Finals -->
-                <div class="bracket-round final-round" data-round="final">
-                    <div class="round-title">Chung kết</div>
-                    <div class="round-matches">
-                        ${rounds.FINAL.map((m, i) => renderSimpleBracketMatch(m, i, true)).join('')}
-                        ${rounds['3RD'].map((m, i) => renderSimpleBracketMatch(m, i, false, true)).join('')}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    attachBracketMatchHandlers();
+    html += '</div>';
+    return html;
 }
 
-function renderSimpleBracketMatch(match, index, isFinal = false, isThird = false) {
-    if (!countries[match.home] || !countries[match.away]) {
-        return '';
-    }
+// ============================================
+// RENDER SIMPLE MATCH (for bracket)
+// ============================================
+function renderSimpleMatch(match) {
+    const homeTeamName = match.home_team || 'TBD';
+    const awayTeamName = match.away_team || 'TBD';
+    const homeScore = match.home_score !== null && match.home_score !== undefined 
+                      ? match.home_score : '-';
+    const awayScore = match.away_score !== null && match.away_score !== undefined 
+                      ? match.away_score : '-';
     
-    const homeData = countries[match.home];
-    const awayData = countries[match.away];
-    const isFinished = match.status === 'finished' && match.actualScore;
-    const hasPrediction = match.userPrediction;
-    const notOpen = match.status === 'not-open';
-    
-    let homeWinner = false;
-    let awayWinner = false;
-    
-    if (isFinished) {
-        const homeScore = match.actualScore.home_penalty !== null ? match.actualScore.home_penalty : match.actualScore.homeScore;
-        const awayScore = match.actualScore.away_penalty !== null ? match.actualScore.away_penalty : match.actualScore.awayScore;
-        homeWinner = homeScore > awayScore;
-        awayWinner = awayScore > homeScore;
-    }
-    
-    const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' });
-    const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    
-    let scoreDisplay = '';
-    if (isFinished) {
-        const hasPenalty = match.actualScore.home_penalty !== null;
-        if (hasPenalty) {
-            scoreDisplay = `${match.actualScore.homeScore}(${match.actualScore.home_penalty}) - ${match.actualScore.awayScore}(${match.actualScore.away_penalty})`;
-        } else {
-            scoreDisplay = `${match.actualScore.homeScore} - ${match.actualScore.awayScore}`;
-        }
-    }
-    
-    const classes = ['simple-match'];
-    if (notOpen) classes.push('not-open');
-    if (isFinal) classes.push('final-match');
-    if (isThird) classes.push('third-match');
-    if (hasPrediction) classes.push('predicted');
+    const homeFlag = getTeamFlag(homeTeamName);
+    const awayFlag = getTeamFlag(awayTeamName);
     
     return `
-        <div class="${classes.join(' ')}" data-match-id="${match.id}">
-            <div class="match-date-time">
-                <span>${dateStr}</span>
-                <span>${timeStr}</span>
+        <div class="simple-match">
+            <div class="simple-team">
+                <span class="team-flag">${homeFlag}</span>
+                <span class="team-name">${homeTeamName}</span>
+                <span class="team-score">${homeScore}</span>
             </div>
-            
-            <div class="match-teams">
-                <div class="team ${homeWinner ? 'winner' : ''}">
-                    <span class="flag" style="background: ${homeData.color}">${homeData.flag}</span>
-                    <span class="name">${match.home}</span>
-                    ${isFinished ? `<span class="score">${match.actualScore.homeScore}</span>` : ''}
-                </div>
-                
-                <div class="team ${awayWinner ? 'winner' : ''}">
-                    <span class="flag" style="background: ${awayData.color}">${awayData.flag}</span>
-                    <span class="name">${match.away}</span>
-                    ${isFinished ? `<span class="score">${match.actualScore.awayScore}</span>` : ''}
-                </div>
+            <div class="simple-team">
+                <span class="team-flag">${awayFlag}</span>
+                <span class="team-name">${awayTeamName}</span>
+                <span class="team-score">${awayScore}</span>
             </div>
-            
-            ${hasPrediction ? '<div class="match-status">✓</div>' : ''}
-            ${scoreDisplay && match.actualScore.home_penalty !== null ? '<div class="penalty-note">(Penalty)</div>' : ''}
         </div>
     `;
 }
 
-function attachBracketMatchHandlers() {
-    document.querySelectorAll('.simple-match').forEach(card => {
-        const matchId = card.getAttribute('data-match-id');
-        const match = matches.find(m => m.id === matchId);
-        if (!match) return;
-        
-        if (!currentPlayer) {
-            card.onclick = () => {
-                alert('Vui lòng đăng nhập để dự đoán!');
-                openLoginModal();
-            };
-        } else if (match.status === 'finished' && match.actualScore) {
-            card.onclick = () => openResultsModal(match);
-        } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
-            card.onclick = () => openModal(match);
-        } else if (match.status === 'not-open') {
-            card.onclick = null;
-            card.style.cursor = 'default';
-        }
-    });
+// ============================================
+// HELPER FUNCTION - GET ROUND TITLE
+// ============================================
+function getRoundTitle(round) {
+    const titles = {
+        'R32': 'Vòng 1/16',
+        'R16': 'Vòng 1/8',
+        'QF': 'Tứ kết',
+        'SF': 'Bán kết',
+        'FINAL': 'Chung kết'
+    };
+    return titles[round] || round;
 }
 
-function renderScheduleGroupStageOnly() {
-    const container = document.getElementById('scheduleGroupStage');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    const groupStageMatches = matches.filter(m => {
-        const group = m.group || m.match_group || '';
-        return /^[A-L]$/.test(group) || /^GROUP [A-L]$/i.test(group) || /^Bảng [A-L]$/i.test(group);
-    });
-    
+// ============================================
+// RENDER SCHEDULE - GROUP STAGE ONLY (with compact groups)
+// ============================================
+function renderScheduleGroupStageOnly(matches) {
+    // Group matches by group (A, B, C, etc.)
     const groups = {};
-    groupStageMatches.forEach(match => {
-        const group = match.group || match.match_group || 'Other';
-        if (!groups[group]) groups[group] = [];
+    matches.forEach(match => {
+        const group = match.group || 'Unknown';
+        if (!groups[group]) {
+            groups[group] = [];
+        }
         groups[group].push(match);
     });
     
+    let html = '<div class="compact-groups-container">';
+    
     // Render each group as compact card
-    Object.keys(groups).sort().forEach(groupName => {
-        const groupMatches = groups[groupName].sort((a, b) => a.date - b.date);
-        
-        const groupCard = document.createElement('div');
-        groupCard.className = 'compact-group-card';
-        
-        // Group title
-        const title = document.createElement('div');
-        title.className = 'compact-group-title';
-        title.textContent = `Bảng ${groupName.replace(/^GROUP /i, '').replace(/^Bảng /i, '')}`;
-        groupCard.appendChild(title);
-        
-        // Matches in columns (2 matches per column)
-        const matchesGrid = document.createElement('div');
-        matchesGrid.className = 'compact-group-grid';
+    for (const [groupName, groupMatches] of Object.entries(groups).sort()) {
+        html += `
+            <div class="compact-group-card">
+                <h3 class="group-title">Bảng ${groupName}</h3>
+                <div class="group-matches-grid">
+        `;
         
         groupMatches.forEach(match => {
-            matchesGrid.appendChild(renderMiniMatchCard(match));
+            html += renderMiniMatchCard(match);
         });
         
-        groupCard.appendChild(matchesGrid);
-        container.appendChild(groupCard);
-    });
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    return html;
 }
+
+// ============================================
+// DEBUG FUNCTION (optional - for testing)
+// ============================================
+function debugMatchObject(match) {
+    console.log('=== MATCH DEBUG ===');
+    console.log('home_team:', match.home_team);
+    console.log('away_team:', match.away_team);
+    console.log('home_score:', match.home_score);
+    console.log('away_score:', match.away_score);
+    console.log('match_date:', match.match_date);
+    console.log('Full object:', match);
+    console.log('==================');
+}
+
+// ============================================
+// EXPORT (if using modules)
+// ============================================
+// export { 
+//     renderMiniMatchCard, 
+//     renderMatchCard, 
+//     renderKnockoutBracket,
+//     renderScheduleGroupStageOnly,
+//     getTeamFlag,
+//     getFlagEmoji 
+// };
