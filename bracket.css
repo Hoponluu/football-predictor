@@ -74,15 +74,9 @@
     flex-direction: column;
     flex: 1;
     justify-content: space-around;
-    /* No gap — space-around distributes pairs evenly so each round
-       naturally centers between feeder pairs from previous round */
-}
-
-/* ===== Bracket Pair (groups 2 matches) ===== */
-.bracket-pair {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    /* No gap — space-around distributes each card evenly along Y axis.
+       R32: 16 cards spread out, R16: 8 cards (each centered between 2 R32 cards),
+       QF: 4, SF: 2, Final: 1 — creating natural bracket tree alignment. */
 }
 
 .bracket-round.final-round .round-matches {
