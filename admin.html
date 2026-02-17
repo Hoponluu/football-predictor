@@ -364,6 +364,15 @@
             background: #3BC76C;
         }
 
+        .btn-warning {
+            background: #F59E0B;
+            color: var(--white);
+        }
+
+        .btn-warning:hover {
+            background: #D97706;
+        }
+
         .btn-secondary {
             background: var(--white);
             color: var(--text-dark);
@@ -922,7 +931,10 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Danh sách trận đấu</h2>
-                        <button class="btn btn-primary" onclick="openAddMatchModal()">+ Thêm trận đấu</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-warning" onclick="recalculateAllPlayerPoints()" title="Tính lại toàn bộ điểm từ đầu">🔄 Tính lại toàn bộ điểm</button>
+                            <button class="btn btn-primary" onclick="openAddMatchModal()">+ Thêm trận đấu</button>
+                        </div>
                     </div>
                     <div class="table-wrapper">
                         <table class="table">
@@ -2870,28 +2882,43 @@
             if (!confirm('Bạn có chắc muốn xóa trận đấu này? Tất cả dự đoán cho trận này cũng sẽ bị xóa!')) {
                 return;
             }
-            
+
             try {
-                // Delete all predictions for this match first
+                // Get affected player IDs before deleting predictions
+                const { data: affectedPreds } = await supabase
+                    .from('predictions')
+                    .select('player_id')
+                    .eq('match_id', id);
+
+                const affectedPlayerIds = [...new Set((affectedPreds || []).map(p => p.player_id))];
+
+                // Delete all predictions for this match
                 const { error: predError } = await supabase
                     .from('predictions')
                     .delete()
                     .eq('match_id', id);
-                
+
                 if (predError) throw predError;
-                
+
                 // Delete match
                 const { error } = await supabase
                     .from('matches')
                     .delete()
                     .eq('id', id);
-                
+
                 if (error) throw error;
-                
-                alert('✅ Đã xóa trận đấu!');
+
+                // Recalculate affected players' points from remaining predictions
+                for (const playerId of affectedPlayerIds) {
+                    await updatePlayerStats(playerId);
+                }
+
+                alert('✅ Đã xóa trận đấu và cập nhật lại điểm!');
                 await loadMatches();
                 await loadPredictions();
+                await loadPlayers();
                 renderMatchesTable();
+                renderPlayersTable();
                 renderDashboard();
             } catch (error) {
                 console.error('Delete match error:', error);
@@ -3094,72 +3121,33 @@
                     alert('❌ Không tìm thấy trận đấu!');
                     return;
                 }
-                
+
                 // Confirm action
-                const confirmMsg = `🔄 RESET ĐIỂM cho trận:\n${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}\n\n⚠️ Hành động này sẽ:\n- Xóa điểm predictions của trận này (set về 0)\n- TRỪ điểm đã cộng vào players\n- Cho phép tính điểm lại\n\n❗ Lưu ý: Nếu đã tính nhiều lần, chỉ trừ điểm lần cuối!\n\nXác nhận reset?`;
+                const confirmMsg = `🔄 RESET ĐIỂM cho trận:\n${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}\n\n⚠️ Hành động này sẽ:\n- Xóa điểm predictions của trận này (set về 0)\n- Tính lại tổng điểm người chơi từ đầu\n- Cho phép tính điểm lại\n\nXác nhận reset?`;
                 if (!confirm(confirmMsg)) {
                     return;
                 }
-                
+
                 console.log('🔄 Resetting points for match:', matchId);
-                
+
                 // Get all predictions for this match
                 const { data: predictions, error: predError } = await supabase
                     .from('predictions')
-                    .select('id, player_id, total_points, points_exact_score')
+                    .select('id, player_id')
                     .eq('match_id', matchId);
-                
+
                 if (predError) {
                     console.error('Error loading predictions:', predError);
                     throw predError;
                 }
-                
+
+                const affectedPlayerIds = [...new Set((predictions || []).map(p => p.player_id))];
+
                 if (!predictions || predictions.length === 0) {
                     console.log('ℹ️ No predictions to reset');
                 } else {
                     console.log(`🔄 Resetting ${predictions.length} predictions...`);
-                    
-                    // First, subtract points from players
-                    const playerAdjustments = {};
-                    const playerStatsAdjustments = {};
-                    
-                    for (const pred of predictions) {
-                        if (pred.total_points > 0) {
-                            if (!playerAdjustments[pred.player_id]) {
-                                playerAdjustments[pred.player_id] = 0;
-                                playerStatsAdjustments[pred.player_id] = { exactScoreCount: 0 };
-                            }
-                            playerAdjustments[pred.player_id] += pred.total_points;
-                            if (pred.points_exact_score > 0) {
-                                playerStatsAdjustments[pred.player_id].exactScoreCount++;
-                            }
-                        }
-                    }
-                    
-                    // Update players (subtract points)
-                    for (const playerId of Object.keys(playerAdjustments)) {
-                        const { data: player } = await supabase
-                            .from('players')
-                            .select('total_points, exact_score_count')
-                            .eq('id', playerId)
-                            .single();
-                        
-                        if (player) {
-                            const newTotal = Math.max(0, (player.total_points || 0) - playerAdjustments[playerId]);
-                            const newExactCount = Math.max(0, (player.exact_score_count || 0) - playerStatsAdjustments[playerId].exactScoreCount);
-                            
-                            await supabase
-                                .from('players')
-                                .update({
-                                    total_points: newTotal,
-                                    exact_score_count: newExactCount
-                                })
-                                .eq('id', playerId);
-                            
-                            console.log(`  ✅ Player ${playerId.substring(0,8)}: -${playerAdjustments[playerId]} → Total: ${newTotal}`);
-                        }
-                    }
-                    
+
                     // Reset prediction points to 0
                     for (const pred of predictions) {
                         await supabase
@@ -3171,11 +3159,17 @@
                                 total_points: 0
                             })
                             .eq('id', pred.id);
-                        
+
                         await new Promise(resolve => setTimeout(resolve, 20));
                     }
-                    
+
                     console.log('✅ All predictions reset to 0');
+
+                    // Recalculate affected players' totals from all their predictions
+                    for (const playerId of affectedPlayerIds) {
+                        await updatePlayerStats(playerId);
+                        console.log(`  ✅ Player ${playerId.substring(0,8)}: recalculated`);
+                    }
                 }
                 
                 // Reset points_calculated flag
@@ -3346,36 +3340,14 @@
                 
                 console.log(`  ✅ ${successCount} predictions updated, ${failCount} failed`);
                 
-                console.log('💾 Updating player totals...');
-                
-                // Update player stats
+                console.log('💾 Recalculating player totals from all predictions...');
+
+                // Recalculate player stats from scratch (sum ALL predictions, not incremental)
                 for (const playerId of Object.keys(playerPointsMap)) {
                     try {
-                        const { data: player } = await supabase
-                            .from('players')
-                            .select('total_points, exact_score_count, top1_count')
-                            .eq('id', playerId)
-                            .single();
-                        
-                        if (player) {
-                            const newTotal = (player.total_points || 0) + playerPointsMap[playerId];
-                            const newExactCount = (player.exact_score_count || 0) + playerStatsMap[playerId].exactScoreCount;
-                            const newTop1Count = (player.top1_count || 0) + playerStatsMap[playerId].top1Count;
-                            
-                            await supabase
-                                .from('players')
-                                .update({
-                                    total_points: newTotal,
-                                    exact_score_count: newExactCount,
-                                    top1_count: newTop1Count
-                                })
-                                .eq('id', playerId);
-                            
-                            console.log(`  ✅ Player ${playerId.substring(0,8)}: +${playerPointsMap[playerId]} → Total: ${newTotal}`);
-                        }
-                        
+                        await updatePlayerStats(playerId);
+                        console.log(`  ✅ Player ${playerId.substring(0,8)}: recalculated from all predictions`);
                         await new Promise(resolve => setTimeout(resolve, 50));
-                        
                     } catch (err) {
                         console.error(`  ❌ Failed to update player ${playerId}:`, err);
                     }
@@ -3428,6 +3400,55 @@
             }
         }
 
+        // Recalculate ALL player points from scratch
+        async function recalculateAllPlayerPoints() {
+            if (!confirm('🔄 TÍNH LẠI TOÀN BỘ ĐIỂM\n\nHành động này sẽ:\n- Tính lại điểm cho TẤT CẢ trận đã có kết quả\n- Cập nhật tổng điểm cho TẤT CẢ người chơi\n\nQuá trình có thể mất vài giây.\nXác nhận?')) {
+                return;
+            }
+
+            try {
+                console.log('🔄 Starting full recalculation...');
+
+                // Step 1: Recalculate points for all finished matches with results
+                const finishedMatches = allMatches.filter(m =>
+                    m.status === 'finished' && m.home_score !== null && m.away_score !== null && m.minute
+                );
+
+                console.log(`📊 Found ${finishedMatches.length} finished matches to recalculate`);
+
+                for (const match of finishedMatches) {
+                    console.log(`  ⚡ Recalculating: ${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}`);
+                    await calculateAndUpdatePoints(match.id, match.home_score, match.away_score, match.minute);
+
+                    await supabase
+                        .from('matches')
+                        .update({ points_calculated: true })
+                        .eq('id', match.id);
+                }
+
+                // Step 2: Recalculate ALL player totals from predictions
+                console.log('💾 Recalculating all player totals...');
+                for (const player of allPlayers) {
+                    await updatePlayerStats(player.id);
+                    console.log(`  ✅ ${player.name}: recalculated`);
+                }
+
+                // Refresh UI
+                await loadMatches();
+                await loadPredictions();
+                await loadPlayers();
+                renderMatchesTable();
+                renderPlayersTable();
+                renderDashboard();
+
+                alert(`✅ Đã tính lại toàn bộ điểm!\n\n📊 Kết quả:\n- ${finishedMatches.length} trận đã tính điểm\n- ${allPlayers.length} người chơi đã cập nhật\n\nĐiểm giờ đây chính xác theo dữ liệu hiện tại.`);
+
+            } catch (error) {
+                console.error('❌ Recalculate all error:', error);
+                alert('❌ Lỗi khi tính lại điểm:\n' + error.message);
+            }
+        }
+
         function viewMatchDetails(id) {
             // id is already a string (UUID)
             const match = allMatches.find(m => m.id === id);
@@ -3435,7 +3456,7 @@
                 alert('Không tìm thấy trận đấu!');
                 return;
             }
-            
+
             alert(`Chi tiết trận đấu:\n${match.home_team} ${match.home_score} - ${match.away_score} ${match.away_team}\nPhút: ${match.minute}'\nTrạng thái: ${match.status}`);
         }
 
