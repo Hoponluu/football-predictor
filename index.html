@@ -1076,6 +1076,7 @@
                     away: m.away_team,
                     date: new Date(m.match_date),
                     status: m.status,
+                    match_number: m.match_number || null,
                     actualScore: m.status === 'finished' ? {
                         homeScore: m.home_score,
                         awayScore: m.away_score,

@@ -1,7 +1,7 @@
 // ============================================
-// BRACKET RENDER - v3
-// Group stage: table row cards
-// Knockout: mini-cards with round-colored borders
+// BRACKET RENDER - v4
+// Group stage: table row cards (sorted by date)
+// Knockout: mini-cards ordered by FIFA bracket position (match_number)
 // ============================================
 
 // Round border colors for knockout mini-cards
@@ -12,6 +12,31 @@ const ROUND_COLORS = {
     SF:  '#8B5CF6',   // Purple
     '3RD': '#6B7280', // Gray
     FINAL: '#F59E0B'  // Gold
+};
+
+// ============================================
+// FIFA World Cup 2026 Official Bracket Structure
+// Defines bracket DISPLAY ORDER for each round.
+// Matches are rendered in this order (top→bottom) so that
+// consecutive pairs [0,1], [2,3]... connect to next round [0], [1]...
+//
+// Source: FIFA.com knockout stage match schedule
+// ============================================
+const FIFA_BRACKET = {
+    // R32 bracket order (top to bottom on the bracket)
+    // Pairs: (M74,M77)→M89, (M73,M75)→M90, (M76,M78)→M91, (M79,M80)→M92,
+    //        (M83,M84)→M93, (M81,M82)→M94, (M86,M88)→M95, (M85,M87)→M96
+    R32: [74, 77, 73, 75, 76, 78, 79, 80, 83, 84, 81, 82, 86, 88, 85, 87],
+    // R16 bracket order
+    // Pairs: (M89,M90)→M97, (M91,M92)→M99, (M93,M94)→M98, (M95,M96)→M100
+    R16: [89, 90, 91, 92, 93, 94, 95, 96],
+    // QF bracket order
+    // Pairs: (M97,M99)→M101, (M98,M100)→M102
+    QF: [97, 99, 98, 100],
+    // SF bracket order
+    SF: [101, 102],
+    FINAL: [104],
+    '3RD': [103]
 };
 
 // ============================================
@@ -39,6 +64,23 @@ function getMatchScores(match) {
     return { homeScore: null, awayScore: null, homePenalty: null, awayPenalty: null, minute: null };
 }
 
+// Helper: sort matches by FIFA bracket position
+function sortByBracketPosition(matchesArr, bracketOrder) {
+    if (!bracketOrder || bracketOrder.length === 0) return matchesArr;
+
+    return matchesArr.sort((a, b) => {
+        const aNum = a.match_number || 0;
+        const bNum = b.match_number || 0;
+        const aIdx = bracketOrder.indexOf(aNum);
+        const bIdx = bracketOrder.indexOf(bNum);
+        // Matches in bracket order first, unknown matches at the end (by date)
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+        return (a.date || 0) - (b.date || 0);
+    });
+}
+
 // ============================================
 // GROUP STAGE: Table Row Card
 // Layout: [HOME_ABBR flag score min' score flag AWAY_ABBR] [date/time] [points]
@@ -53,7 +95,6 @@ function renderMatchRowCard(match) {
     const scores = getMatchScores(match);
     const notOpen = match.status === 'not-open';
 
-    // Determine winner/loser
     let homeWin = false, awayWin = false;
     if (isFinished && scores.homeScore !== null) {
         const hs = scores.homePenalty != null ? scores.homePenalty : scores.homeScore;
@@ -62,12 +103,10 @@ function renderMatchRowCard(match) {
         awayWin = as > hs;
     }
 
-    // Date/time
     const matchDate = match.date || (match.match_date ? new Date(match.match_date) : new Date());
     const dateStr = matchDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
     const timeStr = matchDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-    // Score center section
     let centerHTML = '';
     if (isFinished && scores.homeScore !== null) {
         const minDisplay = scores.minute ? `${scores.minute}'` : 'FT';
@@ -80,7 +119,6 @@ function renderMatchRowCard(match) {
         centerHTML = `<span class="row-vs">vs</span>`;
     }
 
-    // Points
     let pointsHTML = '';
     if (isFinished && match.userPrediction && match.points) {
         const total = (match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0);
@@ -91,7 +129,6 @@ function renderMatchRowCard(match) {
         pointsHTML = `<div class="row-predicted">✓</div>`;
     }
 
-    // Status class
     let statusClass = '';
     if (notOpen) statusClass = 'not-open';
     else if (isFinished) statusClass = 'finished';
@@ -121,7 +158,6 @@ function renderMatchRowCard(match) {
         </div>
     `;
 
-    // Click handler
     if (!currentPlayer) {
         card.onclick = () => { alert('Vui lòng đăng nhập để dự đoán!'); openLoginModal(); };
     } else if (isFinished && match.actualScore) {
@@ -136,7 +172,7 @@ function renderMatchRowCard(match) {
 }
 
 // ============================================
-// GROUP STAGE RENDERER
+// GROUP STAGE RENDERER (sorted by date — chronological)
 // ============================================
 function renderScheduleGroupStageOnly() {
     const container = document.getElementById('scheduleGroupStage');
@@ -184,7 +220,7 @@ function renderScheduleGroupStageOnly() {
 }
 
 // ============================================
-// KNOCKOUT BRACKET - Mini cards with round colors
+// KNOCKOUT BRACKET — sorted by FIFA bracket position (match_number)
 // ============================================
 function renderKnockoutBracket() {
     const container = document.getElementById('scheduleKnockout');
@@ -206,11 +242,24 @@ function renderKnockoutBracket() {
         return;
     }
 
+    // Sort each round by FIFA bracket position (not date!)
     const rounds = {
-        R32: knockoutMatches.filter(m => (m.group || m.match_group) === 'R32').sort((a, b) => a.date - b.date),
-        R16: knockoutMatches.filter(m => (m.group || m.match_group) === 'R16').sort((a, b) => a.date - b.date),
-        QF: knockoutMatches.filter(m => (m.group || m.match_group) === 'QF').sort((a, b) => a.date - b.date),
-        SF: knockoutMatches.filter(m => (m.group || m.match_group) === 'SF').sort((a, b) => a.date - b.date),
+        R32: sortByBracketPosition(
+            knockoutMatches.filter(m => (m.group || m.match_group) === 'R32'),
+            FIFA_BRACKET.R32
+        ),
+        R16: sortByBracketPosition(
+            knockoutMatches.filter(m => (m.group || m.match_group) === 'R16'),
+            FIFA_BRACKET.R16
+        ),
+        QF: sortByBracketPosition(
+            knockoutMatches.filter(m => (m.group || m.match_group) === 'QF'),
+            FIFA_BRACKET.QF
+        ),
+        SF: sortByBracketPosition(
+            knockoutMatches.filter(m => (m.group || m.match_group) === 'SF'),
+            FIFA_BRACKET.SF
+        ),
         '3RD': knockoutMatches.filter(m => (m.group || m.match_group) === '3RD'),
         FINAL: knockoutMatches.filter(m => (m.group || m.match_group) === 'FINAL')
     };
@@ -244,7 +293,6 @@ function renderKnockoutBracket() {
 function renderBracketRound(roundMatches, roundKey, title, dataRound) {
     if (roundMatches.length === 0) return '';
 
-    // Each card is an individual flex item — space-around distributes evenly
     return `
         <div class="bracket-round" data-round="${dataRound}">
             <div class="round-title" style="border-color: ${ROUND_COLORS[roundKey]}">${title}</div>
@@ -255,18 +303,22 @@ function renderBracketRound(roundMatches, roundKey, title, dataRound) {
     `;
 }
 
+// ============================================
+// BRACKET MINI CARD — handles both real teams and TBD
+// ============================================
 function renderBracketMiniCard(match, roundKey) {
     const homeTeam = match.home || match.home_team || 'TBD';
     const awayTeam = match.away || match.away_team || 'TBD';
 
-    if (!countries[homeTeam] || !countries[awayTeam]) return '';
+    const homeData = countries[homeTeam] || null;
+    const awayData = countries[awayTeam] || null;
+    const isTBD = !homeData || !awayData;
 
-    const homeData = countries[homeTeam];
-    const awayData = countries[awayTeam];
     const isFinished = match.status === 'finished';
     const hasPrediction = match.userPrediction;
     const notOpen = match.status === 'not-open';
     const scores = getMatchScores(match);
+    const matchNum = match.match_number;
 
     let homeIsLoser = false, awayIsLoser = false;
     if (isFinished && scores.homeScore !== null) {
@@ -285,9 +337,13 @@ function renderBracketMiniCard(match, roundKey) {
 
     const classes = ['bracket-mini-card'];
     if (notOpen) classes.push('not-open');
+    if (isTBD) classes.push('tbd');
     if (isFinal) classes.push('final-match');
     if (isThird) classes.push('third-match');
     if (hasPrediction && !isFinished) classes.push('predicted');
+
+    // Match number label
+    const matchNumHTML = matchNum ? `<span class="bracket-mini-matchnum">M${matchNum}</span>` : '';
 
     // Points badge
     let badgeHTML = '';
@@ -298,23 +354,33 @@ function renderBracketMiniCard(match, roundKey) {
         badgeHTML = `<div class="bracket-mini-predicted">✓</div>`;
     }
 
-    const homeCode = typeof getCountryCode === 'function' ? getCountryCode(homeTeam) : homeTeam.substring(0,3).toUpperCase();
-    const awayCode = typeof getCountryCode === 'function' ? getCountryCode(awayTeam) : awayTeam.substring(0,3).toUpperCase();
+    // Team display — handle TBD
+    const homeFlag = homeData ? homeData.flag : '❓';
+    const awayFlag = awayData ? awayData.flag : '❓';
+    const homeBg = homeData ? homeData.color : '#E5E7EB';
+    const awayBg = awayData ? awayData.color : '#E5E7EB';
+    const homeCode = homeData
+        ? (typeof getCountryCode === 'function' ? getCountryCode(homeTeam) : homeTeam.substring(0,3).toUpperCase())
+        : homeTeam.substring(0, 6);
+    const awayCode = awayData
+        ? (typeof getCountryCode === 'function' ? getCountryCode(awayTeam) : awayTeam.substring(0,3).toUpperCase())
+        : awayTeam.substring(0, 6);
 
     return `
         <div class="${classes.join(' ')}" data-match-id="${match.id}" style="border-top-color: ${borderColor}">
             <div class="bracket-mini-datetime">
+                ${matchNumHTML}
                 <span>${dateStr}</span>
                 <span>${timeStr}</span>
             </div>
             <div class="bracket-mini-teams">
                 <div class="bracket-mini-team ${homeIsLoser ? 'loser' : ''}">
-                    <span class="bracket-mini-flag" style="background: ${homeData.color}">${homeData.flag}</span>
+                    <span class="bracket-mini-flag" style="background: ${homeBg}">${homeFlag}</span>
                     <span class="bracket-mini-code">${homeCode}</span>
                     ${isFinished && scores.homeScore !== null ? `<span class="bracket-mini-score">${scores.homeScore}</span>` : ''}
                 </div>
                 <div class="bracket-mini-team ${awayIsLoser ? 'loser' : ''}">
-                    <span class="bracket-mini-flag" style="background: ${awayData.color}">${awayData.flag}</span>
+                    <span class="bracket-mini-flag" style="background: ${awayBg}">${awayFlag}</span>
                     <span class="bracket-mini-code">${awayCode}</span>
                     ${isFinished && scores.awayScore !== null ? `<span class="bracket-mini-score">${scores.awayScore}</span>` : ''}
                 </div>
@@ -346,17 +412,15 @@ function attachBracketMatchHandlers() {
 
 // ============================================
 // BRACKET CONNECTOR LINES (SVG overlay)
-// Shows which match winners advance to next round
+// Pairs consecutive cards [0,1]→next[0], [2,3]→next[1]
 // ============================================
 function drawBracketConnectors() {
     const wrapper = document.querySelector('.bracket-wrapper');
     if (!wrapper) return;
 
-    // Remove existing SVG
     const existing = wrapper.querySelector('.bracket-connectors');
     if (existing) existing.remove();
 
-    // Ensure wrapper is positioned for absolute SVG
     wrapper.style.position = 'relative';
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -369,56 +433,44 @@ function drawBracketConnectors() {
     svg.style.pointerEvents = 'none';
     svg.style.zIndex = '0';
 
-    // Round flow: R32→R16→QF→SF→FINAL
     const roundFlow = ['r32', 'r16', 'qf', 'sf'];
 
     for (let ri = 0; ri < roundFlow.length; ri++) {
         const currentRound = wrapper.querySelector(`.bracket-round[data-round="${roundFlow[ri]}"]`);
         if (!currentRound) continue;
 
-        // Determine next round
         let nextRound;
         if (ri < roundFlow.length - 1) {
             nextRound = wrapper.querySelector(`.bracket-round[data-round="${roundFlow[ri + 1]}"]`);
         } else {
-            // SF → final round (FINAL match only)
             nextRound = wrapper.querySelector(`.bracket-round[data-round="final"]`);
         }
         if (!nextRound) continue;
 
-        // Get all cards in current round and next round
         const currentCards = [...currentRound.querySelectorAll('.bracket-mini-card')];
         const nextCards = [...nextRound.querySelectorAll('.bracket-mini-card:not(.third-match)')];
 
-        // Pair cards by index: [0,1]→next[0], [2,3]→next[1], etc.
         for (let i = 0; i < currentCards.length - 1; i += 2) {
             const card1 = currentCards[i];
             const card2 = currentCards[i + 1];
             const target = nextCards[Math.floor(i / 2)];
             if (!target) continue;
 
-            // Get positions relative to wrapper
             const pos1 = getOffsetRelativeTo(card1, wrapper);
             const pos2 = getOffsetRelativeTo(card2, wrapper);
             const posT = getOffsetRelativeTo(target, wrapper);
 
             const y1 = pos1.top + pos1.height / 2;
             const y2 = pos2.top + pos2.height / 2;
-            const x1 = pos1.left + pos1.width; // right edge of source cards
-            const xT = posT.left;              // left edge of target
+            const x1 = pos1.left + pos1.width;
+            const xT = posT.left;
             const yT = posT.top + posT.height / 2;
             const xMid = (x1 + xT) / 2;
 
-            // Determine connector color based on round
             const roundKey = roundFlow[ri].toUpperCase();
             const color = ROUND_COLORS[roundKey] || '#CBD5E1';
             const lineColor = hexToRgba(color, 0.35);
 
-            // Draw bracket path:
-            // card1 right → mid (horizontal)
-            // card2 right → mid (horizontal)
-            // mid y1 → y2 (vertical)
-            // mid yT → target left (horizontal)
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('d', [
                 `M ${x1} ${y1} H ${xMid}`,
@@ -438,7 +490,6 @@ function drawBracketConnectors() {
     wrapper.appendChild(svg);
 }
 
-// Helper: get element position relative to an ancestor
 function getOffsetRelativeTo(el, ancestor) {
     const elRect = el.getBoundingClientRect();
     const aRect = ancestor.getBoundingClientRect();
@@ -450,7 +501,6 @@ function getOffsetRelativeTo(el, ancestor) {
     };
 }
 
-// Helper: convert hex color to rgba
 function hexToRgba(hex, alpha) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);

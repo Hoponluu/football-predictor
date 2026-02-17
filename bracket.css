@@ -126,6 +126,29 @@
     border-top: 3px dashed #6B7280;
 }
 
+/* TBD card (teams not yet determined) */
+.bracket-mini-card.tbd {
+    opacity: 0.6;
+    background: #F9FAFB;
+    cursor: default;
+}
+
+.bracket-mini-card.tbd:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Match number label */
+.bracket-mini-matchnum {
+    font-size: 9px;
+    font-weight: 700;
+    color: #6B7280;
+    background: #F3F4F6;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1;
+}
+
 /* Datetime header */
 .bracket-mini-datetime {
     display: flex;
