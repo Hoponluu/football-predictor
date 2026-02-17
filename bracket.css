@@ -29,10 +29,11 @@
 
 .bracket-wrapper {
     display: flex;
-    gap: 32px;
+    gap: 40px;
     min-width: max-content;
     padding: 16px;
     position: relative;
+    align-items: stretch;
 }
 
 .bracket-empty {
@@ -71,29 +72,17 @@
 .round-matches {
     display: flex;
     flex-direction: column;
-    gap: 12px;
     flex: 1;
     justify-content: space-around;
+    /* No gap — space-around distributes pairs evenly so each round
+       naturally centers between feeder pairs from previous round */
 }
 
 /* ===== Bracket Pair (groups 2 matches) ===== */
 .bracket-pair {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-}
-
-/* Increase spacing as rounds progress */
-.bracket-round[data-round="r16"] .round-matches {
-    gap: 40px;
-}
-
-.bracket-round[data-round="qf"] .round-matches {
-    gap: 100px;
-}
-
-.bracket-round[data-round="sf"] .round-matches {
-    gap: 240px;
+    gap: 6px;
 }
 
 .bracket-round.final-round .round-matches {

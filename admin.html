@@ -3227,36 +3227,43 @@
                 };
                 
                 // Calculate scores for all predictions
+                // Ranking priority: 1) Exact score  2) Goal difference  3) Total score diff  4) Minute
+                const actualGoalDiff = actualHome - actualAway;
+
                 const scoredPredictions = predictions.map(pred => {
-                    const homeDiff = Math.abs(pred.home_score - actualHome);
-                    const awayDiff = Math.abs(pred.away_score - actualAway);
-                    const totalDiff = homeDiff + awayDiff;
-                    
                     const exactScore = (pred.home_score === actualHome && pred.away_score === actualAway);
-                    const minuteDiff = Math.abs(pred.minute - actualMinute);  // Calculate minute difference
-                    
-                    let accuracy = totalDiff;
-                    
-                    const predWinner = pred.home_score > pred.away_score ? 'home' : 
-                                      (pred.home_score < pred.away_score ? 'away' : 'draw');
-                    const actualWinner = actualHome > actualAway ? 'home' :
-                                        (actualHome < actualAway ? 'away' : 'draw');
-                    
-                    if (predWinner === actualWinner) {
-                        accuracy -= 0.5;
-                    }
-                    
+
+                    // Goal difference accuracy: |predicted_diff - actual_diff|
+                    const predGoalDiff = pred.home_score - pred.away_score;
+                    const goalDiffAccuracy = Math.abs(predGoalDiff - actualGoalDiff);
+
+                    // Total individual score difference
+                    const totalDiff = Math.abs(pred.home_score - actualHome) + Math.abs(pred.away_score - actualAway);
+
+                    // Minute prediction closeness
+                    const minuteDiff = Math.abs(pred.minute - actualMinute);
+
                     return {
                         id: pred.id,
                         player_id: pred.player_id,
-                        accuracy,
                         exactScore,
-                        minuteDiff  // Store minute difference instead of boolean
+                        goalDiffAccuracy,
+                        totalDiff,
+                        minuteDiff
                     };
                 });
-                
-                // Sort by accuracy
-                scoredPredictions.sort((a, b) => a.accuracy - b.accuracy);
+
+                // Multi-level sort:
+                // 1. Exact score first (true > false)
+                // 2. Goal difference accuracy (lower = better)
+                // 3. Total score difference (lower = better)
+                // 4. Minute prediction (lower = better)
+                scoredPredictions.sort((a, b) => {
+                    if (a.exactScore !== b.exactScore) return a.exactScore ? -1 : 1;
+                    if (a.goalDiffAccuracy !== b.goalDiffAccuracy) return a.goalDiffAccuracy - b.goalDiffAccuracy;
+                    if (a.totalDiff !== b.totalDiff) return a.totalDiff - b.totalDiff;
+                    return a.minuteDiff - b.minuteDiff;
+                });
                 
                 // Find closest minute prediction (minimum difference)
                 const closestMinuteDiff = Math.min(...scoredPredictions.map(p => p.minuteDiff));
@@ -3302,7 +3309,7 @@
                     if (pred.exactScore) playerStatsMap[pred.player_id].exactScoreCount++;
                     if (i === 0) playerStatsMap[pred.player_id].top1Count++;
                     
-                    console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints}) [minute diff: ${pred.minuteDiff}]`);
+                    console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints}) [goalDiff:${pred.goalDiffAccuracy}, totalDiff:${pred.totalDiff}, minDiff:${pred.minuteDiff}]`);
                 }
                 
                 console.log('💾 Updating predictions table (direct SQL)...');
