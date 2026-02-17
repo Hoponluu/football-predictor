@@ -236,15 +236,35 @@ function renderKnockoutBracket() {
     `;
 
     attachBracketMatchHandlers();
+
+    // Draw connector lines after DOM is ready
+    requestAnimationFrame(() => drawBracketConnectors());
 }
 
 function renderBracketRound(roundMatches, roundKey, title, dataRound) {
     if (roundMatches.length === 0) return '';
+
+    // Group matches into pairs for bracket connector lines
+    let matchesHTML = '';
+    for (let i = 0; i < roundMatches.length; i += 2) {
+        if (i + 1 < roundMatches.length) {
+            matchesHTML += `
+                <div class="bracket-pair">
+                    ${renderBracketMiniCard(roundMatches[i], roundKey)}
+                    ${renderBracketMiniCard(roundMatches[i + 1], roundKey)}
+                </div>
+            `;
+        } else {
+            // Odd match (no pair)
+            matchesHTML += renderBracketMiniCard(roundMatches[i], roundKey);
+        }
+    }
+
     return `
         <div class="bracket-round" data-round="${dataRound}">
             <div class="round-title" style="border-color: ${ROUND_COLORS[roundKey]}">${title}</div>
             <div class="round-matches">
-                ${roundMatches.map(m => renderBracketMiniCard(m, roundKey)).join('')}
+                ${matchesHTML}
             </div>
         </div>
     `;
@@ -337,4 +357,122 @@ function attachBracketMatchHandlers() {
             card.style.cursor = 'default';
         }
     });
+}
+
+// ============================================
+// BRACKET CONNECTOR LINES (SVG overlay)
+// Shows which match winners advance to next round
+// ============================================
+function drawBracketConnectors() {
+    const wrapper = document.querySelector('.bracket-wrapper');
+    if (!wrapper) return;
+
+    // Remove existing SVG
+    const existing = wrapper.querySelector('.bracket-connectors');
+    if (existing) existing.remove();
+
+    // Ensure wrapper is positioned for absolute SVG
+    wrapper.style.position = 'relative';
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('bracket-connectors');
+    svg.setAttribute('width', wrapper.scrollWidth);
+    svg.setAttribute('height', wrapper.scrollHeight);
+    svg.style.position = 'absolute';
+    svg.style.top = '0';
+    svg.style.left = '0';
+    svg.style.pointerEvents = 'none';
+    svg.style.zIndex = '0';
+
+    // Round flow: R32→R16→QF→SF→FINAL
+    const roundFlow = ['r32', 'r16', 'qf', 'sf'];
+
+    for (let ri = 0; ri < roundFlow.length; ri++) {
+        const currentRound = wrapper.querySelector(`.bracket-round[data-round="${roundFlow[ri]}"]`);
+        if (!currentRound) continue;
+
+        // Determine next round
+        let nextRound;
+        if (ri < roundFlow.length - 1) {
+            nextRound = wrapper.querySelector(`.bracket-round[data-round="${roundFlow[ri + 1]}"]`);
+        } else {
+            // SF → final round (FINAL match only)
+            nextRound = wrapper.querySelector(`.bracket-round[data-round="final"]`);
+        }
+        if (!nextRound) continue;
+
+        // Get all pairs in current round
+        const pairs = [...currentRound.querySelectorAll('.bracket-pair')];
+        // Get target cards in next round (individual cards, not in pairs)
+        const nextCards = [...nextRound.querySelectorAll('.bracket-mini-card:not(.third-match)')];
+
+        pairs.forEach((pair, pairIdx) => {
+            const cards = [...pair.querySelectorAll('.bracket-mini-card')];
+            if (cards.length < 2) return;
+
+            const target = nextCards[pairIdx];
+            if (!target) return;
+
+            const card1 = cards[0];
+            const card2 = cards[1];
+
+            // Get positions relative to wrapper
+            const pos1 = getOffsetRelativeTo(card1, wrapper);
+            const pos2 = getOffsetRelativeTo(card2, wrapper);
+            const posT = getOffsetRelativeTo(target, wrapper);
+
+            const y1 = pos1.top + pos1.height / 2;
+            const y2 = pos2.top + pos2.height / 2;
+            const x1 = pos1.left + pos1.width; // right edge of source cards
+            const xT = posT.left;              // left edge of target
+            const yT = posT.top + posT.height / 2;
+            const xMid = (x1 + xT) / 2;
+
+            // Determine connector color based on round
+            const roundKey = roundFlow[ri].toUpperCase();
+            const color = ROUND_COLORS[roundKey] || '#CBD5E1';
+            const lineColor = hexToRgba(color, 0.35);
+
+            // Draw bracket path:
+            // card1 right → mid (horizontal)
+            // card2 right → mid (horizontal)
+            // mid y1 → y2 (vertical)
+            // mid yT → target left (horizontal)
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', [
+                `M ${x1} ${y1} H ${xMid}`,
+                `M ${x1} ${y2} H ${xMid}`,
+                `M ${xMid} ${y1} V ${y2}`,
+                `M ${xMid} ${yT} H ${xT}`
+            ].join(' '));
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', lineColor);
+            path.setAttribute('stroke-width', '2');
+            path.setAttribute('stroke-linecap', 'round');
+
+            svg.appendChild(path);
+        });
+    }
+
+    wrapper.appendChild(svg);
+}
+
+// Helper: get element position relative to an ancestor
+function getOffsetRelativeTo(el, ancestor) {
+    const elRect = el.getBoundingClientRect();
+    const aRect = ancestor.getBoundingClientRect();
+    return {
+        top: elRect.top - aRect.top,
+        left: elRect.left - aRect.left,
+        width: elRect.width,
+        height: elRect.height
+    };
+}
+
+// Helper: convert hex color to rgba
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
