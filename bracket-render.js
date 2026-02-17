@@ -244,27 +244,12 @@ function renderKnockoutBracket() {
 function renderBracketRound(roundMatches, roundKey, title, dataRound) {
     if (roundMatches.length === 0) return '';
 
-    // Group matches into pairs for bracket connector lines
-    let matchesHTML = '';
-    for (let i = 0; i < roundMatches.length; i += 2) {
-        if (i + 1 < roundMatches.length) {
-            matchesHTML += `
-                <div class="bracket-pair">
-                    ${renderBracketMiniCard(roundMatches[i], roundKey)}
-                    ${renderBracketMiniCard(roundMatches[i + 1], roundKey)}
-                </div>
-            `;
-        } else {
-            // Odd match (no pair)
-            matchesHTML += renderBracketMiniCard(roundMatches[i], roundKey);
-        }
-    }
-
+    // Each card is an individual flex item — space-around distributes evenly
     return `
         <div class="bracket-round" data-round="${dataRound}">
             <div class="round-title" style="border-color: ${ROUND_COLORS[roundKey]}">${title}</div>
             <div class="round-matches">
-                ${matchesHTML}
+                ${roundMatches.map(m => renderBracketMiniCard(m, roundKey)).join('')}
             </div>
         </div>
     `;
@@ -401,20 +386,16 @@ function drawBracketConnectors() {
         }
         if (!nextRound) continue;
 
-        // Get all pairs in current round
-        const pairs = [...currentRound.querySelectorAll('.bracket-pair')];
-        // Get target cards in next round (individual cards, not in pairs)
+        // Get all cards in current round and next round
+        const currentCards = [...currentRound.querySelectorAll('.bracket-mini-card')];
         const nextCards = [...nextRound.querySelectorAll('.bracket-mini-card:not(.third-match)')];
 
-        pairs.forEach((pair, pairIdx) => {
-            const cards = [...pair.querySelectorAll('.bracket-mini-card')];
-            if (cards.length < 2) return;
-
-            const target = nextCards[pairIdx];
-            if (!target) return;
-
-            const card1 = cards[0];
-            const card2 = cards[1];
+        // Pair cards by index: [0,1]→next[0], [2,3]→next[1], etc.
+        for (let i = 0; i < currentCards.length - 1; i += 2) {
+            const card1 = currentCards[i];
+            const card2 = currentCards[i + 1];
+            const target = nextCards[Math.floor(i / 2)];
+            if (!target) continue;
 
             // Get positions relative to wrapper
             const pos1 = getOffsetRelativeTo(card1, wrapper);
@@ -451,7 +432,7 @@ function drawBracketConnectors() {
             path.setAttribute('stroke-linecap', 'round');
 
             svg.appendChild(path);
-        });
+        }
     }
 
     wrapper.appendChild(svg);
