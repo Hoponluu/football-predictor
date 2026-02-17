@@ -3473,7 +3473,9 @@
             document.getElementById('playerGroup').value = player.group_id || '';
             
             document.getElementById('addPlayerModalTitle').textContent = 'Sửa thông tin người chơi';
-            document.getElementById('playerPasswordGroup').style.display = 'none';
+            document.getElementById('playerPasswordGroup').style.display = 'block';
+            document.getElementById('playerPassword').value = '';
+            document.getElementById('playerPassword').placeholder = 'Để trống nếu không đổi';
             document.getElementById('addPlayerModal').classList.add('active');
         }
 
@@ -3504,8 +3506,8 @@
                 group_id: groupId  // Pass UUID string directly, don't parse to int
             };
             
-            // Only include password for new players
-            if (!currentEditingPlayer && password) {
+            // Include password for new players (required) or existing players (optional)
+            if (password) {
                 playerData.password = password;
             }
             
