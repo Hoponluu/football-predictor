@@ -2389,24 +2389,34 @@
             console.log('🔐 Attempting login...', { email, groupCode });
             
             try {
-                // Verify group code
-                if (groupCode !== DEMO_GROUP_CODE) {
+                // Verify group code against database
+                const group = await getGroupByCode(groupCode);
+                if (!group) {
                     alert('Mã nhóm không đúng!');
                     return;
                 }
-                
+
                 // Login
                 const result = await loginUser(email, password);
-                
+
                 if (result.success) {
+                    // Verify player belongs to this group
+                    if (result.player.group_id !== group.id) {
+                        alert('Tài khoản không thuộc nhóm này!');
+                        currentUser = null;
+                        localStorage.removeItem('currentUserId');
+                        return;
+                    }
+
                     console.log('✅ Login successful!');
                     currentPlayer = result.player;
-                    
+                    currentGroup = group;
+
                     closeLoginModal();
-                    
+
                     // Reload app with user data
                     await initApp();
-                    
+
                     alert('Đăng nhập thành công!');
                 } else {
                     console.error('❌ Login failed:', result.error);
