@@ -87,7 +87,7 @@
 /* ===== Bracket Mini Card ===== */
 .bracket-mini-card {
     background: var(--white);
-    border-radius: 8px;
+    border-radius: 10px 0;
     border-top: 3px solid #46FF6F;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     padding: 0;
