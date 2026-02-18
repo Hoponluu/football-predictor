@@ -940,7 +940,7 @@
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>M#</th>
                                     <th>Trận đấu</th>
                                     <th>Bảng</th>
                                     <th>Thời gian</th>
@@ -1743,7 +1743,7 @@
                 const { data, error } = await supabase
                     .from('matches')
                     .select('*')
-                    .order('match_date', { ascending: true });
+                    .order('match_number', { ascending: true, nullsFirst: false });
                 
                 if (error) throw error;
                 
@@ -2014,9 +2014,11 @@
                 // Use quotes for UUID strings
                 const matchIdStr = `'${match.id}'`;
                 
+                const matchNumDisplay = match.match_number ? `M${match.match_number}` : '-';
+
                 html += `
                     <tr>
-                        <td>${match.id}</td>
+                        <td><strong>${matchNumDisplay}</strong></td>
                         <td><strong>${match.home_team} vs ${match.away_team}</strong></td>
                         <td>${groupDisplay}</td>
                         <td>${dateStr} ${timeStr}</td>
