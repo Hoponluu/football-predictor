@@ -5,6 +5,10 @@
 // ============================================
 
 // Round border colors for knockout mini-cards
+// Timezone constant — all display and input uses GMT+7 (Vietnam)
+const TZ_VIETNAM = 'Asia/Ho_Chi_Minh';
+
+// Round border colors for knockout mini-cards
 const ROUND_COLORS = {
     R32: '#3B82F6',   // Blue
     R16: '#10B981',   // Green
@@ -104,8 +108,8 @@ function renderMatchRowCard(match) {
     }
 
     const matchDate = match.date || (match.match_date ? new Date(match.match_date) : new Date());
-    const dateStr = matchDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-    const timeStr = matchDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = matchDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: TZ_VIETNAM });
+    const timeStr = matchDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: TZ_VIETNAM });
 
     let centerHTML = '';
     if (isFinished && scores.homeScore !== null) {
@@ -328,8 +332,8 @@ function renderBracketMiniCard(match, roundKey) {
         awayIsLoser = as < hs;
     }
 
-    const dateStr = match.date ? match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' }) : '';
-    const timeStr = match.date ? match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+    const dateStr = match.date ? match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', timeZone: TZ_VIETNAM }) : '';
+    const timeStr = match.date ? match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: TZ_VIETNAM }) : '';
 
     const borderColor = ROUND_COLORS[roundKey] || '#46FF6F';
     const isFinal = roundKey === 'FINAL';
