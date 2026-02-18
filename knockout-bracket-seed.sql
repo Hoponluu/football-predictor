@@ -59,7 +59,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status, matc
 ('R32', '1B',  '3rd', '2026-07-03 04:00:00+07', 'not-open', 85),  -- M85: Vancouver
 ('R32', '1J',  '2H',  '2026-07-03 07:00:00+07', 'not-open', 86),  -- M86: Miami
 ('R32', '1K',  '3rd', '2026-07-04 01:00:00+07', 'not-open', 87),  -- M87: Kansas City
-('R32', '2D',  '2G',  '2026-07-04 04:00:00+07', 'not-open', 88),  -- M88: Dallas
+('R32', '2D',  '2G',  '2026-07-04 04:00:00+07', 'not-open', 88);  -- M88: Dallas
 
 -- ----- ROUND OF 16 (M89-M96) -----
 -- Bracket connections: (M74,M77)→M89, (M73,M75)→M90, (M76,M78)→M91, (M79,M80)→M92
@@ -72,7 +72,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status, matc
 ('R16', 'W83', 'W84', '2026-07-06 07:00:00+07', 'not-open', 93),  -- M93
 ('R16', 'W81', 'W82', '2026-07-07 01:00:00+07', 'not-open', 94),  -- M94
 ('R16', 'W86', 'W88', '2026-07-07 04:00:00+07', 'not-open', 95),  -- M95
-('R16', 'W85', 'W87', '2026-07-07 07:00:00+07', 'not-open', 96),  -- M96
+('R16', 'W85', 'W87', '2026-07-07 07:00:00+07', 'not-open', 96);  -- M96
 
 -- ----- QUARTER-FINALS (M97-M100) -----
 -- Bracket connections: (M89,M90)→M97, (M91,M92)→M99, (M93,M94)→M98, (M95,M96)→M100
@@ -80,13 +80,13 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status, matc
 ('QF', 'W89', 'W90', '2026-07-10 01:00:00+07', 'not-open', 97),  -- M97
 ('QF', 'W93', 'W94', '2026-07-10 04:00:00+07', 'not-open', 98),  -- M98
 ('QF', 'W91', 'W92', '2026-07-11 01:00:00+07', 'not-open', 99),  -- M99
-('QF', 'W95', 'W96', '2026-07-11 04:00:00+07', 'not-open', 100), -- M100
+('QF', 'W95', 'W96', '2026-07-11 04:00:00+07', 'not-open', 100); -- M100
 
 -- ----- SEMI-FINALS (M101-M102) -----
 -- Bracket connections: (M97,M99)→M101, (M98,M100)→M102
 INSERT INTO matches (match_group, home_team, away_team, match_date, status, match_number) VALUES
 ('SF', 'W97', 'W99',  '2026-07-15 04:00:00+07', 'not-open', 101), -- M101
-('SF', 'W98', 'W100', '2026-07-16 04:00:00+07', 'not-open', 102), -- M102
+('SF', 'W98', 'W100', '2026-07-16 04:00:00+07', 'not-open', 102); -- M102
 
 -- ----- 3RD PLACE & FINAL (M103-M104) -----
 -- Bracket connections: Losers of M101,M102 → M103, Winners → M104
