@@ -1926,8 +1926,8 @@
             
             let html = '';
             upcoming.forEach(match => {
-                const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-                const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+                const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
                 
                 let statusBadge = '';
                 if (match.status === 'open') {
@@ -1992,8 +1992,8 @@
             
             let html = '';
             allMatches.forEach(match => {
-                const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' });
+                const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
                 
                 let statusBadge = '';
                 if (match.status === 'finished') {
@@ -2096,7 +2096,7 @@
             let html = '';
             allGroups.forEach(group => {
                 const memberCount = allPlayers.filter(p => p.group_id === group.id).length;
-                const createdDate = new Date(group.created_at).toLocaleDateString('vi-VN');
+                const createdDate = new Date(group.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
                 
                 // Use quotes for UUID strings
                 const groupIdStr = `'${group.id}'`;
@@ -2385,16 +2385,19 @@
 
         async function saveFavoriteDeadline() {
             const deadline = document.getElementById('favoriteDeadline').value;
-            
+
             if (!deadline) {
                 alert('Vui lòng chọn thời gian deadline!');
                 return;
             }
-            
+
+            // Treat input as GMT+7
+            const deadlineDate = new Date(deadline + ':00+07:00');
+
             try {
                 const { error } = await supabase
                     .from('scoring_rules')
-                    .update({ favorite_team_deadline: deadline })
+                    .update({ favorite_team_deadline: deadlineDate.toISOString() })
                     .eq('id', scoringRules?.id || 1);
                 
                 if (error) throw error;
@@ -2787,10 +2790,10 @@
             // Use match_group (primary column) or fallback to group_name
             document.getElementById('matchGroup').value = match.match_group || match.group_name || '';
             
-            // Format datetime for input
+            // Format datetime for input — always in GMT+7
             const date = new Date(match.match_date);
-            const dateStr = date.toISOString().split('T')[0];
-            const timeStr = date.toTimeString().slice(0, 5);
+            const dateStr = date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }); // YYYY-MM-DD
+            const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' }); // HH:MM
             
             document.getElementById('matchDate').value = dateStr;
             document.getElementById('matchTime').value = timeStr;
@@ -2836,8 +2839,9 @@
                 return;
             }
             
-            const matchDate = new Date(`${date}T${time}`);
-            
+            // Treat input as GMT+7 explicitly
+            const matchDate = new Date(`${date}T${time}:00+07:00`);
+
             const matchData = {
                 home_team: homeTeam,
                 away_team: awayTeam,
@@ -3815,7 +3819,7 @@
             document.getElementById('groupDetailName').textContent = group.name;
             document.getElementById('groupDetailCode').textContent = group.code;
             document.getElementById('groupDetailMembers').textContent = members.length;
-            document.getElementById('groupDetailCreated').textContent = new Date(group.created_at).toLocaleDateString('vi-VN');
+            document.getElementById('groupDetailCreated').textContent = new Date(group.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
             
             // Populate members table
             const tbody = document.getElementById('groupMembersTable');
