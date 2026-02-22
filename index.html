@@ -2040,36 +2040,37 @@
         function renderStats() {
             const container = document.getElementById('statsFavoriteTeam');
             if (!container) return;
-            
+
             if (!currentPlayer || !favoriteTeamSettings || !favoriteTeamSettings.selectedTeam) {
                 container.innerHTML = '';
                 return;
             }
-            
+
             const teamData = countries[favoriteTeamSettings.selectedTeam];
             if (!teamData) return;
-            
+
+            // Use actual earned points from player record
+            const earnedPoints = currentPlayer.favorite_points || 0;
             const status = favoriteTeamSettings.teamStatus;
-            
+
             let statusText = '';
             let pointsLabel = '';
-            let pointsValue = 0;
-            
+            let pointsValue = earnedPoints;
+
             if (status === 'champion') {
                 statusText = '🏆 Vô địch!';
                 pointsLabel = 'Điểm nhận được';
-                pointsValue = favoriteTeamSettings.points.champion;
-            } else if (status === 'eliminated' || status === 'round16' || status === 'quarter' || status === 'semi' || status === 'final') {
-                const points = getTeamPoints(status === 'eliminated' ? 'round16' : status);
-                statusText = status === 'eliminated' ? '❌ Đã bị loại' : `✓ Đã đạt ${getStatusName(status)}`;
+            } else if (status === 'eliminated') {
+                statusText = '❌ Đã bị loại';
                 pointsLabel = 'Điểm nhận được';
-                pointsValue = points;
+            } else if (status === 'round16' || status === 'quarter' || status === 'semi' || status === 'final') {
+                statusText = `✓ Đã đạt ${getStatusName(status)}`;
+                pointsLabel = 'Điểm nhận được';
             } else {
                 statusText = '⚽ Đang thi đấu';
-                pointsLabel = 'Điểm tối thiểu';
-                pointsValue = favoriteTeamSettings.points.round16;
+                pointsLabel = 'Điểm hiện tại';
             }
-            
+
             container.innerHTML = `
                 <div class="stats-favorite-team">
                     <div class="stats-favorite-team-header">
