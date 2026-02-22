@@ -331,15 +331,25 @@ async function getLeaderboard(groupId) {
 
 async function getFavoriteTeamSettings(groupId) {
   try {
-    const { data: group, error } = await supabase
-      .from('groups')
+    // Read from scoring_rules (same table admin writes to)
+    const { data: rules, error } = await supabase
+      .from('scoring_rules')
       .select('favorite_team_enabled, favorite_team_locked, favorite_team_deadline, points_round16, points_quarter, points_semi, points_final, points_champion')
-      .eq('id', groupId)
-      .single();
-    
+      .limit(1)
+      .maybeSingle();
+
     if (error) throw error;
-    
-    return group;
+
+    return rules || {
+      favorite_team_enabled: false,
+      favorite_team_locked: false,
+      favorite_team_deadline: null,
+      points_round16: 5,
+      points_quarter: 10,
+      points_semi: 20,
+      points_final: 30,
+      points_champion: 100
+    };
   } catch (error) {
     console.error('Get favorite team settings error:', error);
     return null;
