@@ -1153,102 +1153,7 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">🎯 Đội được phép chọn (Qualified Teams)</h2>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert info">
-                            <span class="alert-icon">ℹ️</span>
-                            <div class="alert-content">
-                                <div class="alert-text">
-                                    Chọn 32-48 đội đã qua vòng bảng. Chỉ các đội này mới hiển thị trong danh sách cho người chơi chọn.
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-bottom: 16px;">
-                            <button class="btn btn-primary" onclick="openSelectQualifiedTeamsModal()">
-                                ✅ Chọn đội qualified
-                            </button>
-                            <span style="margin-left: 12px; color: var(--text-light);" id="qualifiedTeamsCount">
-                                0 đội đã chọn
-                            </span>
-                        </div>
-                        
-                        <div id="qualifiedTeamsList" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            <!-- Will be populated -->
-                        </div>
-                    </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">❌ Đội bị loại (Eliminated Teams)</h2>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert warning">
-                            <span class="alert-icon">⚠️</span>
-                            <div class="alert-content">
-                                <div class="alert-text">
-                                    Mark các đội đã bị loại ở từng vòng để tính điểm cho người chọn đội đó.
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: grid; gap: 16px;">
-                            <div>
-                                <h4 style="margin-bottom: 12px;">Vòng 1/32 (Round of 32)</h4>
-                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('r32')">
-                                    Mark đội bị loại
-                                </button>
-                                <div id="eliminatedR32" style="margin-top: 8px; color: var(--text-light);">
-                                    Chưa có đội bị loại
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <h4 style="margin-bottom: 12px;">Vòng 1/16 (Round of 16)</h4>
-                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('r16')">
-                                    Mark đội bị loại
-                                </button>
-                                <div id="eliminatedR16" style="margin-top: 8px; color: var(--text-light);">
-                                    Chưa có đội bị loại
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <h4 style="margin-bottom: 12px;">Tứ kết (Quarter Finals)</h4>
-                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('quarter')">
-                                    Mark đội bị loại
-                                </button>
-                                <div id="eliminatedQuarter" style="margin-top: 8px; color: var(--text-light);">
-                                    Chưa có đội bị loại
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <h4 style="margin-bottom: 12px;">Bán kết (Semi Finals)</h4>
-                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('semi')">
-                                    Mark đội bị loại
-                                </button>
-                                <div id="eliminatedSemi" style="margin-top: 8px; color: var(--text-light);">
-                                    Chưa có đội bị loại
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <h4 style="margin-bottom: 12px;">Chung kết (Finals)</h4>
-                                <button class="btn btn-sm btn-secondary" onclick="openMarkEliminatedModal('finals')">
-                                    Mark đội bị loại (Á quân)
-                                </button>
-                                <div id="eliminatedFinals" style="margin-top: 8px; color: var(--text-light);">
-                                    Chưa có đội bị loại
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="card">
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1870,7 +1775,15 @@
                 document.getElementById('favSemi').value = scoringRules.fav_semi || 30;
                 document.getElementById('favFinals').value = scoringRules.fav_finals || 40;
                 document.getElementById('favChampion').value = scoringRules.fav_champion || 100;
-                
+
+                // Populate deadline input in GMT+7
+                if (scoringRules.favorite_team_deadline) {
+                    const dl = new Date(scoringRules.favorite_team_deadline);
+                    const dlDate = dl.toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' });
+                    const dlTime = dl.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' });
+                    document.getElementById('favoriteDeadline').value = `${dlDate}T${dlTime}`;
+                }
+
                 console.log('✅ Loaded scoring rules');
                 return scoringRules;
             } catch (error) {
@@ -2232,9 +2145,6 @@
                 tbody.innerHTML = html;
             }
 
-            // Also render qualified and eliminated teams lists
-            renderQualifiedTeamsList();
-            renderEliminatedTeamsList();
         }
 
         async function calculateAllFavoritePoints() {
@@ -2842,7 +2752,10 @@
             }
             
             // Treat input as GMT+7 explicitly
-            const matchDate = new Date(`${date}T${time}:00+07:00`);
+            // time could be HH:MM or HH:MM:SS depending on browser
+            const timeParts = time.split(':');
+            const timeNormalized = `${timeParts[0]}:${timeParts[1]}:00`;
+            const matchDate = new Date(`${date}T${timeNormalized}+07:00`);
 
             const matchData = {
                 home_team: homeTeam,
