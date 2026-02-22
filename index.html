@@ -2441,6 +2441,14 @@
                 openLoginModal();
                 return;
             }
+
+            // Check deadline
+            const now = new Date();
+            const isLocked = favoriteTeamSettings.isLocked || (favoriteTeamSettings.deadline && now > favoriteTeamSettings.deadline);
+            if (isLocked) {
+                alert('⏰ Đã hết hạn chọn đội yêu thích!');
+                return;
+            }
             
             const modal = document.getElementById('favoriteTeamModal');
             const deadlineText = document.getElementById('favoriteDeadlineText');
@@ -2551,7 +2559,16 @@
 
         async function confirmFavoriteTeam() {
             if (!tempSelectedTeam) return;
-            
+
+            // Double-check deadline before saving
+            const now = new Date();
+            const isLocked = favoriteTeamSettings.isLocked || (favoriteTeamSettings.deadline && now > favoriteTeamSettings.deadline);
+            if (isLocked) {
+                alert('⏰ Đã hết hạn chọn đội yêu thích!');
+                closeFavoriteTeamModal();
+                return;
+            }
+
             console.log('💾 Saving favorite team...', tempSelectedTeam);
             
             try {
