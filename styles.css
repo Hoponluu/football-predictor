@@ -218,6 +218,17 @@
             gap: var(--card-gap-v) var(--card-gap-h);
         }
 
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: var(--card-gap-v) var(--card-gap-h);
+        }
+
+        .history-grid .match-card {
+            width: 100%;
+            min-width: unset;
+        }
+
         /* Match Card */
         .match-card {
             width: var(--card-width);
@@ -1570,6 +1581,10 @@
             .row-center {
                 min-width: 50px;
             }
+
+            .history-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         /* Chart Styles */
@@ -1582,6 +1597,10 @@
         @media (max-width: 1200px) {
             .matches-grid {
                 grid-template-columns: repeat(auto-fill, minmax(calc(var(--card-width) * 0.9), 1fr));
+            }
+
+            .history-grid {
+                grid-template-columns: repeat(4, 1fr);
             }
         }
 
@@ -1601,6 +1620,10 @@
 
             .matches-grid {
                 grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            }
+
+            .history-grid {
+                grid-template-columns: repeat(3, 1fr);
             }
 
             .homepage-grid {
