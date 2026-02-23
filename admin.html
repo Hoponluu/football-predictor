@@ -2623,41 +2623,89 @@
 
         // Add countries database
         const countries = {
-            'Argentina': { flag: '🇦🇷', color: '#74ACDF' },
-            'Australia': { flag: '🇦🇺', color: '#012169' },
-            'Belgium': { flag: '🇧🇪', color: '#FDDA24' },
-            'Brasil': { flag: '🇧🇷', color: '#009B3A' },
+            // Special
+            'TBU': { flag: '🏴', color: '#E5E7EB' },
+
+            // WC 2026 Hosts
             'Canada': { flag: '🇨🇦', color: '#FF0000' },
+            'Mexico': { flag: '🇲🇽', color: '#006847' },
+            'United States': { flag: '🇺🇸', color: '#B22234' },
+
+            // Europe - Qualified
+            'Austria': { flag: '🇦🇹', color: '#ED2939' },
+            'Belgium': { flag: '🇧🇪', color: '#FDDA24' },
             'Croatia': { flag: '🇭🇷', color: '#FF0000' },
             'England': { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', color: '#FFFFFF' },
             'France': { flag: '🇫🇷', color: '#0055A4' },
             'Germany': { flag: '🇩🇪', color: '#000000' },
-            'Italy': { flag: '🇮🇹', color: '#009246' },
-            'Japan': { flag: '🇯🇵', color: '#BC002D' },
-            'Mexico': { flag: '🇲🇽', color: '#006847' },
             'Netherlands': { flag: '🇳🇱', color: '#FF4F00' },
+            'Norway': { flag: '🇳🇴', color: '#BA0C2F' },
             'Portugal': { flag: '🇵🇹', color: '#FF0000' },
+            'Scotland': { flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: '#003399' },
             'Spain': { flag: '🇪🇸', color: '#AA151B' },
-            'United States': { flag: '🇺🇸', color: '#B22234' },
-            'Uruguay': { flag: '🇺🇾', color: '#0038A8' },
-            'Vietnam': { flag: '🇻🇳', color: '#DA251D' },
-            'South Korea': { flag: '🇰🇷', color: '#003478' },
-            'Morocco': { flag: '🇲🇦', color: '#C1272D' },
-            'Senegal': { flag: '🇸🇳', color: '#00853F' },
-            'Poland': { flag: '🇵🇱', color: '#DC143C' },
-            'Denmark': { flag: '🇩🇰', color: '#C60C30' },
             'Switzerland': { flag: '🇨🇭', color: '#FF0000' },
+
+            // Europe - Playoffs
+            'Italy': { flag: '🇮🇹', color: '#009246' },
+            'Poland': { flag: '🇵🇱', color: '#DC143C' },
+            'Ukraine': { flag: '🇺🇦', color: '#005BBB' },
+            'Sweden': { flag: '🇸🇪', color: '#006AA7' },
+            'Albania': { flag: '🇦🇱', color: '#E41E20' },
+            'Wales': { flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', color: '#00AB39' },
+            'Turkey': { flag: '🇹🇷', color: '#E30A17' },
+            'Romania': { flag: '🇷🇴', color: '#002B7F' },
+            'Denmark': { flag: '🇩🇰', color: '#C60C30' },
+            'Czech Republic': { flag: '🇨🇿', color: '#D7141A' },
+            'Slovakia': { flag: '🇸🇰', color: '#0B4EA2' },
+            'Kosovo': { flag: '🇽🇰', color: '#244AA5' },
+            'Bosnia & Herzegovina': { flag: '🇧🇦', color: '#002395' },
+            'North Macedonia': { flag: '🇲🇰', color: '#CE2028' },
+            'Northern Ireland': { flag: '🇬🇧', color: '#00A651' },
+
+            // Asia - Qualified
+            'Australia': { flag: '🇦🇺', color: '#012169' },
+            'Iran': { flag: '🇮🇷', color: '#239F40' },
+            'Japan': { flag: '🇯🇵', color: '#BC002D' },
+            'Jordan': { flag: '🇯🇴', color: '#007A33' },
+            'Qatar': { flag: '🇶🇦', color: '#8A1538' },
+            'Saudi Arabia': { flag: '🇸🇦', color: '#165C2A' },
+            'South Korea': { flag: '🇰🇷', color: '#003478' },
+            'Uzbekistan': { flag: '🇺🇿', color: '#0099B5' },
+            'Iraq': { flag: '🇮🇶', color: '#007A33' },
+
+            // Africa
+            'Algeria': { flag: '🇩🇿', color: '#006233' },
+            'Cape Verde': { flag: '🇨🇻', color: '#003893' },
+            'Cameroon': { flag: '🇨🇲', color: '#007A5E' },
+            'DR Congo': { flag: '🇨🇩', color: '#007FFF' },
+            'Egypt': { flag: '🇪🇬', color: '#CE1126' },
+            'Ghana': { flag: '🇬🇭', color: '#006B3F' },
+            'Ivory Coast': { flag: '🇨🇮', color: '#FF8200' },
+            'Morocco': { flag: '🇲🇦', color: '#C1272D' },
+            'Nigeria': { flag: '🇳🇬', color: '#008751' },
+            'Senegal': { flag: '🇸🇳', color: '#00853F' },
+            'South Africa': { flag: '🇿🇦', color: '#007749' },
+            'Tunisia': { flag: '🇹🇳', color: '#E70013' },
+
+            // CONCACAF
+            'Curaçao': { flag: '🇨🇼', color: '#002B7F' },
+            'Haiti': { flag: '🇭🇹', color: '#00209F' },
+            'Jamaica': { flag: '🇯🇲', color: '#009B3A' },
+            'Panama': { flag: '🇵🇦', color: '#DA121A' },
+
+            // Oceania
+            'New Caledonia': { flag: '🇳🇨', color: '#009543' },
+            'New Zealand': { flag: '🇳🇿', color: '#00247D' },
+
+            // South America
+            'Argentina': { flag: '🇦🇷', color: '#74ACDF' },
+            'Bolivia': { flag: '🇧🇴', color: '#007934' },
+            'Brasil': { flag: '🇧🇷', color: '#009B3A' },
             'Colombia': { flag: '🇨🇴', color: '#FCD116' },
             'Ecuador': { flag: '🇪🇨', color: '#FFD100' },
-            'Iran': { flag: '🇮🇷', color: '#239F40' },
-            'Saudi Arabia': { flag: '🇸🇦', color: '#165C2A' },
-            'Ghana': { flag: '🇬🇭', color: '#006B3F' },
-            'Tunisia': { flag: '🇹🇳', color: '#E70013' },
-            'Costa Rica': { flag: '🇨🇷', color: '#002B7F' },
-            'Serbia': { flag: '🇷🇸', color: '#C6363C' },
-            'Cameroon': { flag: '🇨🇲', color: '#007A5E' },
-            'Nigeria': { flag: '🇳🇬', color: '#008751' },
-            'TBU': { flag: '🏴', color: '#E5E7EB' }
+            'Paraguay': { flag: '🇵🇾', color: '#D52B1E' },
+            'Suriname': { flag: '🇸🇷', color: '#377E3F' },
+            'Uruguay': { flag: '🇺🇾', color: '#0038A8' }
         };
 
         // ============================================
