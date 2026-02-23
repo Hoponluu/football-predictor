@@ -907,7 +907,7 @@
                             <thead>
                                 <tr>
                                     <th>Trận đấu</th>
-                                    <th>Thời gian</th>
+                                    <th>Thời gian (GMT+7)</th>
                                     <th>Trạng thái</th>
                                     <th>Dự đoán</th>
                                     <th></th>
@@ -943,7 +943,7 @@
                                     <th>M#</th>
                                     <th>Trận đấu</th>
                                     <th>Bảng</th>
-                                    <th>Thời gian</th>
+                                    <th>Thời gian (GMT+7)</th>
                                     <th>Trạng thái</th>
                                     <th>Kết quả</th>
                                     <th></th>
@@ -1261,7 +1261,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">Giờ</label>
+                        <label class="form-label">Giờ (GMT+7)</label>
                         <input type="time" class="form-input" id="matchTime">
                     </div>
                 </div>
@@ -2303,13 +2303,14 @@
                 return;
             }
 
-            // Treat input as GMT+7
-            const deadlineDate = new Date(deadline + ':00+07:00');
+            // Send timezone-aware string directly (don't use .toISOString())
+            // datetime-local value format: YYYY-MM-DDTHH:MM
+            const deadlineStr = deadline + ':00+07:00';
 
             try {
                 const { error } = await supabase
                     .from('scoring_rules')
-                    .update({ favorite_team_deadline: deadlineDate.toISOString() })
+                    .update({ favorite_team_deadline: deadlineStr })
                     .eq('id', scoringRules?.id || 1);
                 
                 if (error) throw error;
@@ -2800,16 +2801,15 @@
             }
             
             // Treat input as GMT+7 explicitly
-            // time could be HH:MM or HH:MM:SS depending on browser
+            // Send timezone-aware string directly to Supabase (don't use .toISOString() which strips to UTC)
             const timeParts = time.split(':');
             const timeNormalized = `${timeParts[0]}:${timeParts[1]}:00`;
-            const matchDate = new Date(`${date}T${timeNormalized}+07:00`);
 
             const matchData = {
                 home_team: homeTeam,
                 away_team: awayTeam,
                 match_group: group || '',
-                match_date: matchDate.toISOString(),
+                match_date: `${date}T${timeNormalized}+07:00`,
                 status: status
             };
             
