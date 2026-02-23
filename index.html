@@ -195,8 +195,9 @@
                 <!-- Performance Chart -->
                 <div style="margin-top: 24px;">
                     <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">📈 PHONG ĐỘ CỦA BẠN</h3>
-                    <div id="performanceChart" style="background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--stroke);">
-                        <canvas id="chartCanvas" width="800" height="300"></canvas>
+                    <div id="performanceChart" style="position: relative; background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--stroke); overflow: visible;">
+                        <canvas id="chartCanvas" style="width: 100%; height: 300px;"></canvas>
+                        <div id="chartTooltip" style="position:absolute;display:none;background:rgba(17,24,39,0.92);color:white;padding:10px 14px;border-radius:8px;font-size:12px;pointer-events:none;z-index:100;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.2);line-height:1.7;"></div>
                     </div>
                 </div>
 
@@ -1897,133 +1898,310 @@
             renderRecentMatches();
         }
 
-        function renderPerformanceChart() {
+        async function renderPerformanceChart() {
+            const chartContainer = document.getElementById('performanceChart');
             const canvas = document.getElementById('chartCanvas');
-            if (!canvas || !currentPlayer) return;
-            
+            const tooltip = document.getElementById('chartTooltip');
+            if (!canvas || !currentPlayer || !chartContainer) return;
+
             const ctx = canvas.getContext('2d');
-            
-            // Calculate cumulative points per match (vòng)
+
+            // Responsive canvas sizing
+            const containerWidth = chartContainer.clientWidth - 40;
+            const W = Math.max(containerWidth, 300);
+            const H = 300;
+            canvas.width = W;
+            canvas.height = H;
+
+            // Get finished matches sorted by date
             const finishedMatches = matches
                 .filter(m => m.status === 'finished' && m.actualScore)
                 .sort((a, b) => a.date - b.date);
-            
+
             if (finishedMatches.length === 0) {
                 ctx.fillStyle = '#6B7280';
                 ctx.font = '14px Montserrat';
                 ctx.textAlign = 'center';
-                ctx.fillText('Chưa có dữ liệu', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('Chưa có dữ liệu', W / 2, H / 2);
                 return;
             }
-            
-            // Build data for user and top 1
-            const userCumulative = [];
-            const top1Cumulative = [];
-            const rounds = [];
-            
+
+            // Build user cumulative data per finished match
+            const chartData = [];
             let userTotal = 0;
-            let top1Total = 0;
-            const top1Player = leaderboardData[0]; // Current top 1
-            
-            finishedMatches.forEach((match, index) => {
-                const userPred = match.userPrediction;
-                const userPoints = match.points ? ((match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0)) : 0;
-                
-                userTotal += userPoints;
-                userCumulative.push(userTotal);
-                
-                // Top 1 player points for this match
-                // Note: We don't have their predictions in this data structure
-                // So we'll approximate based on their total
-                top1Total += (top1Player.points / finishedMatches.length); // Average distribution
-                top1Cumulative.push(Math.round(top1Total));
-                
-                rounds.push(index + 1);
+            finishedMatches.forEach((match, i) => {
+                const pts = match.points
+                    ? (match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0)
+                    : 0;
+                userTotal += pts;
+                chartData.push({
+                    index: i,
+                    matchId: match.id,
+                    matchNumber: match.match_number || (i + 1),
+                    home: match.home,
+                    away: match.away,
+                    userCumulative: userTotal,
+                    userDelta: pts,
+                    top1Cumulative: 0,
+                    top1Delta: 0
+                });
             });
-            
-            // Simple chart drawing (last 10 rounds)
-            const displayRounds = rounds.slice(-10);
-            const displayUserData = userCumulative.slice(-10);
-            const displayTop1Data = top1Cumulative.slice(-10);
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Chart dimensions
-            const padding = 40;
-            const chartWidth = canvas.width - padding * 2;
-            const chartHeight = canvas.height - padding * 2;
-            
-            // Max values
-            const maxY = Math.max(...displayUserData, ...displayTop1Data);
-            const scaleY = chartHeight / (maxY || 1);
-            const scaleX = chartWidth / (displayRounds.length - 1 || 1);
-            
-            // Draw axes
-            ctx.strokeStyle = '#E5E7EB';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(padding, padding);
-            ctx.lineTo(padding, padding + chartHeight);
-            ctx.lineTo(padding + chartWidth, padding + chartHeight);
-            ctx.stroke();
-            
-            // Draw lines
-            function drawLine(data, color) {
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
+
+            // Determine comparison player: Top 1 or Top 2 if user IS Top 1
+            const isUserTop1 = leaderboardData.length > 0 && leaderboardData[0].id === currentPlayer.id;
+            const comparePlayer = isUserTop1 ? (leaderboardData[1] || null) : (leaderboardData[0] || null);
+            const compareLabel = isUserTop1 ? 'Top 2' : 'Top 1';
+
+            // Load compare player's real per-match predictions from Supabase
+            if (comparePlayer) {
+                try {
+                    const { data: comparePreds } = await supabase
+                        .from('predictions')
+                        .select('match_id, total_points')
+                        .eq('player_id', comparePlayer.id);
+
+                    if (comparePreds) {
+                        const predMap = {};
+                        comparePreds.forEach(p => { predMap[p.match_id] = p.total_points || 0; });
+
+                        let compareTotal = 0;
+                        chartData.forEach(d => {
+                            const pts = predMap[d.matchId] || 0;
+                            compareTotal += pts;
+                            d.top1Cumulative = compareTotal;
+                            d.top1Delta = pts;
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error loading compare player data:', e);
+                }
+            }
+
+            // Chart layout
+            const pad = { top: 36, right: 20, bottom: 36, left: 46 };
+            const cW = W - pad.left - pad.right;
+            const cH = H - pad.top - pad.bottom;
+
+            // Y-axis nice scale
+            const rawMax = Math.max(...chartData.map(d => d.userCumulative), ...chartData.map(d => d.top1Cumulative), 1);
+            function niceStep(max) {
+                if (max <= 5) return 1;
+                if (max <= 10) return 2;
+                if (max <= 25) return 5;
+                if (max <= 50) return 10;
+                if (max <= 100) return 20;
+                if (max <= 250) return 50;
+                if (max <= 500) return 100;
+                return Math.ceil(max / 5 / 100) * 100;
+            }
+            const yStep = niceStep(rawMax);
+            const yMax = Math.ceil(rawMax / yStep) * yStep || yStep;
+            const scaleX = chartData.length > 1 ? cW / (chartData.length - 1) : 0;
+            const scaleY = cH / yMax;
+
+            // Helper: get pixel X for data index
+            function getX(i) { return pad.left + (chartData.length > 1 ? i * scaleX : cW / 2); }
+            // Helper: get pixel Y for value
+            function getY(val) { return pad.top + cH - val * scaleY; }
+
+            // ---- Draw function (called on initial render + each hover) ----
+            function drawChart(highlightIdx) {
+                ctx.clearRect(0, 0, W, H);
+
+                // Grid lines
+                ctx.strokeStyle = '#F3F4F6';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                for (let y = 0; y <= yMax; y += yStep) {
+                    const py = getY(y);
+                    ctx.beginPath();
+                    ctx.moveTo(pad.left, py);
+                    ctx.lineTo(pad.left + cW, py);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+
+                // Y-axis labels
+                ctx.fillStyle = '#9CA3AF';
+                ctx.font = '11px Montserrat';
+                ctx.textAlign = 'right';
+                for (let y = 0; y <= yMax; y += yStep) {
+                    ctx.fillText(y, pad.left - 8, getY(y) + 4);
+                }
+
+                // Axes
+                ctx.strokeStyle = '#E5E7EB';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
-                data.forEach((value, index) => {
-                    const x = padding + index * scaleX;
-                    const y = padding + chartHeight - value * scaleY;
-                    if (index === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
+                ctx.moveTo(pad.left, pad.top);
+                ctx.lineTo(pad.left, pad.top + cH);
+                ctx.lineTo(pad.left + cW, pad.top + cH);
+                ctx.stroke();
+
+                // X-axis labels (show every Nth if crowded)
+                const maxLabels = Math.floor(cW / 36);
+                const labelStep = Math.max(1, Math.ceil(chartData.length / maxLabels));
+                ctx.fillStyle = '#9CA3AF';
+                ctx.font = '10px Montserrat';
+                ctx.textAlign = 'center';
+                chartData.forEach((d, i) => {
+                    if (i % labelStep === 0 || i === chartData.length - 1) {
+                        ctx.fillText('M' + d.matchNumber, getX(i), pad.top + cH + 16);
                     }
                 });
-                ctx.stroke();
-                
-                // Draw points
-                ctx.fillStyle = color;
-                data.forEach((value, index) => {
-                    const x = padding + index * scaleX;
-                    const y = padding + chartHeight - value * scaleY;
+
+                // Helper: draw a data line with gradient fill and dots
+                function drawLine(getData, color, fillAlpha) {
+                    if (chartData.length === 0) return;
+                    // Gradient fill
+                    ctx.fillStyle = fillAlpha;
                     ctx.beginPath();
-                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    chartData.forEach((d, i) => {
+                        const x = getX(i), y = getY(getData(d));
+                        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    });
+                    ctx.lineTo(getX(chartData.length - 1), pad.top + cH);
+                    ctx.lineTo(getX(0), pad.top + cH);
+                    ctx.closePath();
                     ctx.fill();
-                });
+
+                    // Line
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2.5;
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    chartData.forEach((d, i) => {
+                        const x = getX(i), y = getY(getData(d));
+                        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    });
+                    ctx.stroke();
+
+                    // Dots
+                    chartData.forEach((d, i) => {
+                        const x = getX(i), y = getY(getData(d));
+                        const isHighlight = (i === highlightIdx);
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(x, y, isHighlight ? 6 : 3, 0, Math.PI * 2);
+                        ctx.fill();
+                        if (isHighlight) {
+                            ctx.strokeStyle = 'white';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+                    });
+                }
+
+                // Draw compare line first (behind)
+                if (comparePlayer) {
+                    drawLine(d => d.top1Cumulative, '#10B981', 'rgba(16,185,129,0.07)');
+                }
+                // Draw user line on top
+                drawLine(d => d.userCumulative, '#3B82F6', 'rgba(59,130,246,0.07)');
+
+                // Hover vertical line
+                if (highlightIdx >= 0) {
+                    const hx = getX(highlightIdx);
+                    ctx.strokeStyle = 'rgba(107,114,128,0.35)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(hx, pad.top);
+                    ctx.lineTo(hx, pad.top + cH);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Legend
+                ctx.font = '12px Montserrat';
+                ctx.textAlign = 'left';
+                // User
+                ctx.fillStyle = '#3B82F6';
+                ctx.beginPath();
+                ctx.arc(pad.left + 6, 14, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#374151';
+                ctx.fillText('Bạn', pad.left + 16, 18);
+                // Compare
+                if (comparePlayer) {
+                    const labelText = compareLabel + ' – ' + comparePlayer.name;
+                    ctx.fillStyle = '#10B981';
+                    ctx.beginPath();
+                    ctx.arc(pad.left + 60, 14, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#374151';
+                    ctx.fillText(labelText, pad.left + 70, 18);
+                }
             }
-            
-            // Draw user line (blue)
-            drawLine(displayUserData, '#3B82F6');
-            
-            // Draw top1 line (green)
-            drawLine(displayTop1Data, '#10B981');
-            
-            // Labels
-            ctx.fillStyle = '#6B7280';
-            ctx.font = '12px Montserrat';
-            ctx.textAlign = 'center';
-            
-            // X-axis labels (rounds)
-            displayRounds.forEach((round, index) => {
-                const x = padding + index * scaleX;
-                const y = padding + chartHeight + 20;
-                ctx.fillText(round, x, y);
-            });
-            
-            // Legend
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#3B82F6';
-            ctx.fillRect(padding, 10, 12, 12);
-            ctx.fillStyle = '#1F2937';
-            ctx.fillText('Bạn', padding + 20, 20);
-            
-            ctx.fillStyle = '#10B981';
-            ctx.fillRect(padding + 80, 10, 12, 12);
-            ctx.fillStyle = '#1F2937';
-            ctx.fillText('Top 1', padding + 100, 20);
+
+            // Initial draw
+            drawChart(-1);
+
+            // ---- Hover / Tooltip ----
+            canvas.onmousemove = function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = (e.clientX - rect.left) * (W / rect.width);
+
+                // Find nearest data point
+                let nearestIdx = -1;
+                let minDist = Infinity;
+                chartData.forEach((d, i) => {
+                    const dist = Math.abs(mouseX - getX(i));
+                    if (dist < minDist && dist < 30) {
+                        minDist = dist;
+                        nearestIdx = i;
+                    }
+                });
+
+                if (nearestIdx === -1) {
+                    tooltip.style.display = 'none';
+                    drawChart(-1);
+                    return;
+                }
+
+                drawChart(nearestIdx);
+
+                const d = chartData[nearestIdx];
+                let html = '<div style="font-weight:600;margin-bottom:2px;">⚽ M' + d.matchNumber + ': ' + d.home + ' vs ' + d.away + '</div>';
+                html += '<div style="color:#93C5FD;">Bạn: <b>+' + d.userDelta + '</b> điểm → ' + d.userCumulative + ' tổng</div>';
+                if (comparePlayer) {
+                    html += '<div style="color:#6EE7B7;">' + compareLabel + ': <b>+' + d.top1Delta + '</b> điểm → ' + d.top1Cumulative + ' tổng</div>';
+                }
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+
+                // Position tooltip near the data point
+                const canvasScale = rect.width / W;
+                const tipX = getX(nearestIdx) * canvasScale + 16;
+                const tipY = getY(d.userCumulative) * canvasScale - 10;
+                const tipW = tooltip.offsetWidth;
+
+                // Flip left if overflows right
+                if (tipX + tipW > chartContainer.clientWidth - 10) {
+                    tooltip.style.left = (getX(nearestIdx) * canvasScale - tipW - 10) + 'px';
+                } else {
+                    tooltip.style.left = tipX + 'px';
+                }
+                tooltip.style.top = Math.max(0, tipY) + 'px';
+            };
+
+            canvas.onmouseleave = function() {
+                tooltip.style.display = 'none';
+                drawChart(-1);
+            };
+
+            // Touch support for mobile
+            canvas.ontouchmove = function(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
+                canvas.dispatchEvent(mouseEvent);
+            };
+            canvas.ontouchend = function() {
+                tooltip.style.display = 'none';
+                drawChart(-1);
+            };
         }
 
         function renderRecentMatches() {
