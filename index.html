@@ -1668,7 +1668,7 @@
                 container.appendChild(favoriteCard);
             }
             
-            const upcoming = matches.filter(m => m.status !== 'finished').slice(0, 5);
+            const upcoming = matches.filter(m => m.status !== 'finished');
             upcoming.forEach(match => {
                 container.appendChild(renderMatchCard(match));
             });
@@ -1699,7 +1699,7 @@
                     // Then by date
                     return a.date - b.date;
                 })
-                .slice(0, 10); // Show top 10
+                ; // Show all non-finished
             
             if (upcoming.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Không có trận sắp diễn ra</p>';
