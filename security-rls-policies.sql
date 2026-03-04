@@ -29,25 +29,20 @@ ALTER TABLE scoring_rules ENABLE ROW LEVEL SECURITY;
 -- BƯỚC 2: XÓA POLICIES CŨ (NẾU CÓ)
 -- =============================================
 
-DROP POLICY IF EXISTS "matches_select_all" ON matches;
-DROP POLICY IF EXISTS "matches_insert_admin" ON matches;
-DROP POLICY IF EXISTS "matches_update_admin" ON matches;
-DROP POLICY IF EXISTS "matches_delete_admin" ON matches;
-
-DROP POLICY IF EXISTS "predictions_select_own" ON predictions;
-DROP POLICY IF EXISTS "predictions_select_finished" ON predictions;
-DROP POLICY IF EXISTS "predictions_insert_own" ON predictions;
-DROP POLICY IF EXISTS "predictions_update_own" ON predictions;
-DROP POLICY IF EXISTS "predictions_delete_none" ON predictions;
-
-DROP POLICY IF EXISTS "players_select_group" ON players;
-DROP POLICY IF EXISTS "players_insert_register" ON players;
-DROP POLICY IF EXISTS "players_update_own" ON players;
-
-DROP POLICY IF EXISTS "groups_select_all" ON groups;
-DROP POLICY IF EXISTS "groups_insert_create" ON groups;
-
-DROP POLICY IF EXISTS "scoring_rules_select_all" ON scoring_rules;
+-- Drop ALL existing policies on each table (old names + new names)
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename
+    FROM pg_policies
+    WHERE schemaname = 'public'
+    AND tablename IN ('matches', 'predictions', 'players', 'groups', 'scoring_rules')
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', r.policyname, r.tablename);
+  END LOOP;
+END $$;
 
 -- =============================================
 -- BƯỚC 3: POLICIES CHO BẢNG "matches"
