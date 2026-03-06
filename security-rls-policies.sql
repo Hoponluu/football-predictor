@@ -100,24 +100,15 @@ CREATE POLICY "predictions_insert_open_only" ON predictions
     )
   );
 
--- 4c. Chỉ cho phép SỬA dự đoán khi trận đang OPEN
-CREATE POLICY "predictions_update_open_only" ON predictions
+-- 4c. Cho phép UPDATE dự đoán (RLS mở, trigger bảo vệ chi tiết)
+-- Trigger trg_prediction_check_open sẽ block sửa tỉ số/phút khi trận không open
+-- Trigger trg_protect_prediction_points sẽ block sửa điểm khi trận open
+-- → Admin vẫn tính được điểm khi trận finished
+CREATE POLICY "predictions_update" ON predictions
   FOR UPDATE
   TO anon, authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM matches m
-      WHERE m.id = predictions.match_id
-      AND m.status = 'open'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM matches m
-      WHERE m.id = match_id
-      AND m.status = 'open'
-    )
-  );
+  USING (true)
+  WITH CHECK (true);
 
 -- 4d. Cho phép xóa dự đoán (admin cần khi xóa trận đấu)
 -- TODO: Khi có Supabase Auth, giới hạn chỉ admin mới xóa được
@@ -207,11 +198,13 @@ CREATE POLICY "scoring_rules_delete" ON scoring_rules
 -- Backup protection ở tầng database
 -- =============================================
 
--- Trigger: Ngăn sửa dự đoán sau khi trận đấu không còn open
+-- Trigger: Ngăn sửa dự đoán (tỉ số, phút) sau khi trận đấu không còn open
+-- Nhưng CHO PHÉP update cột điểm khi trận đã finished (admin tính điểm)
 CREATE OR REPLACE FUNCTION check_prediction_match_open()
 RETURNS TRIGGER AS $$
 DECLARE
   v_match_status TEXT;
+  v_score_changed BOOLEAN;
 BEGIN
   SELECT status INTO v_match_status
   FROM matches
@@ -221,8 +214,26 @@ BEGIN
     RAISE EXCEPTION 'Match not found: %', NEW.match_id;
   END IF;
 
-  IF v_match_status != 'open' THEN
-    RAISE EXCEPTION 'Cannot modify prediction: match status is "%" (must be "open")', v_match_status;
+  -- Nếu là UPDATE, kiểm tra xem user có sửa tỉ số/phút dự đoán không
+  IF TG_OP = 'UPDATE' THEN
+    v_score_changed := (
+      NEW.home_score IS DISTINCT FROM OLD.home_score OR
+      NEW.away_score IS DISTINCT FROM OLD.away_score OR
+      NEW.minute IS DISTINCT FROM OLD.minute
+    );
+
+    -- Nếu trận không open VÀ user đang sửa tỉ số dự đoán → BLOCK
+    IF v_match_status != 'open' AND v_score_changed THEN
+      RAISE EXCEPTION 'Cannot modify prediction scores: match status is "%" (must be "open")', v_match_status;
+    END IF;
+
+    -- Nếu chỉ sửa cột điểm (admin tính điểm) → CHO PHÉP dù trận finished
+    RETURN NEW;
+  END IF;
+
+  -- Nếu là INSERT, chỉ cho phép khi trận open
+  IF TG_OP = 'INSERT' AND v_match_status != 'open' THEN
+    RAISE EXCEPTION 'Cannot create prediction: match status is "%" (must be "open")', v_match_status;
   END IF;
 
   RETURN NEW;
@@ -244,21 +255,32 @@ CREATE TRIGGER trg_prediction_check_open
 
 CREATE OR REPLACE FUNCTION protect_prediction_points()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_match_status TEXT;
 BEGIN
-  -- Nếu là UPDATE, giữ nguyên các cột điểm (không cho client sửa)
-  IF TG_OP = 'UPDATE' THEN
-    NEW.total_points := OLD.total_points;
-    NEW.points_rank := OLD.points_rank;
-    NEW.points_exact_score := OLD.points_exact_score;
-    NEW.points_minute := OLD.points_minute;
-  END IF;
+  -- Lấy status trận đấu
+  SELECT status INTO v_match_status
+  FROM matches
+  WHERE id = NEW.match_id;
 
-  -- Nếu là INSERT, force điểm = 0
   IF TG_OP = 'INSERT' THEN
+    -- INSERT luôn force điểm = 0 (user tạo dự đoán mới)
     NEW.total_points := 0;
     NEW.points_rank := 0;
     NEW.points_exact_score := 0;
     NEW.points_minute := 0;
+  END IF;
+
+  IF TG_OP = 'UPDATE' THEN
+    -- Nếu trận đang OPEN → user đang sửa dự đoán → giữ điểm = 0
+    IF v_match_status = 'open' THEN
+      NEW.total_points := OLD.total_points;
+      NEW.points_rank := OLD.points_rank;
+      NEW.points_exact_score := OLD.points_exact_score;
+      NEW.points_minute := OLD.points_minute;
+    END IF;
+    -- Nếu trận FINISHED → admin đang tính điểm → CHO PHÉP cập nhật điểm
+    -- (không cần làm gì, để NEW values đi qua)
   END IF;
 
   RETURN NEW;
