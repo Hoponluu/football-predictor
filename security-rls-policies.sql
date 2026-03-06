@@ -100,24 +100,15 @@ CREATE POLICY "predictions_insert_open_only" ON predictions
     )
   );
 
--- 4c. Chỉ cho phép SỬA dự đoán khi trận đang OPEN
-CREATE POLICY "predictions_update_open_only" ON predictions
+-- 4c. Cho phép UPDATE dự đoán (RLS mở, trigger bảo vệ chi tiết)
+-- Trigger trg_prediction_check_open sẽ block sửa tỉ số/phút khi trận không open
+-- Trigger trg_protect_prediction_points sẽ block sửa điểm khi trận open
+-- → Admin vẫn tính được điểm khi trận finished
+CREATE POLICY "predictions_update" ON predictions
   FOR UPDATE
   TO anon, authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM matches m
-      WHERE m.id = predictions.match_id
-      AND m.status = 'open'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM matches m
-      WHERE m.id = match_id
-      AND m.status = 'open'
-    )
-  );
+  USING (true)
+  WITH CHECK (true);
 
 -- 4d. Cho phép xóa dự đoán (admin cần khi xóa trận đấu)
 -- TODO: Khi có Supabase Auth, giới hạn chỉ admin mới xóa được
