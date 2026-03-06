@@ -29,40 +29,43 @@ ALTER TABLE scoring_rules ENABLE ROW LEVEL SECURITY;
 -- BƯỚC 2: XÓA POLICIES CŨ (NẾU CÓ)
 -- =============================================
 
-DROP POLICY IF EXISTS "matches_select_all" ON matches;
-DROP POLICY IF EXISTS "matches_insert_admin" ON matches;
-DROP POLICY IF EXISTS "matches_update_admin" ON matches;
-DROP POLICY IF EXISTS "matches_delete_admin" ON matches;
-
-DROP POLICY IF EXISTS "predictions_select_own" ON predictions;
-DROP POLICY IF EXISTS "predictions_select_finished" ON predictions;
-DROP POLICY IF EXISTS "predictions_insert_own" ON predictions;
-DROP POLICY IF EXISTS "predictions_update_own" ON predictions;
-DROP POLICY IF EXISTS "predictions_delete_none" ON predictions;
-
-DROP POLICY IF EXISTS "players_select_group" ON players;
-DROP POLICY IF EXISTS "players_insert_register" ON players;
-DROP POLICY IF EXISTS "players_update_own" ON players;
-
-DROP POLICY IF EXISTS "groups_select_all" ON groups;
-DROP POLICY IF EXISTS "groups_insert_create" ON groups;
-
-DROP POLICY IF EXISTS "scoring_rules_select_all" ON scoring_rules;
+-- Drop ALL existing policies on each table (old names + new names)
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename
+    FROM pg_policies
+    WHERE schemaname = 'public'
+    AND tablename IN ('matches', 'predictions', 'players', 'groups', 'scoring_rules')
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', r.policyname, r.tablename);
+  END LOOP;
+END $$;
 
 -- =============================================
 -- BƯỚC 3: POLICIES CHO BẢNG "matches"
--- Ai cũng đọc được, KHÔNG AI sửa/xóa được từ frontend
--- (Admin dùng service_role key hoặc SQL Editor)
+-- Cho phép đọc/ghi vì admin panel dùng chung anon key
+-- Trigger trg_protect_match_results bảo vệ kết quả đã finished
+-- TODO: Khi migrate sang Supabase Auth, giới hạn write cho admin only
 -- =============================================
 
--- Tất cả user đều đọc được lịch thi đấu
 CREATE POLICY "matches_select_all" ON matches
-  FOR SELECT
-  TO anon, authenticated
+  FOR SELECT TO anon, authenticated
   USING (true);
 
--- KHÔNG cho phép INSERT/UPDATE/DELETE từ anon role
--- Admin sẽ dùng service_role key hoặc Supabase Dashboard
+CREATE POLICY "matches_insert" ON matches
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "matches_update" ON matches
+  FOR UPDATE TO anon, authenticated
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "matches_delete" ON matches
+  FOR DELETE TO anon, authenticated
+  USING (true);
 
 -- =============================================
 -- BƯỚC 4: POLICIES CHO BẢNG "predictions"
@@ -116,11 +119,11 @@ CREATE POLICY "predictions_update_open_only" ON predictions
     )
   );
 
--- 4d. KHÔNG cho xóa dự đoán
-CREATE POLICY "predictions_no_delete" ON predictions
-  FOR DELETE
-  TO anon, authenticated
-  USING (false);
+-- 4d. Cho phép xóa dự đoán (admin cần khi xóa trận đấu)
+-- TODO: Khi có Supabase Auth, giới hạn chỉ admin mới xóa được
+CREATE POLICY "predictions_delete" ON predictions
+  FOR DELETE TO anon, authenticated
+  USING (true);
 
 -- =============================================
 -- BƯỚC 5: POLICIES CHO BẢNG "players"
@@ -146,11 +149,10 @@ CREATE POLICY "players_update_self" ON players
   USING (true)
   WITH CHECK (true);
 
--- KHÔNG cho xóa player
-CREATE POLICY "players_no_delete" ON players
-  FOR DELETE
-  TO anon, authenticated
-  USING (false);
+-- Cho phép xóa player (admin cần)
+CREATE POLICY "players_delete" ON players
+  FOR DELETE TO anon, authenticated
+  USING (true);
 
 -- =============================================
 -- BƯỚC 6: POLICIES CHO BẢNG "groups"
@@ -168,8 +170,14 @@ CREATE POLICY "groups_insert_create" ON groups
   TO anon, authenticated
   WITH CHECK (true);
 
--- KHÔNG cho update/delete group từ frontend
--- Admin dùng Dashboard hoặc service_role key
+-- Cho phép update/delete group (admin cần)
+CREATE POLICY "groups_update" ON groups
+  FOR UPDATE TO anon, authenticated
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "groups_delete" ON groups
+  FOR DELETE TO anon, authenticated
+  USING (true);
 
 -- =============================================
 -- BƯỚC 7: POLICIES CHO BẢNG "scoring_rules"
@@ -181,7 +189,18 @@ CREATE POLICY "scoring_rules_select_all" ON scoring_rules
   TO anon, authenticated
   USING (true);
 
--- KHÔNG cho phép INSERT/UPDATE/DELETE từ anon role
+-- Cho phép admin quản lý scoring rules
+CREATE POLICY "scoring_rules_insert" ON scoring_rules
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "scoring_rules_update" ON scoring_rules
+  FOR UPDATE TO anon, authenticated
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "scoring_rules_delete" ON scoring_rules
+  FOR DELETE TO anon, authenticated
+  USING (true);
 
 -- =============================================
 -- BƯỚC 8: DATABASE TRIGGER - CHỐNG GIAN LẬN DỰ ĐOÁN
