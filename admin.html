@@ -897,6 +897,25 @@
 
                 <div id="dashboardAlerts"></div>
 
+                <!-- OpenFootball Sync Card -->
+                <div class="card" style="border-left: 4px solid var(--primary-green);">
+                    <div class="card-header">
+                        <h2 class="card-title">Tự động hóa</h2>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-sm btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán cho các trận trong 24h tới">🟢 Mở dự đoán (24h)</button>
+                            <button class="btn btn-sm btn-primary" onclick="syncFromOpenFootball()" title="Cập nhật kết quả từ OpenFootball GitHub">📡 Sync kết quả</button>
+                            <button class="btn btn-sm btn-warning" id="btnFullSync" onclick="runFullSync()" title="Mở dự đoán + Sync kết quả">🔄 Đồng bộ toàn bộ</button>
+                        </div>
+                    </div>
+                    <div style="padding: 0 20px 16px;">
+                        <p style="color: var(--text-light); font-size: 13px; margin-bottom: 12px;">
+                            Nguồn dữ liệu: <a href="https://github.com/openfootball/worldcup.json" target="_blank" style="color: var(--blue);">openfootball/worldcup.json</a> —
+                            Dự đoán tự mở trước giờ thi đấu 24h · Kết quả tự cập nhật tỉ số & phút ghi bàn cuối
+                        </p>
+                        <div id="syncStatus"></div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Trận đấu sắp tới</h2>
@@ -931,7 +950,9 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Danh sách trận đấu</h2>
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán 24h trước trận">🟢 Mở DĐ</button>
+                            <button class="btn btn-info" onclick="syncFromOpenFootball()" title="Sync kết quả từ OpenFootball" style="background: var(--blue); color: white;">📡 Sync KQ</button>
                             <button class="btn btn-warning" onclick="recalculateAllPlayerPoints()" title="Tính lại toàn bộ điểm từ đầu">🔄 Tính lại toàn bộ điểm</button>
                             <button class="btn btn-primary" onclick="openAddMatchModal()">+ Thêm trận đấu</button>
                         </div>
@@ -3816,6 +3837,197 @@
         // Modal helper
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+        }
+
+        // ============================================
+        // OPENFOOTBALL SYNC & AUTO-OPEN
+        // ============================================
+
+        const OPENFOOTBALL_URL = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
+
+        const openFootballNameMap = {
+            'Brazil': 'Brasil',
+            'USA': 'United States'
+        };
+
+        function mapTeamName(ofName) {
+            return openFootballNameMap[ofName] || ofName;
+        }
+
+        function findLastGoalMinute(match) {
+            const allGoals = [...(match.goals1 || []), ...(match.goals2 || [])];
+            if (allGoals.length === 0) return 90;
+            let maxMinute = 0;
+            allGoals.forEach(g => {
+                const total = g.minute + (g.offset || 0);
+                if (total > maxMinute) maxMinute = total;
+            });
+            return Math.min(maxMinute, 120);
+        }
+
+        function getFinalScore(match) {
+            if (!match.score) return null;
+            const ft = match.score.et || match.score.ft;
+            if (!ft || ft.length < 2) return null;
+            return { home: ft[0], away: ft[1] };
+        }
+
+        async function syncFromOpenFootball() {
+            const statusEl = document.getElementById('syncStatus');
+            const setStatus = (msg, type) => {
+                if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : type === 'warning' ? '⏳' : '❌'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
+            };
+
+            setStatus('Đang tải dữ liệu từ OpenFootball...', 'warning');
+
+            try {
+                const response = await fetch(OPENFOOTBALL_URL);
+                if (!response.ok) throw new Error('Không thể tải dữ liệu OpenFootball');
+                const data = await response.json();
+
+                const ofMatches = data.matches || [];
+                let updatedCount = 0;
+                let skippedCount = 0;
+                let errorCount = 0;
+                const details = [];
+
+                for (const ofMatch of ofMatches) {
+                    const score = getFinalScore(ofMatch);
+                    if (!score) continue;
+
+                    const homeName = mapTeamName(ofMatch.team1);
+                    const awayName = mapTeamName(ofMatch.team2);
+
+                    const dbMatch = allMatches.find(m =>
+                        m.home_team === homeName &&
+                        m.away_team === awayName &&
+                        m.status !== 'finished'
+                    );
+
+                    if (!dbMatch) {
+                        const alreadyFinished = allMatches.find(m =>
+                            m.home_team === homeName && m.away_team === awayName && m.status === 'finished'
+                        );
+                        if (alreadyFinished) {
+                            skippedCount++;
+                        }
+                        continue;
+                    }
+
+                    const lastMinute = findLastGoalMinute(ofMatch);
+
+                    const { error } = await supabase
+                        .from('matches')
+                        .update({
+                            home_score: score.home,
+                            away_score: score.away,
+                            minute: lastMinute,
+                            status: 'finished',
+                            points_calculated: false
+                        })
+                        .eq('id', dbMatch.id);
+
+                    if (error) {
+                        errorCount++;
+                        details.push(`❌ ${homeName} vs ${awayName}: ${error.message}`);
+                    } else {
+                        updatedCount++;
+                        details.push(`✅ ${homeName} ${score.home}-${score.away} ${awayName} (${lastMinute}')`);
+                    }
+                }
+
+                await loadMatches();
+                renderMatchesTable();
+                renderDashboard();
+
+                const detailsHtml = details.length > 0
+                    ? `<br><small>${details.join('<br>')}</small>` : '';
+
+                if (updatedCount > 0) {
+                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${errorCount} lỗi${detailsHtml}`, 'success');
+                } else {
+                    setStatus(`Không có trận mới cần cập nhật (${skippedCount} đã có KQ)${detailsHtml}`, 'warning');
+                }
+
+                return { updatedCount, skippedCount, errorCount };
+
+            } catch (error) {
+                console.error('Sync error:', error);
+                setStatus(`Lỗi: ${error.message}`, 'danger');
+                return { updatedCount: 0, skippedCount: 0, errorCount: 1 };
+            }
+        }
+
+        async function autoOpenPredictions() {
+            const statusEl = document.getElementById('syncStatus');
+            const setStatus = (msg, type) => {
+                if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : type === 'warning' ? '⏳' : '❌'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
+            };
+
+            setStatus('Đang kiểm tra trận đấu cần mở dự đoán...', 'warning');
+
+            try {
+                const now = new Date();
+                const threshold = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+                const matchesToOpen = allMatches.filter(m => {
+                    if (m.status !== 'not-open') return false;
+                    const matchDate = new Date(m.match_date);
+                    return matchDate <= threshold;
+                });
+
+                if (matchesToOpen.length === 0) {
+                    setStatus('Không có trận nào cần mở dự đoán trong 24h tới', 'warning');
+                    return 0;
+                }
+
+                let openedCount = 0;
+                const details = [];
+
+                for (const match of matchesToOpen) {
+                    const { error } = await supabase
+                        .from('matches')
+                        .update({ status: 'open' })
+                        .eq('id', match.id);
+
+                    if (error) {
+                        details.push(`❌ ${match.home_team} vs ${match.away_team}: ${error.message}`);
+                    } else {
+                        openedCount++;
+                        const matchDate = new Date(match.match_date);
+                        const timeStr = matchDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        details.push(`🟢 ${match.home_team} vs ${match.away_team} (${timeStr})`);
+                    }
+                }
+
+                await loadMatches();
+                renderMatchesTable();
+                renderDashboard();
+
+                const detailsHtml = details.length > 0
+                    ? `<br><small>${details.join('<br>')}</small>` : '';
+
+                setStatus(`Đã mở dự đoán cho ${openedCount}/${matchesToOpen.length} trận${detailsHtml}`, 'success');
+                return openedCount;
+
+            } catch (error) {
+                console.error('Auto-open error:', error);
+                setStatus(`Lỗi: ${error.message}`, 'danger');
+                return 0;
+            }
+        }
+
+        async function runFullSync() {
+            const btn = document.getElementById('btnFullSync');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang đồng bộ...'; }
+
+            try {
+                await autoOpenPredictions();
+                await new Promise(r => setTimeout(r, 500));
+                await syncFromOpenFootball();
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = '🔄 Đồng bộ toàn bộ'; }
+            }
         }
 
         console.log('✅ Admin panel script loaded');
