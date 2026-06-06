@@ -130,7 +130,7 @@
 
         /* Container */
         .container {
-            max-width: 1200px;
+            max-width: 960px;
             width: 100%;
             flex: 1;
             min-width: 0;
@@ -138,7 +138,7 @@
             position: relative;
         }
 
-        @media (max-width: 1640px) {
+        @media (max-width: 1360px) {
             .side-banner {
                 display: none;
             }
