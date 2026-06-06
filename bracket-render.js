@@ -177,6 +177,71 @@ function renderMatchRowCard(match) {
 }
 
 // ============================================
+// GROUP STANDINGS — calculate from match results
+// FIFA World Cup rules: Pts (W=3,D=1,L=0) → GD → GF → H2H
+// ============================================
+function calculateGroupStandings(groupMatches) {
+    const teams = {};
+
+    groupMatches.forEach(match => {
+        const home = match.home || match.home_team;
+        const away = match.away || match.away_team;
+        if (!home || !away) return;
+
+        if (!teams[home]) teams[home] = { name: home, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+        if (!teams[away]) teams[away] = { name: away, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+
+        if (match.status !== 'finished' || match.home_score === null || match.home_score === undefined) return;
+
+        const hs = match.home_score;
+        const as = match.away_score;
+
+        teams[home].mp++; teams[away].mp++;
+        teams[home].gf += hs; teams[home].ga += as;
+        teams[away].gf += as; teams[away].ga += hs;
+
+        if (hs > as) { teams[home].w++; teams[away].l++; }
+        else if (hs < as) { teams[away].w++; teams[home].l++; }
+        else { teams[home].d++; teams[away].d++; }
+    });
+
+    return Object.values(teams)
+        .map(t => ({ ...t, pts: t.w * 3 + t.d, gd: t.gf - t.ga }))
+        .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+}
+
+function renderStandingsTable(standings) {
+    if (standings.length === 0) return '';
+
+    const rows = standings.map((t, i) => {
+        const flag = (typeof countries !== 'undefined' && countries[t.name]?.flag) || '';
+        const abbr = (typeof countryAbbr !== 'undefined' && countryAbbr[t.name])
+            || t.name.substring(0, 3).toUpperCase();
+        const qualify = i < 2 ? ' style="background:#ECFDF5;"' : '';
+        return `<tr${qualify}>
+            <td style="text-align:center;font-weight:600;">${i + 1}</td>
+            <td>${flag} ${abbr}</td>
+            <td style="text-align:center">${t.mp}</td>
+            <td style="text-align:center">${t.w}</td>
+            <td style="text-align:center">${t.d}</td>
+            <td style="text-align:center">${t.l}</td>
+            <td style="text-align:center">${t.gf}</td>
+            <td style="text-align:center">${t.ga}</td>
+            <td style="text-align:center;font-weight:600;color:${t.gd > 0 ? '#059669' : t.gd < 0 ? '#DC2626' : '#6B7280'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+            <td style="text-align:center;font-weight:700;">${t.pts}</td>
+        </tr>`;
+    }).join('');
+
+    return `<table class="standings-table">
+        <thead><tr>
+            <th>#</th><th>Đội</th><th>ST</th><th>T</th><th>H</th><th>B</th>
+            <th>BT</th><th>BB</th><th>HS</th><th>Đ</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ============================================
 // GROUP STAGE RENDERER (sorted by date — chronological)
 // ============================================
 function renderScheduleGroupStageOnly() {
@@ -212,8 +277,18 @@ function renderScheduleGroupStageOnly() {
         title.textContent = `Bảng ${groupName.replace(/^GROUP /i, '').replace(/^Bảng /i, '')}`;
         groupCard.appendChild(title);
 
+        // Standings table
+        const standings = calculateGroupStandings(groupMatches);
+        const hasFinished = groupMatches.some(m => m.status === 'finished');
+        if (hasFinished) {
+            const standingsDiv = document.createElement('div');
+            standingsDiv.innerHTML = renderStandingsTable(standings);
+            groupCard.appendChild(standingsDiv);
+        }
+
         const matchesList = document.createElement('div');
         matchesList.className = 'compact-group-list';
+        if (hasFinished) matchesList.style.marginTop = '12px';
 
         groupMatches.forEach(match => {
             matchesList.appendChild(renderMatchRowCard(match));
