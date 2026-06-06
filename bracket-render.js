@@ -218,7 +218,7 @@ function renderStandingsTable(standings) {
         const flag = (typeof countries !== 'undefined' && countries[t.name]?.flag) || '';
         const abbr = (typeof countryAbbr !== 'undefined' && countryAbbr[t.name])
             || t.name.substring(0, 3).toUpperCase();
-        const qualify = i < 2 ? ' style="background:#ECFDF5;"' : '';
+        const qualify = i < 2 ? ' class="qualify-row"' : '';
         return `<tr${qualify}>
             <td style="text-align:center;font-weight:600;">${i + 1}</td>
             <td>${flag} ${abbr}</td>
