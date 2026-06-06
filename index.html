@@ -465,14 +465,17 @@
         // AUTHENTICATION FUNCTIONS
         async function loginUser(email, password) {
           try {
-            const { data: player, error } = await supabase
+            const { data: players, error } = await supabase
               .from('players')
               .select('*')
               .eq('email', email)
               .eq('password', password)
-              .single();
-            
+              .limit(1);
+
             if (error) throw error;
+
+            const player = players?.[0];
+            if (!player) throw new Error('Email hoặc mật khẩu không đúng');
             
             currentUser = player;
             localStorage.setItem('currentUserId', player.id);

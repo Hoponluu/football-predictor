@@ -17,16 +17,18 @@ let currentGroup = null;
 
 async function loginUser(email, password) {
   try {
-    // For demo: Simple email/password check against players table
-    const { data: player, error } = await supabase
+    const { data: players, error } = await supabase
       .from('players')
       .select('*')
       .eq('email', email)
-      .eq('password', password) // ⚠️ In production, use proper auth!
-      .single();
-    
+      .eq('password', password)
+      .limit(1);
+
     if (error) throw error;
-    
+
+    const player = players?.[0];
+    if (!player) throw new Error('Email hoặc mật khẩu không đúng');
+
     currentUser = player;
     localStorage.setItem('currentUserId', player.id);
     
