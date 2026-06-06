@@ -41,7 +41,7 @@
         /* Banner */
         .banner-wrapper {
             width: 100%;
-            overflow: hidden;
+            position: relative;
             line-height: 0;
         }
 
@@ -56,9 +56,13 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            position: relative;
+        }
+
+        .first-section {
             margin-top: -100px;
             position: relative;
-            z-index: 1;
+            z-index: 2;
         }
 
         /* Navigation */
@@ -66,14 +70,17 @@
             display: flex;
             gap: 8px;
             align-items: center;
-            margin-bottom: var(--section-padding);
             padding: 8px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(8px);
             border-radius: var(--border-radius);
-            box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 8px;
+            box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.15);
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 1200px;
             z-index: 100;
         }
 
@@ -1660,6 +1667,8 @@
             .nav-tabs {
                 overflow-x: auto;
                 scrollbar-width: none;
+                top: 16px;
+                width: calc(100% - 24px);
             }
 
             .nav-tabs::-webkit-scrollbar {
