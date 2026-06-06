@@ -131,7 +131,7 @@
                     <h2 class="section-title">🏆 LỊCH SỬ (KNOCK-OUT STAGE)</h2>
                 </div>
                 <div id="scheduleKnockout">
-                    <p style="text-align: center; color: var(--text-light); padding: 40px;">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 40px;">
                         Bracket knockout sẽ được hiển thị khi có trận loại trực tiếp
                     </p>
                 </div>
@@ -353,7 +353,7 @@
                         <div class="score-main" id="resultsHomeScore">2</div>
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 16px;">
-                        <div style="font-size: 18px; color: var(--text-light); font-weight: 500;">vs</div>
+                        <div style="font-size: 18px; color: var(--text-secondary); font-weight: 500;">vs</div>
                         <div class="score-detail" id="resultsMinute">82'</div>
                     </div>
                     <div class="results-final-score">
@@ -382,7 +382,7 @@
                 <button class="modal-close" onclick="closeFavoriteTeamModal()">×</button>
             </div>
 
-            <div style="padding: 16px; background: var(--yellow-bg); border-radius: 8px; margin-bottom: 20px;">
+            <div style="padding: 16px; background: var(--highlight-bg); border-radius: 8px; margin-bottom: 20px;">
                 <div style="font-size: 13px; color: #78350F; line-height: 1.5;">
                     <strong>Cách hoạt động:</strong><br>
                     Chọn 1 đội. Đội đó đi càng sâu → Điểm bonus càng cao!<br>
@@ -405,12 +405,12 @@
                 <!-- Will be populated by JavaScript -->
             </div>
 
-            <div id="favoriteTeamSelected" style="display: none; padding: 16px; background: var(--bg-gray); border-radius: 8px; margin-bottom: 20px;">
+            <div id="favoriteTeamSelected" style="display: none; padding: 16px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 20px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="font-size: 40px;" id="selectedTeamFlag"></div>
                     <div style="flex: 1;">
-                        <div style="font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px;" id="selectedTeamName"></div>
-                        <div style="font-size: 12px; color: var(--text-light);" id="selectedTeamPoints"></div>
+                        <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;" id="selectedTeamName"></div>
+                        <div style="font-size: 12px; color: var(--text-secondary);" id="selectedTeamPoints"></div>
                     </div>
                 </div>
             </div>
@@ -1278,7 +1278,7 @@
                             <div style="font-size: 48px;">${teamData.flag}</div>
                             <div style="flex: 1;">
                                 <div style="font-size: 20px; font-weight: 600; color: var(--text);">${currentPlayer.favorite_team}</div>
-                                <div style="font-size: 14px; color: var(--text-light); margin-top: 4px;">Đội yêu thích của bạn</div>
+                                <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">Đội yêu thích của bạn</div>
                             </div>
                             <button class="btn btn-secondary" onclick="openFavoriteTeamModal()">Đổi đội</button>
                         </div>
@@ -1287,7 +1287,7 @@
                     favTeamContainer.innerHTML = `
                         <div style="text-align: center; padding: 32px; background: var(--bg-secondary); border-radius: 12px;">
                             <div style="font-size: 48px; margin-bottom: 16px;">⭐</div>
-                            <p style="color: var(--text-light); margin-bottom: 16px;">Bạn chưa chọn đội yêu thích</p>
+                            <p style="color: var(--text-secondary); margin-bottom: 16px;">Bạn chưa chọn đội yêu thích</p>
                             <button class="btn btn-primary" onclick="openFavoriteTeamModal()">Chọn ngay</button>
                         </div>
                     `;
@@ -1303,17 +1303,17 @@
                         <div style="padding: 16px; background: var(--bg-secondary); border-radius: 12px; margin-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="font-weight: 600; color: var(--text);">${match.home} vs ${match.away}</span>
-                                <span style="color: var(--text-light); font-size: 13px;">${match.date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+                                <span style="color: var(--text-secondary); font-size: 13px;">${match.date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
                             </div>
                             <div style="display: flex; gap: 16px; align-items: center;">
                                 <span style="font-size: 18px; font-weight: 600; color: var(--text);">${match.userPrediction.homeScore} - ${match.userPrediction.awayScore}</span>
-                                <span style="color: var(--text-light);">${match.userPrediction.minute}'</span>
+                                <span style="color: var(--text-secondary);">${match.userPrediction.minute}'</span>
                                 ${match.points ? `<span style="color: #10B981; margin-left: auto; font-weight: 600;">+${(match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0)} điểm</span>` : ''}
                             </div>
                         </div>
                     `).join('');
                 } else {
-                    historyContainer.innerHTML = '<p style="text-align: center; padding: 32px; color: var(--text-light);">Bạn chưa có dự đoán nào</p>';
+                    historyContainer.innerHTML = '<p style="text-align: center; padding: 32px; color: var(--text-secondary);">Bạn chưa có dự đoán nào</p>';
                 }
             }
         }
@@ -1423,7 +1423,7 @@
                     `;
                 } else {
                     result.innerHTML = `
-                        <div style="color: var(--text-light);">Không dự đoán</div>
+                        <div style="color: var(--text-secondary);">Không dự đoán</div>
                         <div class="points-text"><span class="point-badge">+0</span></div>
                     `;
                 }
@@ -1715,7 +1715,7 @@
                 ; // Show all non-finished
             
             if (upcoming.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Không có trận sắp diễn ra</p>';
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Không có trận sắp diễn ra</p>';
                 return;
             }
             
@@ -1737,7 +1737,7 @@
                 .sort((a, b) => b.date - a.date);
             
             if (history.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Chưa có trận đấu nào kết thúc</p>';
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Chưa có trận đấu nào kết thúc</p>';
                 return;
             }
             
@@ -1823,11 +1823,11 @@
             leaderboardData.forEach(player => {
                 const rankClass = player.rank <= 4 ? `rank-${player.rank}` : 'rank-other';
                 const isCurrentUser = currentPlayer && player.id === currentPlayer.id;
-                const rowClass = isCurrentUser ? 'style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-left: 4px solid #F59E0B; font-weight: 600;"' : '';
+                const rowClass = isCurrentUser ? 'class="current-user-row"' : '';
                 
                 const favDisplay = player.favPoints > 0
-                    ? `<span style="color: #059669; font-weight: 600;">+${player.favPoints}</span>`
-                    : '<span style="color: #D1D5DB;">0</span>';
+                    ? `<span style="color: var(--color-success); font-weight: 600;">+${player.favPoints}</span>`
+                    : '<span style="color: var(--text-tertiary);">0</span>';
 
                 html += `
                     <tr ${rowClass}>
@@ -2260,7 +2260,7 @@
                 .slice(0, 5);
             
             if (recentFinished.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Chưa có lịch sử</p>';
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Chưa có lịch sử</p>';
                 return;
             }
             
@@ -2541,41 +2541,40 @@
                 
                 // Create table structure (compact design like image 2)
                 let tableHTML = `
-                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <table class="predictions-table">
                         <tbody>
                 `;
-                
+
                 predictions.forEach((pred, index) => {
                     const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
-                    const bgColor = isCurrentUser ? '#FEF3C7' : (index % 2 === 0 ? '#F9FAFB' : 'white');
-                    
+
                     const totalPoints = pred.total_points || 0;
                     const pointsRank = pred.points_rank || 0;
                     const pointsExact = pred.points_exact_score || 0;
                     const pointsMinute = pred.points_minute || 0;
-                    
+
                     const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
-                    
+
                     tableHTML += `
-                        <tr style="background: ${bgColor}; border-bottom: 1px solid #E5E7EB;">
-                            <td style="padding: 12px 8px; text-align: center; font-size: 16px; width: 40px; font-weight: 600;">
+                        <tr class="${isCurrentUser ? 'current-user-row' : ''}">
+                            <td class="pred-rank-cell">
                                 ${rankBadge}
                             </td>
-                            <td style="padding: 12px 12px; font-weight: ${isCurrentUser ? '600' : '500'}; color: ${isCurrentUser ? '#92400E' : '#1F2937'};">
+                            <td class="pred-name-cell ${isCurrentUser ? 'is-current' : ''}">
                                 ${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}
                             </td>
-                            <td style="padding: 12px 8px; text-align: center; font-weight: 600; width: 80px; color: #1F2937; font-size: 16px;">
+                            <td class="pred-score-cell">
                                 ${pred.home_score}-${pred.away_score}
                             </td>
-                            <td style="padding: 12px 8px; text-align: center; color: #6B7280; width: 60px; font-size: 14px;">
+                            <td class="pred-minute-cell">
                                 ${pred.minute}'
                             </td>
-                            <td style="padding: 12px 8px; text-align: center; width: 140px;">
-                                ${pointsRank ? `<span style="display: inline-block; background: #DBEAFE; color: #1E40AF; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">🏆 +${pointsRank}</span>` : ''}
-                                ${pointsExact ? `<span style="display: inline-block; background: #D1FAE5; color: #065F46; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">🎯 +${pointsExact}</span>` : ''}
-                                ${pointsMinute ? `<span style="display: inline-block; background: #FEF3C7; color: #92400E; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">💡 +${pointsMinute}</span>` : ''}
+                            <td class="pred-badges-cell">
+                                ${pointsRank ? `<span class="pred-badge pred-badge-rank">🏆 +${pointsRank}</span>` : ''}
+                                ${pointsExact ? `<span class="pred-badge pred-badge-exact">🎯 +${pointsExact}</span>` : ''}
+                                ${pointsMinute ? `<span class="pred-badge pred-badge-minute">💡 +${pointsMinute}</span>` : ''}
                             </td>
-                            <td style="padding: 12px 12px; text-align: center; font-weight: 700; color: #10B981; width: 70px; font-size: 16px;">
+                            <td class="pred-total-cell">
                                 +${totalPoints}
                             </td>
                         </tr>
@@ -2741,15 +2740,15 @@
                 `;
                 
                 if (tempSelectedTeam === teamName) {
-                    item.style.background = 'var(--yellow-bg)';
-                    item.style.borderColor = '#F59E0B';
+                    item.style.background = 'var(--highlight-bg)';
+                    item.style.borderColor = 'var(--color-warning)';
                 }
-                
+
                 item.innerHTML = `
                     <div style="font-size: 32px;">${teamData.flag}</div>
                     <div style="flex: 1;">
-                        <div style="font-size: 14px; font-weight: 600; color: var(--text-dark);">${teamName}</div>
-                        <div style="font-size: 12px; color: var(--text-light);">Điểm max: ${favoriteTeamSettings.points.champion}</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary);">${teamName}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">Điểm max: ${favoriteTeamSettings.points.champion}</div>
                     </div>
                 `;
                 
@@ -2757,7 +2756,7 @@
                 
                 item.onmouseenter = () => {
                     if (tempSelectedTeam !== teamName) {
-                        item.style.background = 'var(--bg-gray)';
+                        item.style.background = 'var(--bg-secondary)';
                     }
                 };
                 

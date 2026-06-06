@@ -13,8 +13,8 @@
             --neutral-950: #151519;
 
             /* Primary & Accent */
-            --primary: #ADEB03;
-            --primary-hover: #98CF03;
+            --primary: #678C04;
+            --primary-hover: #567603;
             --accent-cyan: #68FEDB;
             --accent-red: #FE3D03;
             --accent-blue: #3463FF;
@@ -59,6 +59,8 @@
         }
 
         [data-theme="dark"] {
+            --primary: #ADEB03;
+            --primary-hover: #98CF03;
             --bg: var(--neutral-950);
             --bg-secondary: var(--neutral-800);
             --bg-inverse: var(--neutral-50);
@@ -72,8 +74,8 @@
             --stroke-strong: var(--neutral-50);
             --stroke-secondary: var(--neutral-600);
             --active-tab: var(--neutral-700);
-            --highlight-bg: #423A1F;
-            --highlight-text: #FDE68A;
+            --highlight-bg: var(--neutral-800);
+            --highlight-text: var(--neutral-50);
             --shadow: rgba(0, 0, 0, 0.3);
             --shadow-lg: rgba(0, 0, 0, 0.5);
         }
@@ -145,7 +147,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 14px;
             font-weight: 500;
-            color: var(--text-primary);
+            color: var(--neutral-950);
             cursor: pointer;
             transition: all 0.2s ease;
             white-space: nowrap;
@@ -156,12 +158,12 @@
         }
 
         .nav-tab.active {
-            background: var(--active-tab);
+            background: var(--neutral-200);
         }
 
         .theme-toggle {
             background: none;
-            border: 1px solid var(--stroke);
+            border: 1px solid var(--neutral-200);
             border-radius: 50%;
             width: 36px;
             height: 36px;
@@ -1387,11 +1389,117 @@
         }
 
         .leaderboard-table tbody tr:nth-child(odd) {
-            background: var(--highlight-bg);
+            background: var(--surface-secondary);
         }
 
         .leaderboard-table tbody tr:hover {
             background: rgba(74, 222, 128, 0.1);
+        }
+
+        .leaderboard-table tbody tr.current-user-row {
+            background: linear-gradient(135deg, var(--highlight-bg) 0%, var(--highlight-bg) 100%);
+            border-left: 4px solid var(--color-warning);
+            font-weight: 600;
+        }
+
+        .leaderboard-table tbody tr.current-user-row:hover {
+            background: linear-gradient(135deg, var(--highlight-bg) 0%, var(--highlight-bg) 100%);
+        }
+
+        /* Predictions table */
+        .predictions-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .predictions-table tr {
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .predictions-table tr:nth-child(even) {
+            background: var(--surface-secondary);
+        }
+
+        .predictions-table tr.current-user-row {
+            background: var(--highlight-bg);
+        }
+
+        .predictions-table td {
+            padding: 12px 8px;
+        }
+
+        .pred-rank-cell {
+            text-align: center;
+            font-size: 16px;
+            width: 40px;
+            font-weight: 600;
+        }
+
+        .pred-name-cell {
+            padding-left: 12px;
+            padding-right: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .pred-name-cell.is-current {
+            font-weight: 600;
+            color: var(--highlight-text);
+        }
+
+        .pred-score-cell {
+            text-align: center;
+            font-weight: 600;
+            width: 80px;
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .pred-minute-cell {
+            text-align: center;
+            color: var(--text-secondary);
+            width: 60px;
+            font-size: 14px;
+        }
+
+        .pred-badges-cell {
+            text-align: center;
+            width: 140px;
+        }
+
+        .pred-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 0 2px;
+            font-weight: 600;
+        }
+
+        .pred-badge-rank {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .pred-badge-exact {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .pred-badge-minute {
+            background: var(--highlight-bg);
+            color: var(--highlight-text);
+        }
+
+        .pred-total-cell {
+            text-align: center;
+            font-weight: 700;
+            color: var(--color-success);
+            width: 70px;
+            font-size: 16px;
+            padding-left: 12px;
+            padding-right: 12px;
         }
 
         .rank-badge {
