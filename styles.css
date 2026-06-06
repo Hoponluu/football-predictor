@@ -1418,6 +1418,34 @@
             gap: 6px;
         }
 
+        /* ===== Group Standings Table ===== */
+        .standings-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .standings-table th {
+            background: var(--bg-gray);
+            color: var(--text-light);
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            padding: 5px 4px;
+            text-align: center;
+            border-bottom: 2px solid var(--stroke);
+        }
+
+        .standings-table td {
+            padding: 5px 4px;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .standings-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
         /* ===== Match Row Card ===== */
         .match-row-card {
             display: flex;
