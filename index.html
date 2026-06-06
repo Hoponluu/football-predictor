@@ -22,6 +22,10 @@
             <button class="nav-tab" onclick="switchPage('schedule')">📅 Lịch thi đấu</button>
             <button class="nav-tab" onclick="switchPage('leaderboard')">🏆 Bảng xếp hạng</button>
             <div class="nav-user-section" id="navUserSection" style="display: none;">
+                <div class="group-switcher" id="groupSwitcher" style="display: none;">
+                    <select class="group-switcher-select" id="groupSwitcherSelect" onchange="handleGroupSwitch(this.value)">
+                    </select>
+                </div>
                 <button class="nav-user-btn" onclick="openProfilePage()" id="navUserBtn">User</button>
                 <button class="nav-logout-btn" onclick="handleLogout()">Đăng xuất</button>
             </div>
@@ -675,21 +679,31 @@
         // Get all predictions for a match (all players in group)
         async function getMatchPredictions(matchId) {
           try {
+            // Get player IDs in the current group
+            const { data: memberships, error: memError } = await supabase
+              .from('player_groups')
+              .select('player_id')
+              .eq('group_id', groupId);
+
+            if (memError) throw memError;
+
+            const playerIds = (memberships || []).map(m => m.player_id);
+            if (playerIds.length === 0) return [];
+
             const { data: predictions, error } = await supabase
               .from('predictions')
               .select(`
                 *,
-                players!inner (
+                players (
                   id,
-                  name,
-                  group_id
+                  name
                 )
               `)
               .eq('match_id', matchId)
-              .eq('players.group_id', groupId);
-            
+              .in('player_id', playerIds);
+
             if (error) throw error;
-            
+
             return (predictions || []).map(p => ({
               ...p,
               player_name: p.players.name,
@@ -702,25 +716,29 @@
         }
         
         // LEADERBOARD FUNCTIONS
-        async function getLeaderboard(groupId) {
+        async function getLeaderboard(grpId) {
           try {
-            const { data: players, error } = await supabase
-              .from('players')
+            const { data: memberships, error } = await supabase
+              .from('player_groups')
               .select(`
-                id,
-                name,
-                favorite_team,
-                favorite_points,
-                predictions (
-                  total_points,
-                  points_rank,
-                  points_exact_score,
-                  points_minute
+                players (
+                  id,
+                  name,
+                  favorite_team,
+                  favorite_points,
+                  predictions (
+                    total_points,
+                    points_rank,
+                    points_exact_score,
+                    points_minute
+                  )
                 )
               `)
-              .eq('group_id', groupId);
+              .eq('group_id', grpId);
 
             if (error) throw error;
+
+            const players = (memberships || []).map(m => m.players).filter(Boolean);
 
             const leaderboard = players.map(player => {
               const predictions = player.predictions || [];
@@ -735,20 +753,20 @@
                 id: player.id,
                 name: player.name,
                 points: totalPoints,
-                predictionPoints: predictionPoints,
-                favPoints: favPoints,
+                predictionPoints,
+                favPoints,
                 favoriteTeam: player.favorite_team,
                 top1: top1Count,
                 exactScore: exactScoreCount,
                 exactMinute: exactMinuteCount
               };
             });
-            
+
             leaderboard.sort((a, b) => b.points - a.points);
             leaderboard.forEach((player, index) => {
               player.rank = index + 1;
             });
-            
+
             return leaderboard;
           } catch (error) {
             console.error('Get leaderboard error:', error);
@@ -825,28 +843,27 @@
         }
         
         // PLAYER FUNCTIONS
-        async function getPlayers(groupId) {
+        async function getPlayers(grpId) {
           try {
-            const { data: players, error } = await supabase
-              .from('players')
-              .select('*')
-              .eq('group_id', groupId);
-            
+            const { data: memberships, error } = await supabase
+              .from('player_groups')
+              .select('players (*)')
+              .eq('group_id', grpId);
+
             if (error) throw error;
-            
-            return players || [];
+
+            return (memberships || []).map(m => m.players).filter(Boolean);
           } catch (error) {
             console.error('Get players error:', error);
             return [];
           }
         }
-        
-        async function createPlayer(groupId, name, email, password, isAdmin = false) {
+
+        async function createPlayer(grpId, name, email, password, isAdmin = false) {
           try {
             const { data: player, error } = await supabase
               .from('players')
               .insert({
-                group_id: groupId,
                 name,
                 email,
                 password,
@@ -854,9 +871,13 @@
               })
               .select()
               .single();
-            
+
             if (error) throw error;
-            
+
+            if (grpId) {
+              await supabase.from('player_groups').insert({ player_id: player.id, group_id: grpId });
+            }
+
             return { success: true, player };
           } catch (error) {
             console.error('Create player error:', error);
@@ -864,6 +885,39 @@
           }
         }
         
+        // PLAYER-GROUP MEMBERSHIP FUNCTIONS
+        async function getPlayerGroups(playerId) {
+          try {
+            const { data, error } = await supabase
+              .from('player_groups')
+              .select('group_id, groups (id, name, code)')
+              .eq('player_id', playerId);
+
+            if (error) throw error;
+            return (data || []).map(pg => pg.groups).filter(Boolean);
+          } catch (error) {
+            console.error('Get player groups error:', error);
+            return [];
+          }
+        }
+
+        async function isPlayerInGroup(playerId, grpId) {
+          try {
+            const { data, error } = await supabase
+              .from('player_groups')
+              .select('id')
+              .eq('player_id', playerId)
+              .eq('group_id', grpId)
+              .maybeSingle();
+
+            if (error) throw error;
+            return !!data;
+          } catch (error) {
+            console.error('Check membership error:', error);
+            return false;
+          }
+        }
+
         console.log('✅ Supabase client initialized');
         console.log('📊 Database:', SUPABASE_CONFIG.url);
         console.log('✅ All functions ready!');
@@ -1041,20 +1095,41 @@
                     
                     if (currentPlayer) {
                         console.log('✅ User logged in:', currentPlayer.name);
-                        
-                        // Get group ID from user profile
-                        groupId = currentPlayer.group_id;
+
+                        // Load user's groups
+                        const playerGroupsList = await getPlayerGroups(currentPlayer.id);
+
+                        // Restore groupId from localStorage, or use first group
+                        const savedGroupId = localStorage.getItem('currentGroupId');
+                        if (savedGroupId && playerGroupsList.some(g => g.id === savedGroupId)) {
+                            groupId = savedGroupId;
+                        } else if (playerGroupsList.length > 0) {
+                            groupId = playerGroupsList[0].id;
+                            localStorage.setItem('currentGroupId', groupId);
+                        } else {
+                            groupId = currentPlayer.group_id;
+                        }
+
+                        // Load the current group object
+                        const { data: grpData } = await supabase
+                            .from('groups')
+                            .select('*')
+                            .eq('id', groupId)
+                            .single();
+                        if (grpData) currentGroup = grpData;
+
                         console.log('✅ Group ID:', groupId);
-                        
+
                         updateUIForLoggedInUser();
-                        
+                        renderGroupSwitcher(playerGroupsList);
+
                         // Load GROUP-SPECIFIC data
                         await Promise.all([
                             loadMyPredictions(),
                             loadLeaderboard(),
                             loadFavoriteTeamSettings()
                         ]);
-                        
+
                         console.log('✅ Personal & group data loaded');
                     } else {
                         console.log('ℹ️ Guest mode - matches visible, login to compete');
@@ -1218,19 +1293,65 @@
 
         async function handleLogout() {
             if (!confirm('Bạn có chắc muốn đăng xuất?')) return;
-            
+
             await logoutUser();
             currentPlayer = null;
             groupId = null;
+            currentGroup = null;
             matches = [];
             myPredictions = {};
             leaderboardData = [];
+            localStorage.removeItem('currentGroupId');
             
             updateUIForGuestUser();
             switchPage('homepage');
             renderAllPages();
             
             console.log('✅ Logged out');
+        }
+
+        // Group Switcher
+        function renderGroupSwitcher(groups) {
+            const switcher = document.getElementById('groupSwitcher');
+            const select = document.getElementById('groupSwitcherSelect');
+            if (!switcher || !select) return;
+
+            if (groups.length <= 1) {
+                switcher.style.display = 'none';
+                return;
+            }
+
+            let options = '';
+            groups.forEach(g => {
+                const selected = g.id === groupId ? 'selected' : '';
+                options += `<option value="${g.id}" ${selected}>${g.name}</option>`;
+            });
+            select.innerHTML = options;
+            switcher.style.display = 'block';
+        }
+
+        async function handleGroupSwitch(newGroupId) {
+            if (newGroupId === groupId) return;
+
+            groupId = newGroupId;
+            localStorage.setItem('currentGroupId', newGroupId);
+
+            // Load new group object
+            const { data: grpData } = await supabase
+                .from('groups')
+                .select('*')
+                .eq('id', newGroupId)
+                .single();
+            if (grpData) currentGroup = grpData;
+
+            // Reload group-specific data
+            await Promise.all([
+                loadLeaderboard(),
+                loadFavoriteTeamSettings()
+            ]);
+
+            renderAllPages();
+            console.log('✅ Switched to group:', currentGroup?.name);
         }
 
         // Open Profile Page
@@ -2613,13 +2734,13 @@
 
         async function handleLogin(event) {
             event.preventDefault();
-            
+
             const email = document.getElementById('loginName').value.trim();
             const password = document.getElementById('loginPassword').value;
             const groupCode = document.getElementById('loginGroupCode').value.trim();
-            
+
             console.log('🔐 Attempting login...', { email, groupCode });
-            
+
             try {
                 // Verify group code against database
                 const group = await getGroupByCode(groupCode);
@@ -2632,8 +2753,9 @@
                 const result = await loginUser(email, password);
 
                 if (result.success) {
-                    // Verify player belongs to this group
-                    if (result.player.group_id !== group.id) {
+                    // Verify player belongs to this group via player_groups
+                    const isMember = await isPlayerInGroup(result.player.id, group.id);
+                    if (!isMember) {
                         alert('Tài khoản không thuộc nhóm này!');
                         currentUser = null;
                         localStorage.removeItem('currentUserId');
@@ -2643,6 +2765,8 @@
                     console.log('✅ Login successful!');
                     currentPlayer = result.player;
                     currentGroup = group;
+                    groupId = group.id;
+                    localStorage.setItem('currentGroupId', group.id);
 
                     closeLoginModal();
 

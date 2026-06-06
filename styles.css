@@ -240,6 +240,23 @@
             border-color: var(--text-secondary);
         }
 
+        .group-switcher-select {
+            padding: 8px 12px;
+            border: 1px solid var(--neutral-200);
+            border-radius: var(--border-radius);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--neutral-950);
+            background: var(--neutral-50);
+            cursor: pointer;
+            outline: none;
+        }
+
+        .group-switcher-select:focus {
+            border-color: var(--primary);
+        }
+
         /* Page Content */
         .page-content {
             display: none;
