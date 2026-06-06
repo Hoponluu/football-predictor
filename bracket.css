@@ -5,7 +5,7 @@
    ============================================ */
 
 .tournament-bracket {
-    background: var(--white);
+    background: var(--surface);
     border: 1px solid var(--stroke);
     border-radius: var(--border-radius);
     padding: 24px;
@@ -15,7 +15,7 @@
 
 .bracket-hint {
     text-align: center;
-    color: var(--text-light);
+    color: var(--text-secondary);
     font-size: 12px;
     margin-bottom: 16px;
     display: none;
@@ -47,7 +47,7 @@
 }
 
 .bracket-empty-text {
-    color: var(--text-light);
+    color: var(--text-secondary);
     font-size: 14px;
 }
 
@@ -63,10 +63,10 @@
 .round-title {
     font-size: 13px;
     font-weight: 700;
-    color: var(--text-dark);
+    color: var(--text-primary);
     text-align: center;
     padding-bottom: 10px;
-    border-bottom: 3px solid var(--primary-green);
+    border-bottom: 3px solid var(--primary);
 }
 
 .round-matches {
@@ -86,9 +86,9 @@
 
 /* ===== Bracket Mini Card ===== */
 .bracket-mini-card {
-    background: var(--white);
+    background: var(--surface);
     border-radius: 10px 0;
-    border-top: 3px solid #46FF6F;
+    border-top: 3px solid var(--primary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     padding: 0;
     cursor: pointer;
@@ -114,22 +114,22 @@
 }
 
 .bracket-mini-card.predicted {
-    box-shadow: 0 0 0 1px var(--primary-green), 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0 0 1px var(--primary), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .bracket-mini-card.final-match {
-    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-    border-top: 3px solid #F59E0B;
+    background: var(--highlight-bg);
+    border-top: 3px solid var(--color-warning);
 }
 
 .bracket-mini-card.third-match {
-    border-top: 3px dashed #6B7280;
+    border-top: 3px dashed var(--text-secondary);
 }
 
 /* TBD card (teams not yet determined) */
 .bracket-mini-card.tbd {
     opacity: 0.6;
-    background: #F9FAFB;
+    background: var(--surface-secondary);
     cursor: default;
 }
 
@@ -142,8 +142,8 @@
 .bracket-mini-matchnum {
     font-size: 9px;
     font-weight: 700;
-    color: #6B7280;
-    background: #F3F4F6;
+    color: var(--text-secondary);
+    background: var(--bg);
     padding: 1px 4px;
     border-radius: 3px;
     line-height: 1;
@@ -156,12 +156,12 @@
     padding: 5px 8px;
     gap: 6px;
     font-size: 10px;
-    color: #9CA3AF;
+    color: var(--text-tertiary);
 }
 
 .bracket-mini-datetime span:first-child {
     font-weight: 600;
-    color: #6B7280;
+    color: var(--text-secondary);
 }
 
 /* Teams section */
@@ -196,14 +196,14 @@
 .bracket-mini-code {
     font-size: 11px;
     font-weight: 700;
-    color: var(--text-dark);
+    color: var(--text-primary);
     flex: 1;
 }
 
 .bracket-mini-score {
     font-size: 13px;
     font-weight: 700;
-    color: var(--text-dark);
+    color: var(--text-primary);
     min-width: 14px;
     text-align: right;
 }
@@ -213,12 +213,12 @@
     position: absolute;
     top: 4px;
     right: 6px;
-    background: #FEF3C7;
+    background: var(--highlight-bg);
     padding: 1px 5px;
     border-radius: 3px;
     font-size: 9px;
     font-weight: 700;
-    color: #92400E;
+    color: var(--highlight-text);
 }
 
 .bracket-mini-predicted {
@@ -227,13 +227,13 @@
     right: 6px;
     font-size: 12px;
     font-weight: 700;
-    color: var(--primary-green);
+    color: var(--primary);
 }
 
 .bracket-mini-penalty {
     text-align: center;
     font-size: 9px;
-    color: var(--text-light);
+    color: var(--text-secondary);
     font-weight: 600;
     padding-bottom: 4px;
 }
