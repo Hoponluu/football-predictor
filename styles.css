@@ -106,12 +106,42 @@
             object-fit: cover;
         }
 
+        /* Page Layout with Side Banners */
+        .page-layout {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            position: relative;
+        }
+
+        .side-banner {
+            width: 200px;
+            flex-shrink: 0;
+            padding-top: 0;
+        }
+
+        .side-banner-img {
+            position: sticky;
+            top: 24px;
+            width: 200px;
+            height: auto;
+            display: block;
+        }
+
         /* Container */
         .container {
             max-width: 1200px;
-            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+            min-width: 0;
             padding: 20px;
             position: relative;
+        }
+
+        @media (max-width: 1640px) {
+            .side-banner {
+                display: none;
+            }
         }
 
         .first-section {
