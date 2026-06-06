@@ -35,7 +35,7 @@
                     <h2 class="section-title">🏟️ TRẬN ĐẤU SẮP DIỄN RA</h2>
                     <button class="view-all-btn" onclick="switchPage('schedule')">XEM TẤT CẢ</button>
                 </div>
-                <div class="matches-scroll" id="upcomingMatches">
+                <div class="matches-grid" id="upcomingMatches">
                     <!-- Sẽ được tạo bằng JavaScript -->
                 </div>
             </section>
@@ -71,7 +71,7 @@
             <section class="section">
                 <div class="section-header">
                     <h2 class="section-title">📊 LỊCH SỬ</h2>
-                    <button class="view-all-btn" onclick="scrollToPersonalStats()">XEM TẤT CẢ</button>
+                    <button class="view-all-btn" onclick="switchPage('schedule'); setTimeout(() => document.getElementById('scheduleHistoryMatches')?.scrollIntoView({ behavior: 'smooth' }), 100)">XEM TẤT CẢ</button>
                 </div>
                 <div class="matches-scroll" id="historyMatches">
                     <!-- Sẽ được tạo bằng JavaScript -->
@@ -1671,10 +1671,14 @@
                 container.appendChild(favoriteCard);
             }
             
-            const upcoming = matches.filter(m => m.status !== 'finished');
+            const upcoming = matches.filter(m => m.status === 'open');
             upcoming.forEach(match => {
                 container.appendChild(renderMatchCard(match));
             });
+
+            if (upcoming.length === 0 && !favoriteCard) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Chưa có trận đấu nào đang mở dự đoán</p>';
+            }
         }
 
         function renderScheduleMatches() {
@@ -1833,7 +1837,7 @@
             });
 
             if (tbody) tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</td></tr>';
-            if (preview) preview.innerHTML = html ? `<table class="leaderboard-table"><tbody>${html}</tbody></table>` : '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
+            if (preview) preview.innerHTML = html ? `<table class="leaderboard-table"><thead><tr><th>Hạng</th><th>Người chơi</th><th>Điểm</th><th>⭐</th><th>Top 1</th><th>Đúng tỉ số</th><th>Đúng phút</th></tr></thead><tbody>${html}</tbody></table>` : '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
         }
 
         function renderPersonalStats() {
