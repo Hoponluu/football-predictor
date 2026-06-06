@@ -30,7 +30,7 @@ WHERE match_number = 76;
 
 -- M77: Belgium 0-0 Senegal → Belgium thắng penalty 5-4 (0-0 + PEN!)
 UPDATE matches SET
-  status = 'finished', home_score = 0, away_score = 0, minute = 90,
+  status = 'finished', home_score = 0, away_score = 0, minute = 0,
   home_penalty = 5, away_penalty = 4
 WHERE match_number = 77;
 
@@ -96,7 +96,7 @@ WHERE match_number = 87;
 
 -- M88: Croatia 0-0 South Korea → South Korea thắng PEN 4-3 (Upset!)
 UPDATE matches SET
-  status = 'finished', home_score = 0, away_score = 0, minute = 90,
+  status = 'finished', home_score = 0, away_score = 0, minute = 0,
   home_penalty = 3, away_penalty = 4
 WHERE match_number = 88;
 
