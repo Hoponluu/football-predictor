@@ -1397,10 +1397,8 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Nhóm</label>
-                    <select class="form-select" id="playerGroup">
-                        <option value="">Chọn nhóm</option>
-                    </select>
+                    <label class="form-label">Nhóm (có thể chọn nhiều)</label>
+                    <div id="playerGroupCheckboxes" style="display: flex; flex-direction: column; gap: 8px; padding: 8px 0;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1665,15 +1663,22 @@
             awaySelect.innerHTML = options;
         }
 
-        function populateGroupSelectors() {
-            const playerGroupSelect = document.getElementById('playerGroup');
-            
-            let options = '<option value="">Chọn nhóm</option>';
+        function populateGroupSelectors(selectedGroupIds = []) {
+            const container = document.getElementById('playerGroupCheckboxes');
+            if (!container) return;
+
+            let html = '';
             allGroups.forEach(group => {
-                options += `<option value="${group.id}">${group.name} (${group.code})</option>`;
+                const checked = selectedGroupIds.includes(group.id) ? 'checked' : '';
+                html += `
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" class="player-group-cb" value="${group.id}" ${checked}>
+                        <span>${group.name} (${group.code})</span>
+                    </label>
+                `;
             });
-            
-            playerGroupSelect.innerHTML = options;
+
+            container.innerHTML = html || '<span style="color:#999;">Chưa có nhóm nào</span>';
         }
 
         // Database Functions
@@ -1705,17 +1710,23 @@
                     .from('players')
                     .select(`
                         *,
-                        groups (
-                            id,
-                            name,
-                            code
+                        player_groups (
+                            group_id,
+                            groups (
+                                id,
+                                name,
+                                code
+                            )
                         )
                     `);
-                
+
                 if (error) throw error;
-                
-                allPlayers = data || [];
-                
+
+                allPlayers = (data || []).map(p => ({
+                    ...p,
+                    memberGroups: (p.player_groups || []).map(pg => pg.groups).filter(Boolean)
+                }));
+
                 console.log('✅ Loaded', allPlayers.length, 'players');
                 return allPlayers;
             } catch (error) {
@@ -1999,7 +2010,10 @@
 
             let html = '';
             allPlayers.forEach(player => {
-                const groupName = player.groups?.name || 'N/A';
+                const groups = player.memberGroups || [];
+                const groupNames = groups.length > 0
+                    ? groups.map(g => `<span style="display:inline-block;background:#E0F2FE;color:#0369A1;padding:2px 6px;border-radius:4px;font-size:11px;margin:1px 2px;">${g.name}</span>`).join('')
+                    : '<span style="color:#D1D5DB;">-</span>';
                 const playerPredictions = allPredictions.filter(p => p.player_id === player.id).length;
                 const predPts = player.total_points || 0;
                 const favPts = player.favorite_points || 0;
@@ -2015,7 +2029,7 @@
                     <tr>
                         <td><strong>${player.name}</strong></td>
                         <td>${player.email}</td>
-                        <td>${groupName}</td>
+                        <td>${groupNames}</td>
                         <td>${predPts}</td>
                         <td>${favTeamDisplay}</td>
                         <td><strong>${totalPts}</strong></td>
@@ -2044,7 +2058,7 @@
             
             let html = '';
             allGroups.forEach(group => {
-                const memberCount = allPlayers.filter(p => p.group_id === group.id).length;
+                const memberCount = allPlayers.filter(p => (p.memberGroups || []).some(g => g.id === group.id)).length;
                 const createdDate = new Date(group.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
                 
                 // Use quotes for UUID strings
@@ -3551,31 +3565,34 @@
 
         function openAddPlayerModal() {
             currentEditingPlayer = null;
-            
+
             document.getElementById('playerName').value = '';
             document.getElementById('playerEmail').value = '';
             document.getElementById('playerPassword').value = '';
-            document.getElementById('playerGroup').value = '';
-            
+
+            populateGroupSelectors([]);
+
             document.getElementById('addPlayerModalTitle').textContent = 'Thêm người chơi mới';
             document.getElementById('playerPasswordGroup').style.display = 'block';
+            document.getElementById('playerPassword').placeholder = '••••••••';
             document.getElementById('addPlayerModal').classList.add('active');
         }
 
         async function editPlayer(id) {
-            // id is already a string (UUID)
             const player = allPlayers.find(p => p.id === id);
             if (!player) {
                 alert('Không tìm thấy người chơi!');
                 return;
             }
-            
+
             currentEditingPlayer = player;
-            
+
             document.getElementById('playerName').value = player.name;
             document.getElementById('playerEmail').value = player.email;
-            document.getElementById('playerGroup').value = player.group_id || '';
-            
+
+            const currentGroupIds = (player.memberGroups || []).map(g => g.id);
+            populateGroupSelectors(currentGroupIds);
+
             document.getElementById('addPlayerModalTitle').textContent = 'Sửa thông tin người chơi';
             document.getElementById('playerPasswordGroup').style.display = 'block';
             document.getElementById('playerPassword').value = '';
@@ -3587,63 +3604,97 @@
             const name = document.getElementById('playerName').value.trim();
             const email = document.getElementById('playerEmail').value.trim();
             const password = document.getElementById('playerPassword').value;
-            const groupId = document.getElementById('playerGroup').value; // Keep as string (UUID)
-            
+
+            const selectedGroupIds = Array.from(
+                document.querySelectorAll('.player-group-cb:checked')
+            ).map(cb => cb.value);
+
             if (!name || !email) {
                 alert('Vui lòng điền đầy đủ thông tin!');
                 return;
             }
-            
+
             if (!currentEditingPlayer && !password) {
                 alert('Vui lòng nhập mật khẩu!');
                 return;
             }
-            
-            if (!groupId) {
-                alert('Vui lòng chọn nhóm!');
+
+            if (selectedGroupIds.length === 0) {
+                alert('Vui lòng chọn ít nhất 1 nhóm!');
                 return;
             }
-            
-            const playerData = {
-                name: name,
-                email: email,
-                group_id: groupId  // Pass UUID string directly, don't parse to int
-            };
-            
-            // Include password for new players (required) or existing players (optional)
+
+            const playerData = { name, email };
             if (password) {
                 playerData.password = password;
             }
-            
+
             try {
+                let playerId;
+
                 if (currentEditingPlayer) {
-                    // Update existing player
+                    playerId = currentEditingPlayer.id;
+
                     const { error } = await supabase
                         .from('players')
                         .update(playerData)
-                        .eq('id', currentEditingPlayer.id);
-                    
+                        .eq('id', playerId);
                     if (error) throw error;
-                    
+
+                    // Sync group memberships: remove old, add new
+                    const oldGroupIds = (currentEditingPlayer.memberGroups || []).map(g => g.id);
+                    const toRemove = oldGroupIds.filter(id => !selectedGroupIds.includes(id));
+                    const toAdd = selectedGroupIds.filter(id => !oldGroupIds.includes(id));
+
+                    for (const gId of toRemove) {
+                        const { error: rmErr } = await supabase
+                            .from('player_groups')
+                            .delete()
+                            .eq('player_id', playerId)
+                            .eq('group_id', gId);
+                        if (rmErr) throw rmErr;
+                    }
+
+                    for (const gId of toAdd) {
+                        const { error: addErr } = await supabase
+                            .from('player_groups')
+                            .insert({ player_id: playerId, group_id: gId });
+                        if (addErr) throw addErr;
+                    }
+
                     alert('✅ Đã cập nhật thông tin người chơi!');
                 } else {
                     // Create new player
-                    const { error } = await supabase
+                    const { data: newPlayer, error } = await supabase
                         .from('players')
                         .insert([{
                             ...playerData,
                             total_points: 0,
                             exact_score_count: 0,
                             top1_count: 0
-                        }]);
-                    
+                        }])
+                        .select()
+                        .single();
                     if (error) throw error;
-                    
+
+                    playerId = newPlayer.id;
+
+                    // Add to selected groups
+                    const memberships = selectedGroupIds.map(gId => ({
+                        player_id: playerId,
+                        group_id: gId
+                    }));
+                    const { error: linkErr } = await supabase
+                        .from('player_groups')
+                        .insert(memberships);
+                    if (linkErr) throw linkErr;
+
                     alert('✅ Đã thêm người chơi mới!');
                 }
-                
+
                 await loadPlayers();
                 renderPlayersTable();
+                renderGroupsTable();
                 renderDashboard();
                 closeModal('addPlayerModal');
             } catch (error) {
@@ -3848,9 +3899,8 @@
         }
 
         async function deleteGroup(id) {
-            // Check if group has members
-            const members = allPlayers.filter(p => p.group_id === id);
-            
+            const members = allPlayers.filter(p => (p.memberGroups || []).some(g => g.id === id));
+
             if (members.length > 0) {
                 alert(`Không thể xóa nhóm có ${members.length} thành viên! Vui lòng chuyển họ sang nhóm khác trước.`);
                 return;
@@ -3886,8 +3936,8 @@
                 return;
             }
             
-            const members = allPlayers.filter(p => p.group_id === id);
-            
+            const members = allPlayers.filter(p => (p.memberGroups || []).some(g => g.id === id));
+
             document.getElementById('groupDetailName').textContent = group.name;
             document.getElementById('groupDetailCode').textContent = group.code;
             document.getElementById('groupDetailMembers').textContent = members.length;
