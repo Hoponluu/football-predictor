@@ -14,13 +14,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <!-- Banner -->
+    <!-- Banner + Nav overlay -->
     <div class="banner-wrapper">
         <img src="BannerWC.png" alt="FIFA World Cup 2026" class="banner-img">
-    </div>
-
-    <div class="container">
-        <!-- Navigation -->
         <nav class="nav-tabs">
             <button class="nav-tab active" onclick="switchPage('homepage')" style="padding: 8px 12px;">🏠</button>
             <button class="nav-tab" onclick="switchPage('schedule')">📅 Lịch thi đấu</button>
@@ -31,11 +27,13 @@
             </div>
             <button class="nav-login" id="navLoginBtn" onclick="openLoginModal()">Đăng nhập</button>
         </nav>
+    </div>
 
+    <div class="container">
         <!-- Homepage -->
         <div id="homepage" class="page-content active">
             <!-- Trận đấu sắp diễn ra -->
-            <section class="section">
+            <section class="section first-section">
                 <div class="section-header">
                     <h2 class="section-title">🏟️ TRẬN ĐẤU SẮP DIỄN RA</h2>
                     <button class="view-all-btn" onclick="switchPage('schedule')">XEM TẤT CẢ</button>
