@@ -23,7 +23,7 @@ WHERE match_number = 99;
 
 -- M100: Denmark 0-0 United States → USA PEN 5-3 (0-0 tie!)
 UPDATE matches SET
-  status = 'finished', home_score = 0, away_score = 0, minute = 90,
+  status = 'finished', home_score = 0, away_score = 0, minute = 0,
   home_penalty = 3, away_penalty = 5
 WHERE match_number = 100;
 

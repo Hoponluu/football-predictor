@@ -953,6 +953,7 @@
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán 24h trước trận">🟢 Mở DĐ</button>
                             <button class="btn btn-info" onclick="syncFromOpenFootball()" title="Sync kết quả từ OpenFootball" style="background: var(--blue); color: white;">📡 Sync KQ</button>
+                            <button class="btn btn-success" onclick="calculateUncalculatedMatches()" title="Tính điểm các trận chưa tính">⚡ Tính điểm trận mới</button>
                             <button class="btn btn-warning" onclick="recalculateAllPlayerPoints()" title="Tính lại toàn bộ điểm từ đầu">🔄 Tính lại toàn bộ điểm</button>
                             <button class="btn btn-primary" onclick="openAddMatchModal()">+ Thêm trận đấu</button>
                         </div>
@@ -1164,10 +1165,21 @@
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
-                            <label class="form-label">Deadline chọn đội</label>
+                            <label class="form-label">Khóa lựa chọn đội yêu thích</label>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                                <span id="favLockStatus" style="font-weight: 600;">Đang tải...</span>
+                                <button class="btn btn-warning" onclick="toggleFavoriteLock()" id="favLockBtn">🔒 Khóa</button>
+                            </div>
+                            <small style="color: var(--text-light); display: block; margin-top: 8px;">
+                                Khi khóa, người chơi không thể chọn hoặc đổi đội yêu thích
+                            </small>
+                        </div>
+                        <hr style="border: none; border-top: 1px solid var(--stroke); margin: 16px 0;">
+                        <div class="form-group">
+                            <label class="form-label">Deadline chọn đội (tùy chọn)</label>
                             <input type="datetime-local" class="form-input" id="favoriteDeadline">
                             <small style="color: var(--text-light); display: block; margin-top: 8px;">
-                                Sau thời điểm này, người chơi không thể đổi đội yêu thích
+                                Sau thời điểm này, người chơi không thể đổi đội yêu thích (tự động)
                             </small>
                         </div>
                         <button class="btn btn-primary" onclick="saveFavoriteDeadline()">💾 Lưu deadline</button>
@@ -1625,7 +1637,8 @@
                 renderPlayersTable();
                 renderGroupsTable();
                 renderFavoritesTable();
-                
+                updateFavLockUI();
+
                 // Populate dropdowns
                 populateTeamSelectors();
                 populateGroupSelectors();
@@ -2344,6 +2357,42 @@
             }
         }
 
+        function updateFavLockUI() {
+            const group = allGroups.find(g => g.code === 'WC2026-DEMO') || allGroups[0];
+            if (!group) return;
+            const locked = group.favorite_team_locked;
+            const statusEl = document.getElementById('favLockStatus');
+            const btn = document.getElementById('favLockBtn');
+            if (statusEl) statusEl.innerHTML = locked
+                ? '<span style="color: #DC2626;">🔒 Đã khóa</span>'
+                : '<span style="color: #059669;">🔓 Đang mở</span>';
+            if (btn) {
+                btn.textContent = locked ? '🔓 Mở khóa' : '🔒 Khóa';
+                btn.className = locked ? 'btn btn-success' : 'btn btn-warning';
+            }
+        }
+
+        async function toggleFavoriteLock() {
+            const group = allGroups.find(g => g.code === 'WC2026-DEMO') || allGroups[0];
+            if (!group) { alert('Không tìm thấy group!'); return; }
+
+            const newLocked = !group.favorite_team_locked;
+            try {
+                const { error } = await supabase
+                    .from('groups')
+                    .update({ favorite_team_locked: newLocked })
+                    .eq('id', group.id);
+                if (error) throw error;
+
+                group.favorite_team_locked = newLocked;
+                updateFavLockUI();
+                alert(newLocked ? '🔒 Đã khóa! User không thể chọn/đổi đội yêu thích.' : '🔓 Đã mở! User có thể chọn đội yêu thích.');
+            } catch (error) {
+                console.error('Toggle fav lock error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
         // Qualified Teams Management
         function openSelectQualifiedTeamsModal() {
             // Create modal dynamically
@@ -3057,7 +3106,7 @@
                 }
                 
                 // Check if match has results
-                if (match.home_score === null || match.away_score === null || !match.minute) {
+                if (match.home_score === null || match.away_score === null || match.minute === null || match.minute === undefined) {
                     alert('❌ Trận đấu chưa có kết quả!\n\nVui lòng nhập kết quả trước khi tính điểm.');
                     return;
                 }
@@ -3395,6 +3444,45 @@
             }
         }
 
+        async function calculateUncalculatedMatches() {
+            const uncalculated = allMatches.filter(m =>
+                m.status === 'finished' && m.home_score !== null && m.away_score !== null &&
+                m.minute !== null && m.minute !== undefined && !m.points_calculated
+            );
+
+            if (uncalculated.length === 0) {
+                alert('✅ Tất cả trận đã có kết quả đều đã tính điểm rồi!');
+                return;
+            }
+
+            const matchList = uncalculated.map(m => `  ${m.home_team} ${m.home_score}-${m.away_score} ${m.away_team}`).join('\n');
+            if (!confirm(`⚡ Tính điểm cho ${uncalculated.length} trận chưa tính:\n\n${matchList}\n\nXác nhận?`)) return;
+
+            try {
+                for (const match of uncalculated) {
+                    console.log(`⚡ Calculating: ${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}`);
+                    await calculateAndUpdatePoints(match.id, match.home_score, match.away_score, match.minute);
+                    await supabase.from('matches').update({ points_calculated: true }).eq('id', match.id);
+                }
+
+                for (const player of allPlayers) {
+                    await updatePlayerStats(player.id);
+                }
+
+                await loadMatches();
+                await loadPredictions();
+                await loadPlayers();
+                renderMatchesTable();
+                renderPlayersTable();
+                renderDashboard();
+
+                alert(`✅ Đã tính điểm ${uncalculated.length} trận!\n\n📊 Đã cập nhật điểm cho ${allPlayers.length} người chơi.`);
+            } catch (error) {
+                console.error('❌ Calculate uncalculated error:', error);
+                alert('❌ Lỗi: ' + error.message);
+            }
+        }
+
         // Recalculate ALL player points from scratch
         async function recalculateAllPlayerPoints() {
             if (!confirm('🔄 TÍNH LẠI TOÀN BỘ ĐIỂM\n\nHành động này sẽ:\n- Tính lại điểm cho TẤT CẢ trận đã có kết quả\n- Cập nhật tổng điểm cho TẤT CẢ người chơi\n\nQuá trình có thể mất vài giây.\nXác nhận?')) {
@@ -3406,7 +3494,7 @@
 
                 // Step 1: Recalculate points for all finished matches with results
                 const finishedMatches = allMatches.filter(m =>
-                    m.status === 'finished' && m.home_score !== null && m.away_score !== null && m.minute
+                    m.status === 'finished' && m.home_score !== null && m.away_score !== null && m.minute !== null && m.minute !== undefined
                 );
 
                 console.log(`📊 Found ${finishedMatches.length} finished matches to recalculate`);
@@ -3856,7 +3944,7 @@
 
         function findLastGoalMinute(match) {
             const allGoals = [...(match.goals1 || []), ...(match.goals2 || [])];
-            if (allGoals.length === 0) return 90;
+            if (allGoals.length === 0) return 0;
             let maxMinute = 0;
             allGoals.forEach(g => {
                 const total = g.minute + (g.offset || 0);

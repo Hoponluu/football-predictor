@@ -4,9 +4,9 @@
 -- Sau đó vào Admin → bấm "Tính điểm" cho từng trận
 -- =============================================
 
--- M7: Brasil 0-0 Japan — Hòa không bàn thắng! (minute = 90)
+-- M7: Brasil 0-0 Japan — Hòa không bàn thắng! (minute = 0)
 UPDATE matches SET
-  status = 'finished', home_score = 0, away_score = 0, minute = 90
+  status = 'finished', home_score = 0, away_score = 0, minute = 0
 WHERE match_number = 7;
 
 -- M8: Germany 3-1 Morocco (phút 88)
