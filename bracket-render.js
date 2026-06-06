@@ -191,10 +191,11 @@ function calculateGroupStandings(groupMatches) {
         if (!teams[home]) teams[home] = { name: home, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
         if (!teams[away]) teams[away] = { name: away, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
 
-        if (match.status !== 'finished' || match.home_score === null || match.home_score === undefined) return;
+        if (match.status !== 'finished' || !match.actualScore) return;
 
-        const hs = match.home_score;
-        const as = match.away_score;
+        const hs = match.actualScore.homeScore;
+        const as = match.actualScore.awayScore;
+        if (hs === null || hs === undefined) return;
 
         teams[home].mp++; teams[away].mp++;
         teams[home].gf += hs; teams[home].ga += as;
