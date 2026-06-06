@@ -1888,6 +1888,10 @@
         }
 
         @media (max-width: 768px) {
+            .page-layout {
+                margin-top: -20px;
+            }
+
             .container {
                 padding: 12px;
             }
