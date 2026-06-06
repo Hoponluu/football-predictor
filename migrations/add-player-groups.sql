@@ -22,7 +22,26 @@ ON CONFLICT (player_id, group_id) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_player_groups_player ON player_groups(player_id);
 CREATE INDEX IF NOT EXISTS idx_player_groups_group ON player_groups(group_id);
 
--- 4. Verify migration
+-- 4. RLS Policies
+ALTER TABLE player_groups ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "player_groups_select_all" ON player_groups
+  FOR SELECT TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "player_groups_insert" ON player_groups
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "player_groups_update" ON player_groups
+  FOR UPDATE TO anon, authenticated
+  USING (true) WITH CHECK (true);
+
+CREATE POLICY "player_groups_delete" ON player_groups
+  FOR DELETE TO anon, authenticated
+  USING (true);
+
+-- 5. Verify migration
 SELECT
   p.name AS player_name,
   p.email,

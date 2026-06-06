@@ -18,7 +18,11 @@ UPDATE players SET
   favorite_team = NULL,
   favorite_team_status = NULL,
   favorite_points = 0
-WHERE group_id = (SELECT id FROM groups WHERE code = 'WC2026-DEMO');
+WHERE id IN (
+  SELECT pg.player_id FROM player_groups pg
+  JOIN groups g ON g.id = pg.group_id
+  WHERE g.code = 'WC2026-DEMO'
+);
 
 -- Reset group settings
 UPDATE groups SET

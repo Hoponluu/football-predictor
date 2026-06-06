@@ -36,7 +36,13 @@
         </nav>
     </div>
 
-    <div class="container">
+    <!-- Side banners + Content wrapper -->
+    <div class="page-layout">
+        <aside class="side-banner side-banner-left">
+            <img src="Banner-left.png" alt="" class="side-banner-img">
+        </aside>
+
+        <div class="container">
         <!-- Homepage -->
         <div id="homepage" class="page-content active">
             <!-- Trận đấu sắp diễn ra -->
@@ -221,6 +227,11 @@
             </section>
         </div>
     </div>
+
+        <aside class="side-banner side-banner-right">
+            <img src="Banner-right.png" alt="" class="side-banner-img">
+        </aside>
+    </div><!-- end page-layout -->
 
     <!-- Profile Page -->
     <div id="profile" class="page-content">
@@ -465,14 +476,17 @@
         // AUTHENTICATION FUNCTIONS
         async function loginUser(email, password) {
           try {
-            const { data: player, error } = await supabase
+            const { data: players, error } = await supabase
               .from('players')
               .select('*')
               .eq('email', email)
               .eq('password', password)
-              .single();
-            
+              .limit(1);
+
             if (error) throw error;
+
+            const player = players?.[0];
+            if (!player) throw new Error('Email hoặc mật khẩu không đúng');
             
             currentUser = player;
             localStorage.setItem('currentUserId', player.id);
