@@ -1165,13 +1165,14 @@
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
-                            <label class="form-label">Khóa lựa chọn đội yêu thích</label>
+                            <label class="form-label">Tính năng chọn đội yêu thích</label>
                             <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
                                 <span id="favLockStatus" style="font-weight: 600;">Đang tải...</span>
+                                <button class="btn btn-primary" onclick="toggleFavoriteEnabled()" id="favEnableBtn">✅ Bật tính năng</button>
                                 <button class="btn btn-warning" onclick="toggleFavoriteLock()" id="favLockBtn">🔒 Khóa</button>
                             </div>
                             <small style="color: var(--text-light); display: block; margin-top: 8px;">
-                                Khi khóa, người chơi không thể chọn hoặc đổi đội yêu thích
+                                Bật/tắt tính năng cho tất cả người chơi. Khi khóa, người chơi không thể chọn hoặc đổi đội yêu thích.
                             </small>
                         </div>
                         <hr style="border: none; border-top: 1px solid var(--stroke); margin: 16px 0;">
@@ -1785,19 +1786,21 @@
                 if (error || !data) {
                     console.warn('⚠️ Scoring rules table not found or empty, using defaults');
                     scoringRules = {
-                        points_rank_1: 5,
-                        points_rank_2: 4,
-                        points_rank_3: 3,
-                        points_rank_other: 2,
+                        points_rank_1: 4,
+                        points_rank_2: 3,
+                        points_rank_3: 2,
+                        points_rank_other: 1,
                         points_exact_score: 5,
                         points_exact_minute: 3,
                         fav_group_stage: 0,
                         fav_r32: 5,
                         fav_r16: 10,
-                        fav_quarter: 20,
-                        fav_semi: 30,
-                        fav_finals: 40,
-                        fav_champion: 100,
+                        fav_quarter: 10,
+                        fav_semi: 10,
+                        fav_finals: 10,
+                        fav_champion: 20,
+                        favorite_team_enabled: true,
+                        favorite_team_locked: false,
                         favorite_team_deadline: null,
                         qualified_teams: [],
                         eliminated_teams: {}
@@ -1807,19 +1810,19 @@
                 }
                 
                 // Populate rules form
-                document.getElementById('ruleTop1').value = scoringRules.points_rank_1 || 5;
-                document.getElementById('ruleTop2').value = scoringRules.points_rank_2 || 4;
-                document.getElementById('ruleTop3').value = scoringRules.points_rank_3 || 3;
-                document.getElementById('ruleOther').value = scoringRules.points_rank_other || 2;
+                document.getElementById('ruleTop1').value = scoringRules.points_rank_1 || 4;
+                document.getElementById('ruleTop2').value = scoringRules.points_rank_2 || 3;
+                document.getElementById('ruleTop3').value = scoringRules.points_rank_3 || 2;
+                document.getElementById('ruleOther').value = scoringRules.points_rank_other || 1;
                 document.getElementById('ruleExactScore').value = scoringRules.points_exact_score || 5;
                 document.getElementById('ruleExactMinute').value = scoringRules.points_exact_minute || 3;
                 document.getElementById('favGroupStage').value = scoringRules.fav_group_stage || 0;
                 document.getElementById('favR32').value = scoringRules.fav_r32 || 5;
                 document.getElementById('favR16').value = scoringRules.fav_r16 || 10;
-                document.getElementById('favQuarter').value = scoringRules.fav_quarter || 20;
-                document.getElementById('favSemi').value = scoringRules.fav_semi || 30;
-                document.getElementById('favFinals').value = scoringRules.fav_finals || 40;
-                document.getElementById('favChampion').value = scoringRules.fav_champion || 100;
+                document.getElementById('favQuarter').value = scoringRules.fav_quarter || 10;
+                document.getElementById('favSemi').value = scoringRules.fav_semi || 10;
+                document.getElementById('favFinals').value = scoringRules.fav_finals || 10;
+                document.getElementById('favChampion').value = scoringRules.fav_champion || 20;
 
                 // Populate deadline input in GMT+7
                 if (scoringRules.favorite_team_deadline) {
@@ -2372,37 +2375,65 @@
         }
 
         function updateFavLockUI() {
-            const group = allGroups.find(g => g.code === 'WC2026-DEMO') || allGroups[0];
-            if (!group) return;
-            const locked = group.favorite_team_locked;
+            if (!scoringRules) return;
+            const locked = scoringRules.favorite_team_locked;
+            const enabled = scoringRules.favorite_team_enabled !== false;
             const statusEl = document.getElementById('favLockStatus');
             const btn = document.getElementById('favLockBtn');
-            if (statusEl) statusEl.innerHTML = locked
-                ? '<span style="color: #DC2626;">🔒 Đã khóa</span>'
-                : '<span style="color: #059669;">🔓 Đang mở</span>';
+            const enableBtn = document.getElementById('favEnableBtn');
+
+            if (statusEl) statusEl.innerHTML = !enabled
+                ? '<span style="color: #6B7280;">⛔ Tắt</span>'
+                : locked
+                    ? '<span style="color: #DC2626;">🔒 Đã khóa</span>'
+                    : '<span style="color: #059669;">🔓 Đang mở</span>';
             if (btn) {
                 btn.textContent = locked ? '🔓 Mở khóa' : '🔒 Khóa';
                 btn.className = locked ? 'btn btn-success' : 'btn btn-warning';
+                btn.disabled = !enabled;
+            }
+            if (enableBtn) {
+                enableBtn.textContent = enabled ? '⛔ Tắt tính năng' : '✅ Bật tính năng';
+                enableBtn.className = enabled ? 'btn btn-secondary' : 'btn btn-primary';
             }
         }
 
         async function toggleFavoriteLock() {
-            const group = allGroups.find(g => g.code === 'WC2026-DEMO') || allGroups[0];
-            if (!group) { alert('Không tìm thấy group!'); return; }
+            if (!scoringRules) { alert('Chưa tải scoring rules!'); return; }
 
-            const newLocked = !group.favorite_team_locked;
+            const newLocked = !scoringRules.favorite_team_locked;
             try {
                 const { error } = await supabase
-                    .from('groups')
+                    .from('scoring_rules')
                     .update({ favorite_team_locked: newLocked })
-                    .eq('id', group.id);
+                    .eq('id', scoringRules.id);
                 if (error) throw error;
 
-                group.favorite_team_locked = newLocked;
+                scoringRules.favorite_team_locked = newLocked;
                 updateFavLockUI();
                 alert(newLocked ? '🔒 Đã khóa! User không thể chọn/đổi đội yêu thích.' : '🔓 Đã mở! User có thể chọn đội yêu thích.');
             } catch (error) {
                 console.error('Toggle fav lock error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function toggleFavoriteEnabled() {
+            if (!scoringRules) { alert('Chưa tải scoring rules!'); return; }
+
+            const newEnabled = scoringRules.favorite_team_enabled === false;
+            try {
+                const { error } = await supabase
+                    .from('scoring_rules')
+                    .update({ favorite_team_enabled: newEnabled })
+                    .eq('id', scoringRules.id);
+                if (error) throw error;
+
+                scoringRules.favorite_team_enabled = newEnabled;
+                updateFavLockUI();
+                alert(newEnabled ? '✅ Đã bật tính năng chọn đội yêu thích!' : '⛔ Đã tắt tính năng chọn đội yêu thích!');
+            } catch (error) {
+                console.error('Toggle fav enabled error:', error);
                 alert('Lỗi: ' + error.message);
             }
         }
