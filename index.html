@@ -987,27 +987,26 @@
         }
         
         // FAVORITE TEAM FUNCTIONS
-        async function getFavoriteTeamSettings(groupId) {
+        async function getFavoriteTeamSettings() {
           try {
-            // Read enabled/locked from groups table
-            const { data: group, error: groupError } = await supabase
-              .from('groups')
-              .select('favorite_team_enabled, favorite_team_locked, points_round16, points_quarter, points_semi, points_final, points_champion')
-              .eq('id', groupId)
-              .single();
-
-            if (groupError) throw groupError;
-
-            // Read deadline from scoring_rules (where admin saves it)
-            const { data: rules } = await supabase
+            const { data: rules, error } = await supabase
               .from('scoring_rules')
-              .select('favorite_team_deadline')
+              .select('favorite_team_enabled, favorite_team_locked, favorite_team_deadline, fav_r32, fav_r16, fav_quarter, fav_semi, fav_finals, fav_champion')
               .limit(1)
               .maybeSingle();
 
+            if (error) throw error;
+
             return {
-              ...group,
-              favorite_team_deadline: rules?.favorite_team_deadline || null
+              favorite_team_enabled: rules?.favorite_team_enabled ?? true,
+              favorite_team_locked: rules?.favorite_team_locked ?? false,
+              favorite_team_deadline: rules?.favorite_team_deadline || null,
+              points_r32: rules?.fav_r32 || 5,
+              points_r16: rules?.fav_r16 || 10,
+              points_quarter: rules?.fav_quarter || 10,
+              points_semi: rules?.fav_semi || 10,
+              points_finals: rules?.fav_finals || 10,
+              points_champion: rules?.fav_champion || 20
             };
           } catch (error) {
             console.error('Get favorite team settings error:', error);
@@ -1495,8 +1494,8 @@
             console.log('📥 Loading favorite team settings...');
             
             try {
-                const settings = await getFavoriteTeamSettings(groupId);
-                
+                const settings = await getFavoriteTeamSettings();
+
                 favoriteTeamSettings = {
                     isEnabled: settings.favorite_team_enabled,
                     isLocked: settings.favorite_team_locked,
@@ -1504,10 +1503,11 @@
                     selectedTeam: currentPlayer?.favorite_team || null,
                     teamStatus: currentPlayer?.favorite_team_status || null,
                     points: {
-                        round16: settings.points_round16,
+                        r32: settings.points_r32,
+                        round16: settings.points_r16,
                         quarter: settings.points_quarter,
                         semi: settings.points_semi,
-                        final: settings.points_final,
+                        final: settings.points_finals,
                         champion: settings.points_champion
                     }
                 };
