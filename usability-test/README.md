@@ -27,16 +27,16 @@ Mô phỏng toàn bộ giải đấu World Cup trong ~60-90 phút để:
 
 ### Vòng bảng (12 đội, 3 bảng)
 - **Group A**: Brasil, Germany, Japan, Morocco
-- **Group B**: Argentina, England, United States, Australia
+- **Group B**: Argentina, England, USA, Australia
 - **Group C**: France, Spain, Netherlands, South Korea
 
 ### Vòng knockout (32 đội)
-Top 32 theo FIFA ranking: Argentina, France, Brasil, England, Belgium, Netherlands, Portugal, Spain, Germany, Colombia, Uruguay, Japan, United States, Mexico, Morocco, Croatia, South Korea, Serbia, Denmark, Australia, Turkey, Switzerland, Ecuador, Saudi Arabia, Nigeria, Cameroon, Canada, Senegal, Poland, Egypt, Chile, Ivory Coast
+Top 32 theo FIFA ranking: Argentina, France, Brasil, England, Belgium, Netherlands, Portugal, Spain, Germany, Colombia, Uruguay, Japan, USA, Mexico, Morocco, Croatia, South Korea, Serbia, Denmark, Australia, Turkey, Switzerland, Ecuador, Saudi Arabia, Nigeria, Cameroon, Canada, Senegal, Poland, Egypt, Chile, Ivory Coast
 
 ## Kết quả chung cuộc
 
 - 🥇 **Argentina** (Champion)
-- 🥈 United States
+- 🥈 USA
 - 🥉 Spain
 - 4th: Japan
 

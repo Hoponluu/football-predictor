@@ -130,10 +130,10 @@ BEGIN
         (pid_vy,     mid, 4, 0, 80);   -- goalDiff=1, totalDiff=1, minDiff=8
 
     -- -----------------------------------------------
-    -- M4: United States vs Paraguay | KQ: 1-2 (65')
+    -- M4: USA vs Paraguay | KQ: 1-2 (65')
     -- Test: upset, minute bonus goes to non-rank-1 (Na Bito)
     -- -----------------------------------------------
-    SELECT id INTO mid FROM matches WHERE home_team='United States' AND away_team='Paraguay';
+    SELECT id INTO mid FROM matches WHERE home_team='USA' AND away_team='Paraguay';
     INSERT INTO predictions (player_id, match_id, home_score, away_score, minute) VALUES
         (pid_admin,  mid, 2, 1, 70),   -- predicted wrong winner!
         (pid_lan,    mid, 1, 2, 30),   -- exact score, far minute
@@ -421,7 +421,7 @@ WHERE home_team='Haiti' AND away_team='Scotland';
 
 -- Group D
 UPDATE matches SET home_score=1, away_score=2, minute=65, status='finished', points_calculated=false
-WHERE home_team='United States' AND away_team='Paraguay';
+WHERE home_team='USA' AND away_team='Paraguay';
 
 UPDATE matches SET home_score=1, away_score=1, minute=45, status='finished', points_calculated=false
 WHERE home_team='Australia' AND away_team='Turkey';

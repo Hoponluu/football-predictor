@@ -38,7 +38,7 @@ WHERE id IN (
 -- =============================================
 -- 5. INSERT GROUP STAGE MATCHES (18 trận, 3 bảng)
 -- Bảng A: Brasil, Germany, Japan, Morocco
--- Bảng B: Argentina, England, United States, Australia
+-- Bảng B: Argentina, England, USA, Australia
 -- Bảng C: France, Spain, Netherlands, South Korea
 -- Status: 'not-open' (sẽ mở bằng SQL riêng)
 -- match_date sẽ được set khi mở dự đoán
@@ -49,7 +49,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status, matc
 ('A', 'Brasil',    'Morocco',       '2026-06-15 00:00:00+07', 'not-open', 1),
 ('A', 'Germany',   'Japan',         '2026-06-15 00:00:00+07', 'not-open', 2),
 ('B', 'Argentina', 'Australia',     '2026-06-15 00:00:00+07', 'not-open', 3),
-('B', 'England',   'United States', '2026-06-15 00:00:00+07', 'not-open', 4),
+('B', 'England',   'USA', '2026-06-15 00:00:00+07', 'not-open', 4),
 ('C', 'France',    'South Korea',   '2026-06-15 00:00:00+07', 'not-open', 5),
 ('C', 'Spain',     'Netherlands',   '2026-06-15 00:00:00+07', 'not-open', 6);
 
@@ -57,7 +57,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status, matc
 INSERT INTO matches (match_group, home_team, away_team, match_date, status, match_number) VALUES
 ('A', 'Brasil',    'Japan',         '2026-06-16 00:00:00+07', 'not-open', 7),
 ('A', 'Germany',   'Morocco',       '2026-06-16 00:00:00+07', 'not-open', 8),
-('B', 'Argentina', 'United States', '2026-06-16 00:00:00+07', 'not-open', 9),
+('B', 'Argentina', 'USA', '2026-06-16 00:00:00+07', 'not-open', 9),
 ('B', 'England',   'Australia',     '2026-06-16 00:00:00+07', 'not-open', 10),
 ('C', 'France',    'Netherlands',   '2026-06-16 00:00:00+07', 'not-open', 11),
 ('C', 'Spain',     'South Korea',   '2026-06-16 00:00:00+07', 'not-open', 12);
@@ -67,7 +67,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status, matc
 ('A', 'Brasil',    'Germany',       '2026-06-17 00:00:00+07', 'not-open', 13),
 ('A', 'Japan',     'Morocco',       '2026-06-17 00:00:00+07', 'not-open', 14),
 ('B', 'Argentina', 'England',       '2026-06-17 00:00:00+07', 'not-open', 15),
-('B', 'United States', 'Australia', '2026-06-17 00:00:00+07', 'not-open', 16),
+('B', 'USA', 'Australia', '2026-06-17 00:00:00+07', 'not-open', 16),
 ('C', 'France',    'Spain',         '2026-06-17 00:00:00+07', 'not-open', 17),
 ('C', 'Netherlands', 'South Korea', '2026-06-17 00:00:00+07', 'not-open', 18);
 

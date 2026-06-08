@@ -14,7 +14,7 @@ UPDATE matches SET
   status = 'finished', home_score = 3, away_score = 1, minute = 88
 WHERE match_number = 8;
 
--- M9: Argentina 2-1 United States (phút 62)
+-- M9: Argentina 2-1 USA (phút 62)
 UPDATE matches SET
   status = 'finished', home_score = 2, away_score = 1, minute = 62
 WHERE match_number = 9;

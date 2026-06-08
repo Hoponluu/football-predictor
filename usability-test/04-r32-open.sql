@@ -72,9 +72,9 @@ UPDATE matches SET
   home_team = 'Japan', away_team = 'Turkey', status = 'open'
 WHERE match_number = 84;
 
--- M85: United States vs Australia
+-- M85: USA vs Australia
 UPDATE matches SET
-  home_team = 'United States', away_team = 'Australia', status = 'open'
+  home_team = 'USA', away_team = 'Australia', status = 'open'
 WHERE match_number = 85;
 
 -- M86: Mexico vs Denmark

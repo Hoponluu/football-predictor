@@ -9,9 +9,9 @@ UPDATE matches SET
   home_team = 'Spain', away_team = 'Japan', status = 'open'
 WHERE match_number = 103;
 
--- M104: FINAL — W101(Argentina) vs W102(United States)
+-- M104: FINAL — W101(Argentina) vs W102(USA)
 UPDATE matches SET
-  home_team = 'Argentina', away_team = 'United States', status = 'open'
+  home_team = 'Argentina', away_team = 'USA', status = 'open'
 WHERE match_number = 104;
 
 -- Verify

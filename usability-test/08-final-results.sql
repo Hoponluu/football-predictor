@@ -9,7 +9,7 @@ UPDATE matches SET
   home_penalty = NULL, away_penalty = NULL
 WHERE match_number = 103;
 
--- M104: FINAL — Argentina 1-1 United States → Argentina PEN 4-2
+-- M104: FINAL — Argentina 1-1 USA → Argentina PEN 4-2
 -- Argentina vô địch World Cup 2026!
 UPDATE matches SET
   status = 'finished', home_score = 1, away_score = 1, minute = 120,
@@ -19,13 +19,13 @@ WHERE match_number = 104;
 -- =============================================
 -- KẾT QUẢ CHUNG CUỘC:
 -- 🥇 Champion: Argentina
--- 🥈 Runner-up: United States
+-- 🥈 Runner-up: USA
 -- 🥉 3rd Place: Spain
 -- 4th Place: Japan
 --
 -- FAVORITE TEAM POINTS (tổng cộng):
 -- Argentina: R32 + R16 + QF + SF + FINAL + Champion = MAX POINTS
--- United States: R32 + R16 + QF + SF + FINAL
+-- USA: R32 + R16 + QF + SF + FINAL
 -- Spain: R32 + R16 + QF + SF + FINAL (thua SF nhưng có mặt ở 3rd place match)
 -- Japan: R32 + R16 + QF + SF + FINAL (thua SF nhưng có mặt ở 3rd place match)
 -- France: R32 + R16 + QF
