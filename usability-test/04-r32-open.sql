@@ -5,10 +5,9 @@
 -- Không có giới hạn thời gian — admin tự đóng bằng results SQL
 -- =============================================
 
--- Lock favorite team selection
-UPDATE groups SET
-  favorite_team_locked = true
-WHERE code = 'WC2026-DEMO';
+-- Lock favorite team selection (global setting in scoring_rules)
+UPDATE scoring_rules SET
+  favorite_team_locked = true;
 
 -- Update teams và mở dự đoán cho 16 trận R32
 -- Seeding: Top 16 FIFA vs Bottom 16 (1 vs 32, 2 vs 31...)

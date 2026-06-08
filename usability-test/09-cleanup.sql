@@ -24,10 +24,9 @@ WHERE id IN (
   WHERE g.code = 'WC2026-DEMO'
 );
 
--- Reset group settings
-UPDATE groups SET
+-- Reset favorite team settings (global setting in scoring_rules)
+UPDATE scoring_rules SET
   favorite_team_enabled = true,
-  favorite_team_locked = false
-WHERE code = 'WC2026-DEMO';
+  favorite_team_locked = false;
 
 SELECT 'Cleanup complete! Ready for next test session.' AS status;

@@ -8,25 +8,32 @@
 DELETE FROM predictions;
 DELETE FROM matches;
 
--- 2. Reset player stats
+-- 2. Reset player stats (using player_groups join table)
 UPDATE players SET
   total_points = 0,
   exact_score_count = 0,
   top1_count = 0,
   favorite_points = 0
-WHERE group_id = (SELECT id FROM groups WHERE code = 'WC2026-DEMO');
+WHERE id IN (
+  SELECT pg.player_id FROM player_groups pg
+  JOIN groups g ON g.id = pg.group_id
+  WHERE g.code = 'WC2026-DEMO'
+);
 
--- 3. Mở lại favorite team cho user chọn
-UPDATE groups SET
+-- 3. Mở lại favorite team cho user chọn (global setting in scoring_rules)
+UPDATE scoring_rules SET
   favorite_team_enabled = true,
-  favorite_team_locked = false
-WHERE code = 'WC2026-DEMO';
+  favorite_team_locked = false;
 
 -- 4. Reset favorite team của tất cả player (để họ chọn lại)
 UPDATE players SET
   favorite_team = NULL,
   favorite_team_status = NULL
-WHERE group_id = (SELECT id FROM groups WHERE code = 'WC2026-DEMO');
+WHERE id IN (
+  SELECT pg.player_id FROM player_groups pg
+  JOIN groups g ON g.id = pg.group_id
+  WHERE g.code = 'WC2026-DEMO'
+);
 
 -- =============================================
 -- 5. INSERT GROUP STAGE MATCHES (18 trận, 3 bảng)
