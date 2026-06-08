@@ -4083,11 +4083,10 @@
         // OPENFOOTBALL SYNC & AUTO-OPEN
         // ============================================
 
-        const OPENFOOTBALL_URL = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
+        const OPENFOOTBALL_URL = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2022/worldcup.json';
 
         const openFootballNameMap = {
-            'Brazil': 'Brasil',
-            'USA': 'United States'
+            'Brazil': 'Brasil'
         };
 
         function mapTeamName(ofName) {
@@ -4109,7 +4108,12 @@
             if (!match.score) return null;
             const ft = match.score.et || match.score.ft;
             if (!ft || ft.length < 2) return null;
-            return { home: ft[0], away: ft[1] };
+            const result = { home: ft[0], away: ft[1], homePenalty: null, awayPenalty: null };
+            if (match.score.p && match.score.p.length >= 2) {
+                result.homePenalty = match.score.p[0];
+                result.awayPenalty = match.score.p[1];
+            }
+            return result;
         }
 
         async function syncFromOpenFootball() {
@@ -4156,15 +4160,19 @@
 
                     const lastMinute = findLastGoalMinute(ofMatch);
 
+                    const updateData = {
+                        home_score: score.home,
+                        away_score: score.away,
+                        home_penalty: score.homePenalty,
+                        away_penalty: score.awayPenalty,
+                        minute: lastMinute,
+                        status: 'finished',
+                        points_calculated: false
+                    };
+
                     const { error } = await supabase
                         .from('matches')
-                        .update({
-                            home_score: score.home,
-                            away_score: score.away,
-                            minute: lastMinute,
-                            status: 'finished',
-                            points_calculated: false
-                        })
+                        .update(updateData)
                         .eq('id', dbMatch.id);
 
                     if (error) {
@@ -4172,7 +4180,8 @@
                         details.push(`❌ ${homeName} vs ${awayName}: ${error.message}`);
                     } else {
                         updatedCount++;
-                        details.push(`✅ ${homeName} ${score.home}-${score.away} ${awayName} (${lastMinute}')`);
+                        const penStr = score.homePenalty != null ? ` (PEN ${score.homePenalty}-${score.awayPenalty})` : '';
+                        details.push(`✅ ${homeName} ${score.home}-${score.away}${penStr} ${awayName} (${lastMinute}')`);
                     }
                 }
 
