@@ -1343,13 +1343,32 @@
                         <label class="form-label">Tỉ số đội nhà</label>
                         <input type="number" class="form-input" id="resultHomeScore" min="0" placeholder="0">
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label">Tỉ số đội khách</label>
                         <input type="number" class="form-input" id="resultAwayScore" min="0" placeholder="0">
                     </div>
                 </div>
-                
+
+                <div id="penaltySection" style="display: none; margin-bottom: 16px;">
+                    <div class="alert warning" style="margin-bottom: 12px;">
+                        <span class="alert-icon">⚽</span>
+                        <div class="alert-content">
+                            <div class="alert-text">Trận hòa trong vòng knockout — nhập kết quả penalty</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Penalty đội nhà</label>
+                            <input type="number" class="form-input" id="resultHomePenalty" min="0" placeholder="VD: 4">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Penalty đội khách</label>
+                            <input type="number" class="form-input" id="resultAwayPenalty" min="0" placeholder="VD: 2">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Phút ghi bàn đầu tiên</label>
                     <input type="number" class="form-input" id="resultMinute" min="1" max="120" placeholder="VD: 75">
@@ -1641,7 +1660,11 @@
                 // Populate dropdowns
                 populateTeamSelectors();
                 populateGroupSelectors();
-                
+
+                // Auto show/hide penalty when knockout match scores are tied
+                document.getElementById('resultHomeScore').addEventListener('input', updatePenaltyVisibility);
+                document.getElementById('resultAwayScore').addEventListener('input', updatePenaltyVisibility);
+
                 console.log('✅ Admin panel ready!');
             } catch (error) {
                 console.error('Init error:', error);
@@ -1965,8 +1988,9 @@
                     statusBadge = '<span class="badge warning">Chưa mở</span>';
                 }
                 
+                const penText = match.home_penalty != null ? ` (PEN ${match.home_penalty}-${match.away_penalty})` : '';
                 const resultText = match.home_score !== null && match.away_score !== null
-                    ? `${match.home_score}-${match.away_score} (${match.minute}')`
+                    ? `${match.home_score}-${match.away_score}${penText} (${match.minute}')`
                     : '-';
                 
                 // Display match_group (primary) or group_name (fallback)
@@ -3009,84 +3033,128 @@
         }
 
         // Enter Result Functions
+        const KNOCKOUT_ROUNDS = ['R32', 'R16', 'QF', 'SF', '3RD', 'FINAL'];
+
+        function isKnockoutMatch(match) {
+            return KNOCKOUT_ROUNDS.includes(match?.match_group);
+        }
+
+        function updatePenaltyVisibility() {
+            if (!currentResultMatch || !isKnockoutMatch(currentResultMatch)) {
+                document.getElementById('penaltySection').style.display = 'none';
+                return;
+            }
+            const hs = parseInt(document.getElementById('resultHomeScore').value);
+            const as = parseInt(document.getElementById('resultAwayScore').value);
+            const isDraw = !isNaN(hs) && !isNaN(as) && hs === as;
+            document.getElementById('penaltySection').style.display = isDraw ? 'block' : 'none';
+            if (!isDraw) {
+                document.getElementById('resultHomePenalty').value = '';
+                document.getElementById('resultAwayPenalty').value = '';
+            }
+        }
+
         function openEnterResultModal(matchId) {
-            // matchId is already a string (UUID)
             const match = allMatches.find(m => m.id === matchId);
             if (!match) {
                 alert('Không tìm thấy trận đấu!');
                 return;
             }
-            
+
             currentResultMatch = match;
-            
+
             document.getElementById('resultMatchTitle').textContent = `${match.home_team} vs ${match.away_team}`;
             document.getElementById('enterResultModalTitle').textContent = 'Nhập kết quả trận đấu';
             document.getElementById('resultHomeScore').value = '';
             document.getElementById('resultAwayScore').value = '';
             document.getElementById('resultMinute').value = '';
-            
-            // Hide edit warning
+            document.getElementById('resultHomePenalty').value = '';
+            document.getElementById('resultAwayPenalty').value = '';
+            document.getElementById('penaltySection').style.display = 'none';
+
             document.getElementById('editResultWarning').style.display = 'none';
-            
+
             document.getElementById('enterResultModal').classList.add('active');
         }
 
         function openEditResultModal(matchId) {
-            // matchId is already a string (UUID)
             const match = allMatches.find(m => m.id === matchId);
             if (!match) {
                 alert('Không tìm thấy trận đấu!');
                 return;
             }
-            
+
             if (match.status !== 'finished') {
                 alert('Trận đấu chưa kết thúc!');
                 return;
             }
-            
+
             currentResultMatch = match;
-            
+
             document.getElementById('resultMatchTitle').textContent = `${match.home_team} vs ${match.away_team}`;
             document.getElementById('enterResultModalTitle').textContent = 'Sửa kết quả trận đấu';
-            
-            // Pre-fill with existing results
-            document.getElementById('resultHomeScore').value = match.home_score || '';
-            document.getElementById('resultAwayScore').value = match.away_score || '';
+
+            document.getElementById('resultHomeScore').value = match.home_score ?? '';
+            document.getElementById('resultAwayScore').value = match.away_score ?? '';
             document.getElementById('resultMinute').value = match.minute || '';
-            
-            // Show edit warning
+            document.getElementById('resultHomePenalty').value = match.home_penalty ?? '';
+            document.getElementById('resultAwayPenalty').value = match.away_penalty ?? '';
+            updatePenaltyVisibility();
+
             document.getElementById('editResultWarning').style.display = 'block';
-            
+
             document.getElementById('enterResultModal').classList.add('active');
         }
 
         async function saveMatchResult() {
             if (!currentResultMatch) return;
-            
+
             const homeScore = parseInt(document.getElementById('resultHomeScore').value);
             const awayScore = parseInt(document.getElementById('resultAwayScore').value);
             const minute = parseInt(document.getElementById('resultMinute').value);
-            
+
             if (isNaN(homeScore) || isNaN(awayScore) || isNaN(minute)) {
                 alert('Vui lòng nhập đầy đủ thông tin!');
                 return;
             }
-            
+
             if (homeScore < 0 || awayScore < 0 || minute < 1 || minute > 120) {
                 alert('Tỉ số hoặc phút ghi bàn không hợp lệ!');
                 return;
             }
-            
+
+            // Penalty validation for knockout draws
+            let homePenalty = null;
+            let awayPenalty = null;
+            if (isKnockoutMatch(currentResultMatch) && homeScore === awayScore) {
+                homePenalty = parseInt(document.getElementById('resultHomePenalty').value);
+                awayPenalty = parseInt(document.getElementById('resultAwayPenalty').value);
+                if (isNaN(homePenalty) || isNaN(awayPenalty)) {
+                    alert('Trận knockout hòa — vui lòng nhập kết quả penalty!');
+                    return;
+                }
+                if (homePenalty === awayPenalty) {
+                    alert('Penalty không thể hòa!');
+                    return;
+                }
+                if (homePenalty < 0 || awayPenalty < 0) {
+                    alert('Penalty không hợp lệ!');
+                    return;
+                }
+            }
+
             // Detect if editing existing result
-            const isEditing = currentResultMatch.status === 'finished' && 
+            const isEditing = currentResultMatch.status === 'finished' &&
                              currentResultMatch.home_score !== null;
-            
+
             // Confirmation message
-            let confirmMsg = `Xác nhận kết quả:\n${currentResultMatch.home_team} ${homeScore} - ${awayScore} ${currentResultMatch.away_team}\nPhút: ${minute}'`;
-            
+            let penaltyStr = homePenalty != null ? ` (PEN ${homePenalty}-${awayPenalty})` : '';
+            let confirmMsg = `Xác nhận kết quả:\n${currentResultMatch.home_team} ${homeScore} - ${awayScore} ${currentResultMatch.away_team}${penaltyStr}\nPhút: ${minute}'`;
+
             if (isEditing) {
-                const oldResult = `${currentResultMatch.home_score}-${currentResultMatch.away_score} (${currentResultMatch.minute}')`;
-                const newResult = `${homeScore}-${awayScore} (${minute}')`;
+                const oldPen = currentResultMatch.home_penalty != null ? ` (PEN ${currentResultMatch.home_penalty}-${currentResultMatch.away_penalty})` : '';
+                const oldResult = `${currentResultMatch.home_score}-${currentResultMatch.away_score}${oldPen} (${currentResultMatch.minute}')`;
+                const newResult = `${homeScore}-${awayScore}${penaltyStr} (${minute}')`;
                 confirmMsg = `⚠️ SỬA KẾT QUẢ\n\nKết quả cũ: ${oldResult}\nKết quả mới: ${newResult}\n\n` +
                            `Điểm của tất cả người chơi sẽ được tính lại!\n\nBạn có chắc chắn?`;
             }
@@ -3105,9 +3173,11 @@
                 const updateData = {
                     home_score: homeScore,
                     away_score: awayScore,
+                    home_penalty: homePenalty,
+                    away_penalty: awayPenalty,
                     minute: minute,
                     status: 'finished',
-                    points_calculated: false  // Reset flag when result changes
+                    points_calculated: false
                 };
                 
                 const { data: matchData, error: matchError } = await supabase
