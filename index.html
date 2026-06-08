@@ -1091,14 +1091,58 @@
         console.log('🚀 App initializing...');
 
         // ============================================
+        // AUTO MATCH STATUS TRANSITIONS
+        // ============================================
+
+        async function autoUpdateMatchStatuses() {
+            try {
+                const now = new Date().toISOString();
+                const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+                // not-open → open: match starts within 24h
+                const { data: opened } = await supabase
+                    .from('matches')
+                    .update({ status: 'open' })
+                    .eq('status', 'not-open')
+                    .gt('match_date', now)
+                    .lte('match_date', in24h)
+                    .select('id');
+
+                // open → not-open: match already kicked off
+                const { data: closed } = await supabase
+                    .from('matches')
+                    .update({ status: 'not-open' })
+                    .eq('status', 'open')
+                    .lte('match_date', now)
+                    .select('id');
+
+                const total = (opened?.length || 0) + (closed?.length || 0);
+                if (total > 0) {
+                    console.log(`⚡ Auto-updated ${total} match statuses (${opened?.length || 0} opened, ${closed?.length || 0} closed)`);
+                }
+            } catch (error) {
+                console.error('Auto-update statuses error:', error);
+            }
+        }
+
+        // Check every 60 seconds
+        setInterval(async () => {
+            await autoUpdateMatchStatuses();
+            await loadMatchesGlobal();
+            if (currentPlayer) await loadMyPredictions();
+            renderAllPages();
+        }, 60000);
+
+        // ============================================
         // INIT APP - OPTIMIZED LOGIC
         // ============================================
-        
+
         async function initApp() {
             console.log('📊 Loading app...');
-            
+
             try {
-                // STEP 1: Load GLOBAL data (matches - same for all groups)
+                // STEP 1: Auto-update match statuses then load
+                await autoUpdateMatchStatuses();
                 console.log('📥 Loading matches (global)...');
                 await loadMatchesGlobal();
                 console.log('✅ Matches loaded');
