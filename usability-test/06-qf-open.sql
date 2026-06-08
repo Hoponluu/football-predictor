@@ -19,9 +19,9 @@ UPDATE matches SET
   home_team = 'England', away_team = 'Spain', status = 'open'
 WHERE match_number = 99;
 
--- M100: W95(Denmark) vs W96(United States)
+-- M100: W95(Denmark) vs W96(USA)
 UPDATE matches SET
-  home_team = 'Denmark', away_team = 'United States', status = 'open'
+  home_team = 'Denmark', away_team = 'USA', status = 'open'
 WHERE match_number = 100;
 
 -- Verify

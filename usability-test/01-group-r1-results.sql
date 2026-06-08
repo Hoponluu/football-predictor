@@ -19,7 +19,7 @@ UPDATE matches SET
   status = 'finished', home_score = 3, away_score = 0, minute = 67
 WHERE match_number = 3;
 
--- M4: England 1-1 United States (phút 55) — Hòa!
+-- M4: England 1-1 USA (phút 55) — Hòa!
 UPDATE matches SET
   status = 'finished', home_score = 1, away_score = 1, minute = 55
 WHERE match_number = 4;

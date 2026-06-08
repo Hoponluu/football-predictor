@@ -76,7 +76,7 @@ UPDATE matches SET
   home_penalty = NULL, away_penalty = NULL
 WHERE match_number = 84;
 
--- M85: United States 1-1 Australia → USA thắng AET 2-1 (phút 107)
+-- M85: USA 1-1 Australia → USA thắng AET 2-1 (phút 107)
 UPDATE matches SET
   status = 'finished', home_score = 2, away_score = 1, minute = 107,
   home_penalty = NULL, away_penalty = NULL
@@ -104,7 +104,7 @@ WHERE match_number = 88;
 -- KẾT QUẢ R32:
 -- Đi tiếp: Argentina, France, Brasil, England, Belgium, Netherlands,
 --          Portugal, Spain, Germany, Colombia, Uruguay, Japan,
---          United States, Denmark, Morocco, South Korea
+--          USA, Denmark, Morocco, South Korea
 -- Bị loại: Ivory Coast, Chile, Egypt, Poland, Senegal, Canada,
 --          Cameroon, Nigeria, Saudi Arabia, Ecuador, Switzerland,
 --          Turkey, Australia, Mexico, Serbia, Croatia

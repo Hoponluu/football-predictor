@@ -19,7 +19,7 @@ UPDATE matches SET
   status = 'finished', home_score = 1, away_score = 0, minute = 45
 WHERE match_number = 15;
 
--- M16: United States 3-2 Australia (phút 92) — Dramatic injury time!
+-- M16: USA 3-2 Australia (phút 92) — Dramatic injury time!
 UPDATE matches SET
   status = 'finished', home_score = 3, away_score = 2, minute = 92
 WHERE match_number = 16;
@@ -37,7 +37,7 @@ WHERE match_number = 18;
 -- =============================================
 -- BẢNG XẾP HẠNG SAU VÒNG BẢNG:
 -- Group A: Brasil 7pts (1st), Japan 7pts (2nd), Germany 3pts, Morocco 0pts
--- Group B: Argentina 9pts (1st), England 4pts (2nd), United States 4pts, Australia 0pts
+-- Group B: Argentina 9pts (1st), England 4pts (2nd), USA 4pts, Australia 0pts
 -- Group C: Spain 7pts (1st), France 6pts (2nd), Netherlands 4pts, South Korea 0pts
 -- =============================================
 

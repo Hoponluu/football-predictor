@@ -25,7 +25,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status) VALU
 
 -- 13/06 (Fri)
 ('B', 'Canada', 'TBU',                 '2026-06-13 02:00:00+07', 'not-open'),       -- 2h00
-('D', 'United States', 'Paraguay',     '2026-06-13 08:00:00+07', 'not-open'),       -- 8h00
+('D', 'USA', 'Paraguay',     '2026-06-13 08:00:00+07', 'not-open'),       -- 8h00
 
 -- 13-14/06 (Sat)
 ('D', 'Australia', 'TBU',              '2026-06-13 11:00:00+07', 'not-open'),       -- 11h00
@@ -69,7 +69,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status) VALU
 
 -- 20/06 (Fri)
 ('C', 'Scotland', 'Morocco',           '2026-06-20 02:00:00+07', 'not-open'),       -- 2h00
-('D', 'United States', 'Australia',    '2026-06-20 02:00:00+07', 'not-open'),       -- 2h00
+('D', 'USA', 'Australia',    '2026-06-20 02:00:00+07', 'not-open'),       -- 2h00
 ('C', 'Brasil', 'Haiti',               '2026-06-20 08:00:00+07', 'not-open'),       -- 8h00
 ('D', 'Paraguay', 'TBU',               '2026-06-20 11:00:00+07', 'not-open'),       -- 11h00
 
@@ -114,7 +114,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status) VALU
 ('E', 'Curaçao', 'Ivory Coast',        '2026-06-26 03:00:00+07', 'not-open'),       -- 3h00
 ('F', 'Tunisia', 'Netherlands',        '2026-06-26 06:00:00+07', 'not-open'),       -- 6h00
 ('F', 'Japan', 'TBU',                  '2026-06-26 06:00:00+07', 'not-open'),       -- 6h00
-('D', 'TBU', 'United States',          '2026-06-26 09:00:00+07', 'not-open'),       -- 9h00
+('D', 'TBU', 'USA',          '2026-06-26 09:00:00+07', 'not-open'),       -- 9h00
 ('D', 'Paraguay', 'Australia',         '2026-06-26 09:00:00+07', 'not-open'),       -- 9h00
 
 -- 27/06 (Fri)

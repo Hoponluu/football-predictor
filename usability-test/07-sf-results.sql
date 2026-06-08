@@ -9,7 +9,7 @@ UPDATE matches SET
   home_penalty = NULL, away_penalty = NULL
 WHERE match_number = 101;
 
--- M102: Japan 1-2 United States (phút 83) — USA vào chung kết!
+-- M102: Japan 1-2 USA (phút 83) — USA vào chung kết!
 UPDATE matches SET
   status = 'finished', home_score = 1, away_score = 2, minute = 83,
   home_penalty = NULL, away_penalty = NULL
@@ -17,7 +17,7 @@ WHERE match_number = 102;
 
 -- =============================================
 -- KẾT QUẢ SF:
--- Chung kết: Argentina vs United States
+-- Chung kết: Argentina vs USA
 -- Tranh hạng 3: Spain vs Japan
 -- =============================================
 

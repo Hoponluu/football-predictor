@@ -45,7 +45,7 @@ UPDATE matches SET
   home_penalty = NULL, away_penalty = NULL
 WHERE match_number = 95;
 
--- M96: United States 2-1 Morocco (phút 88)
+-- M96: USA 2-1 Morocco (phút 88)
 UPDATE matches SET
   status = 'finished', home_score = 2, away_score = 1, minute = 88,
   home_penalty = NULL, away_penalty = NULL
@@ -54,7 +54,7 @@ WHERE match_number = 96;
 -- =============================================
 -- KẾT QUẢ R16:
 -- Đi tiếp (vào QF): France, Argentina, England, Spain,
---                    Japan, Germany, Denmark, United States
+--                    Japan, Germany, Denmark, USA
 -- Bị loại: Belgium, Brasil, Netherlands, Portugal,
 --          Uruguay, Colombia, South Korea, Morocco
 -- =============================================
