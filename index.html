@@ -21,6 +21,7 @@
             <button class="nav-tab active" onclick="switchPage('homepage')" style="padding: 8px 12px;">🏠</button>
             <button class="nav-tab" onclick="switchPage('schedule')">📅 Lịch thi đấu</button>
             <button class="nav-tab" onclick="switchPage('leaderboard')">🏆 Bảng xếp hạng</button>
+            <button class="nav-tab" onclick="switchPage('rules')">📖 Luật chơi</button>
             <div class="nav-user-section" id="navUserSection" style="display: none;">
                 <div class="group-switcher" id="groupSwitcher" style="display: none;">
                     <select class="group-switcher-select" id="groupSwitcherSelect" onchange="handleGroupSwitch(this.value)">
@@ -222,6 +223,203 @@
                     <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">📊 5 TRẬN GẦN NHẤT</h3>
                     <div id="recentMatches" style="display: flex; flex-direction: column; gap: 8px;">
                         <!-- Recent matches mini cards will be rendered here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Rules Page -->
+        <div id="rules" class="page-content">
+
+            <!-- Block 1: Luật tính điểm -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📖 LUẬT TÍNH ĐIỂM</h2>
+                </div>
+
+                <!-- Prize highlight -->
+                <div class="rules-prize-banner">
+                    <span style="font-size: 28px;">🍽️</span>
+                    <div>
+                        <strong>GIẢI THƯỞNG CHUNG CUỘC</strong>
+                        <p>Người đứng <strong>đầu bảng xếp hạng</strong> khi giải đấu kết thúc sẽ được <strong>nguyên nhóm mời đi ăn!</strong></p>
+                    </div>
+                </div>
+
+                <!-- Điểm xếp hạng -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">🏅 Điểm xếp hạng (mỗi trận)</h3>
+                    <p class="rules-card-desc">Sau mỗi trận, tất cả dự đoán được xếp hạng theo độ chính xác. Tiêu chí so sánh theo thứ tự ưu tiên:</p>
+                    <ol class="rules-criteria-list">
+                        <li>Đoán <strong>đúng tỉ số</strong> chính xác</li>
+                        <li>Đoán đúng <strong>hiệu số bàn thắng</strong> (VD: đoán 2-1, thực tế 3-2 → hiệu số đều là +1)</li>
+                        <li><strong>Tổng chênh lệch</strong> bàn thắng ít nhất</li>
+                        <li>Dự đoán <strong>phút ghi bàn cuối</strong> gần nhất</li>
+                    </ol>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Hạng</th><th>Điểm</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>🥇 Top 1</td><td><strong>5 điểm</strong></td></tr>
+                            <tr><td>🥈 Top 2</td><td><strong>4 điểm</strong></td></tr>
+                            <tr><td>🥉 Top 3</td><td><strong>3 điểm</strong></td></tr>
+                            <tr><td>Còn lại</td><td><strong>2 điểm</strong></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Điểm bonus -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">🎯 Điểm bonus</h3>
+                    <p class="rules-card-desc">Ngoài điểm xếp hạng, bạn có thể nhận thêm bonus nếu dự đoán chính xác:</p>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Loại bonus</th><th>Điểm</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>🎯 Đúng tỉ số chính xác</td><td><strong>+5 điểm</strong></td></tr>
+                            <tr><td>💡 Đoán phút ghi bàn cuối gần nhất</td><td><strong>+3 điểm</strong></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Ví dụ minh họa -->
+                <div class="rules-card rules-example">
+                    <h3 class="rules-card-title">📝 Ví dụ minh họa</h3>
+                    <div class="rules-example-scenario">
+                        <strong>Trận: Brasil 2-1 Argentina</strong> (bàn cuối phút 78')
+                    </div>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Người chơi</th><th>Dự đoán</th><th>Phút</th><th>Hạng</th><th>Bonus</th><th>Tổng</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>An</td><td><strong>2-1</strong></td><td>75'</td>
+                                <td>🥇 5đ</td><td>🎯+5 💡+3</td><td class="rules-total"><strong>13 điểm</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Bình</td><td>2-1</td><td>45'</td>
+                                <td>🥈 4đ</td><td>🎯+5</td><td class="rules-total"><strong>9 điểm</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Chi</td><td>3-2</td><td>80'</td>
+                                <td>🥉 3đ</td><td>-</td><td class="rules-total"><strong>3 điểm</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Dũng</td><td>1-0</td><td>60'</td>
+                                <td>4th 2đ</td><td>-</td><td class="rules-total"><strong>2 điểm</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="rules-example-note">
+                        <strong>Giải thích:</strong> An & Bình cùng đoán đúng 2-1, nhưng An đoán phút 75' (gần 78' hơn Bình 45') nên An xếp trên. Chi đoán 3-2 (hiệu số +1 đúng) nên xếp trên Dũng (hiệu số +1 nhưng tổng chênh lệch lớn hơn). Chỉ An được bonus phút gần nhất.
+                    </p>
+                </div>
+
+                <!-- Điểm đội yêu thích -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">⭐ Điểm đội yêu thích</h3>
+                    <p class="rules-card-desc">Mỗi người chơi chọn <strong>1 đội yêu thích</strong> trước khi vòng knockout bắt đầu. Đội đi càng sâu trong giải, bạn càng nhận nhiều điểm bonus <strong>(cộng dồn)</strong>:</p>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Vòng đội đạt được</th><th>Điểm cộng thêm</th><th>Tổng cộng dồn</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Vòng 32 đội (R32)</td><td>+5</td><td>5 điểm</td></tr>
+                            <tr><td>Vòng 16 đội (R16)</td><td>+10</td><td>15 điểm</td></tr>
+                            <tr><td>Tứ kết (QF)</td><td>+20</td><td>35 điểm</td></tr>
+                            <tr><td>Bán kết (SF)</td><td>+30</td><td>65 điểm</td></tr>
+                            <tr><td>Chung kết</td><td>+40</td><td>105 điểm</td></tr>
+                            <tr><td>🏆 Vô địch</td><td>+100</td><td><strong>205 điểm</strong></td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="rules-example-scenario" style="margin-top: 16px;">
+                        <strong>Ví dụ:</strong> Bạn chọn Argentina. Argentina vào đến Bán kết rồi bị loại → Bạn nhận 5 + 10 + 20 + 30 = <strong>65 điểm bonus</strong>.
+                    </div>
+                </div>
+
+                <!-- Bảng xếp hạng -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">🏆 Bảng xếp hạng chung cuộc</h3>
+                    <p class="rules-card-desc">Tổng điểm = <strong>Điểm dự đoán tất cả các trận</strong> + <strong>Điểm đội yêu thích</strong></p>
+                    <p class="rules-card-desc">Nếu hai người cùng điểm, so sánh theo: Số lần đoán đúng tỉ số → Số lần đứng Top 1 → Số lần đoán đúng phút.</p>
+                </div>
+            </section>
+
+            <!-- Block 2: Hướng dẫn dự đoán -->
+            <section class="section" style="margin-top: 24px;">
+                <div class="section-header">
+                    <h2 class="section-title">🎮 HƯỚNG DẪN DỰ ĐOÁN</h2>
+                </div>
+
+                <div class="rules-steps">
+                    <div class="rules-step">
+                        <div class="rules-step-number">1</div>
+                        <div class="rules-step-content">
+                            <h4>Đăng nhập vào hệ thống</h4>
+                            <p>Nhập email, mật khẩu và mã nhóm do quản trị viên cung cấp. Bấm <strong>"Đăng nhập"</strong>.</p>
+                            <div class="rules-step-image" data-placeholder="screenshot-login">
+                                <span>📸 Ảnh minh họa đăng nhập</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rules-step">
+                        <div class="rules-step-number">2</div>
+                        <div class="rules-step-content">
+                            <h4>Xem các trận sắp diễn ra</h4>
+                            <p>Tại <strong>Trang chủ</strong>, bạn sẽ thấy các trận đấu sắp diễn ra. Trận nào có nút <strong>"Dự đoán"</strong> nghĩa là đang mở (trước giờ kick-off 24h).</p>
+                            <div class="rules-step-image" data-placeholder="screenshot-upcoming">
+                                <span>📸 Ảnh minh họa trận sắp diễn ra</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rules-step">
+                        <div class="rules-step-number">3</div>
+                        <div class="rules-step-content">
+                            <h4>Nhập dự đoán</h4>
+                            <p>Bấm vào thẻ trận đấu → Nhập <strong>tỉ số</strong> (VD: 2-1) và <strong>phút ghi bàn cuối cùng</strong> (VD: 78). Bấm <strong>"Lưu dự đoán"</strong>.</p>
+                            <div class="rules-step-image" data-placeholder="screenshot-predict">
+                                <span>📸 Ảnh minh họa nhập dự đoán</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rules-step">
+                        <div class="rules-step-number">4</div>
+                        <div class="rules-step-content">
+                            <h4>Sửa dự đoán (nếu cần)</h4>
+                            <p>Bạn có thể sửa dự đoán bất kỳ lúc nào <strong>trước khi trận đấu bắt đầu</strong>. Sau khi kick-off, dự đoán sẽ bị khóa tự động.</p>
+                            <div class="rules-step-image" data-placeholder="screenshot-edit">
+                                <span>📸 Ảnh minh họa sửa dự đoán</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rules-step">
+                        <div class="rules-step-number">5</div>
+                        <div class="rules-step-content">
+                            <h4>Chọn đội yêu thích</h4>
+                            <p>Trước vòng knockout, bấm vào mục <strong>"⭐ Đội yêu thích"</strong> ở trang cá nhân để chọn 1 đội. Lưu ý: sau khi admin khóa, bạn không thể đổi đội.</p>
+                            <div class="rules-step-image" data-placeholder="screenshot-favteam">
+                                <span>📸 Ảnh minh họa chọn đội yêu thích</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rules-step">
+                        <div class="rules-step-number">6</div>
+                        <div class="rules-step-content">
+                            <h4>Theo dõi bảng xếp hạng</h4>
+                            <p>Vào tab <strong>"🏆 Bảng xếp hạng"</strong> để xem thứ hạng của bạn so với mọi người trong nhóm. Điểm được cập nhật sau mỗi trận.</p>
+                            <div class="rules-step-image" data-placeholder="screenshot-leaderboard">
+                                <span>📸 Ảnh minh họa bảng xếp hạng</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
