@@ -365,7 +365,7 @@
 
         .history-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: var(--card-gap-v) var(--card-gap-h);
         }
 
@@ -1732,19 +1732,46 @@
             margin-bottom: 12px;
         }
 
+        .rules-step-horizontal {
+            flex-wrap: wrap;
+        }
+
+        .rules-step-horizontal .rules-step-content {
+            flex: 1;
+            min-width: 200px;
+        }
+
         .rules-step-image {
-            background: var(--surface-secondary);
-            border: 2px dashed var(--stroke);
+            flex-shrink: 0;
             border-radius: 8px;
-            padding: 40px 20px;
-            text-align: center;
-            color: var(--text-tertiary);
-            font-size: 13px;
+            overflow: hidden;
+            border: 1px solid var(--stroke);
+        }
+
+        .rules-step-image img {
+            display: block;
+            width: 240px;
+            height: auto;
+            border-radius: 8px;
         }
 
         @media (max-width: 768px) {
             .rules-step {
                 gap: 12px;
+            }
+
+            .rules-step-horizontal {
+                flex-direction: column;
+            }
+
+            .rules-step-horizontal .rules-step-image {
+                order: -1;
+                align-self: center;
+            }
+
+            .rules-step-image img {
+                width: 100%;
+                max-width: 300px;
             }
 
             .rules-step-number {
@@ -2076,10 +2103,6 @@
         @media (max-width: 1200px) {
             .matches-grid {
                 grid-template-columns: repeat(auto-fill, minmax(calc(var(--card-width) * 0.9), 1fr));
-            }
-
-            .history-grid {
-                grid-template-columns: repeat(4, 1fr);
             }
         }
 
