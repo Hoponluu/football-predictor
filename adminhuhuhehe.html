@@ -1570,21 +1570,93 @@
         </div>
     </div>
 
-    <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Admin uses /api/admin proxy — no Supabase CDN needed -->
 
     <script>
-        // Supabase Configuration
-        const SUPABASE_CONFIG = {
-            url: 'https://bzgfmvxgfgpzinnstgdm.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6Z2ZtdnhnZmdwemlubnN0Z2RtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NjUyOTUsImV4cCI6MjA4NjE0MTI5NX0.in-jeMj88CES1pabN7cqNpIQeTeshCeiTgvauqQbcuM'
-        };
+        // ============================================
+        // ADMIN API CLIENT — routes all queries through /api/admin
+        // ============================================
+        const ADMIN_API_URL = '/api/admin';
+        var adminToken = null;
 
-        // Initialize Supabase
-        var supabase = window.supabase.createClient(
-            SUPABASE_CONFIG.url,
-            SUPABASE_CONFIG.anonKey
-        );
+        class AdminFilterBuilder {
+            constructor(table, operation, data, options, token) {
+                this._table = table;
+                this._op = operation;
+                this._data = data;
+                this._options = options;
+                this._token = token;
+                this._filters = [];
+            }
+            eq(col, val) { this._filters.push({ method: 'eq', args: [col, val] }); return this; }
+            neq(col, val) { this._filters.push({ method: 'neq', args: [col, val] }); return this; }
+            gt(col, val) { this._filters.push({ method: 'gt', args: [col, val] }); return this; }
+            gte(col, val) { this._filters.push({ method: 'gte', args: [col, val] }); return this; }
+            lt(col, val) { this._filters.push({ method: 'lt', args: [col, val] }); return this; }
+            lte(col, val) { this._filters.push({ method: 'lte', args: [col, val] }); return this; }
+            in(col, vals) { this._filters.push({ method: 'in', args: [col, vals] }); return this; }
+            is(col, val) { this._filters.push({ method: 'is', args: [col, val] }); return this; }
+            like(col, val) { this._filters.push({ method: 'like', args: [col, val] }); return this; }
+            ilike(col, val) { this._filters.push({ method: 'ilike', args: [col, val] }); return this; }
+            order(col, opts) { this._filters.push({ method: 'order', args: [col, opts] }); return this; }
+            limit(n) { this._filters.push({ method: 'limit', args: [n] }); return this; }
+            single() { this._filters.push({ method: 'single' }); return this; }
+            maybeSingle() { this._filters.push({ method: 'maybeSingle' }); return this; }
+            select(cols) { this._filters.push({ method: 'select', args: [cols || '*'] }); return this; }
+
+            then(resolve, reject) {
+                const body = {
+                    action: 'query',
+                    table: this._table,
+                    operation: this._op,
+                    data: this._data,
+                    options: this._options,
+                    filters: this._filters
+                };
+                fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this._token}`
+                    },
+                    body: JSON.stringify(body)
+                })
+                .then(r => r.json())
+                .then(resolve)
+                .catch(reject);
+            }
+        }
+
+        class AdminTableBuilder {
+            constructor(table, token) {
+                this._table = table;
+                this._token = token;
+            }
+            select(cols) { return new AdminFilterBuilder(this._table, 'select', cols || '*', null, this._token); }
+            insert(data, opts) { return new AdminFilterBuilder(this._table, 'insert', data, opts, this._token); }
+            update(data) { return new AdminFilterBuilder(this._table, 'update', data, null, this._token); }
+            delete() { return new AdminFilterBuilder(this._table, 'delete', null, null, this._token); }
+            upsert(data, opts) { return new AdminFilterBuilder(this._table, 'upsert', data, opts, this._token); }
+        }
+
+        function createAdminClient(token) {
+            return {
+                from(table) { return new AdminTableBuilder(table, token); },
+                rpc(fn, params) {
+                    return fetch(ADMIN_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ action: 'rpc', fn, params })
+                    }).then(r => r.json());
+                }
+            };
+        }
+
+        // Initialize with a dummy — will be replaced after login
+        var supabase = { from() { throw new Error('Not logged in'); } };
 
         // Global Variables
         var currentAdmin = null;
@@ -1594,34 +1666,41 @@
         var allPredictions = [];
         var scoringRules = null;
 
-        console.log('✅ Supabase initialized');
-        console.log('📊 Database:', SUPABASE_CONFIG.url);
+        console.log('🔒 Admin panel — API proxy mode');
 
         // Admin Authentication
         async function handleAdminLogin(event) {
             event.preventDefault();
-            
+
             const email = document.getElementById('adminEmail').value;
             const password = document.getElementById('adminPassword').value;
-            
+
             console.log('🔐 Admin login attempt:', email);
-            
+
             try {
-                // Hardcode admin check for now - In production, use proper auth
-                if (email === 'admin@wc2026.com' && password === 'admin123') {
-                    currentAdmin = { email, name: 'Admin', role: 'admin' };
-                    
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('adminLayout').classList.add('active');
-                    document.getElementById('adminName').textContent = 'Admin';
-                    
-                    console.log('✅ Admin logged in');
-                    
-                    // Load all data
-                    await initAdminPanel();
-                } else {
-                    alert('Email hoặc mật khẩu không đúng!');
+                const resp = await fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'login', email, password })
+                });
+                const result = await resp.json();
+
+                if (!resp.ok || !result.token) {
+                    alert(result.error || 'Email hoặc mật khẩu không đúng!');
+                    return;
                 }
+
+                adminToken = result.token;
+                supabase = createAdminClient(adminToken);
+                currentAdmin = result.admin;
+
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminLayout').classList.add('active');
+                document.getElementById('adminName').textContent = currentAdmin.name || 'Admin';
+
+                console.log('✅ Admin logged in via API');
+
+                await initAdminPanel();
             } catch (error) {
                 console.error('Login error:', error);
                 alert('Lỗi đăng nhập: ' + error.message);
@@ -1631,6 +1710,8 @@
         function handleAdminLogout() {
             if (confirm('Bạn có chắc muốn đăng xuất?')) {
                 currentAdmin = null;
+                adminToken = null;
+                supabase = { from() { throw new Error('Not logged in'); } };
                 document.getElementById('adminLayout').classList.remove('active');
                 document.getElementById('loginScreen').style.display = 'flex';
                 document.getElementById('adminEmail').value = '';
