@@ -1851,11 +1851,12 @@
             gap: 8px;
         }
 
-        /* Group Standings Grid */
+        /* Group Standings - Horizontal Scroll */
         .standings-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: flex;
             gap: 16px;
+            width: max-content;
+            padding-bottom: 8px;
         }
 
         .standings-card {
@@ -1864,6 +1865,8 @@
             border-radius: var(--border-radius);
             padding: 16px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            width: 380px;
+            flex-shrink: 0;
         }
 
         /* Compact Group Cards - Horizontal Scroll */
@@ -2079,6 +2082,7 @@
 
         /* Mobile adjustments */
         @media (max-width: 768px) {
+            .standings-card,
             .compact-group-card {
                 width: 340px;
             }
@@ -2090,8 +2094,8 @@
         }
 
         @media (max-width: 480px) {
-            .standings-grid {
-                grid-template-columns: 1fr;
+            .standings-card {
+                width: 300px;
             }
 
             .compact-group-card {
@@ -2124,9 +2128,6 @@
                 grid-template-columns: repeat(auto-fill, minmax(calc(var(--card-width) * 0.9), 1fr));
             }
 
-            .standings-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
         }
 
         @media (max-width: 768px) {
@@ -2136,10 +2137,6 @@
 
             .container {
                 padding: 12px;
-            }
-
-            .standings-grid {
-                grid-template-columns: repeat(2, 1fr);
             }
 
             .nav-tabs {
