@@ -684,25 +684,23 @@
         var currentUser = null;
         var currentGroup = null;
         
+        const PLAYER_API_URL = '/api/player';
+
         // AUTHENTICATION FUNCTIONS
-        async function loginUser(email, password) {
+        async function loginUser(email, password, groupCode) {
           try {
-            const { data: players, error } = await supabase
-              .from('players')
-              .select('*')
-              .eq('email', email)
-              .eq('password', password)
-              .limit(1);
+            const resp = await fetch(PLAYER_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'login', email, password, groupCode })
+            });
+            const result = await resp.json();
+            if (!resp.ok || !result.player) throw new Error(result.error || 'Email hoặc mật khẩu không đúng');
 
-            if (error) throw error;
+            currentUser = result.player;
+            localStorage.setItem('currentUserId', result.player.id);
 
-            const player = players?.[0];
-            if (!player) throw new Error('Email hoặc mật khẩu không đúng');
-            
-            currentUser = player;
-            localStorage.setItem('currentUserId', player.id);
-            
-            return { success: true, player };
+            return { success: true, player: result.player };
           } catch (error) {
             console.error('Login error:', error);
             return { success: false, error: error.message };
@@ -772,70 +770,7 @@
           }
         }
         
-        async function createMatch(groupId, matchData) {
-          try {
-            const { data: match, error } = await supabase
-              .from('matches')
-              .insert({
-                group_id: groupId,
-                match_group: matchData.group,
-                home_team: matchData.home,
-                away_team: matchData.away,
-                match_date: matchData.date,
-                status: matchData.status || 'not-open'
-              })
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, match };
-          } catch (error) {
-            console.error('Create match error:', error);
-            return { success: false, error: error.message };
-          }
-        }
-        
-        async function updateMatchStatus(matchId, status) {
-          try {
-            const { data: match, error } = await supabase
-              .from('matches')
-              .update({ status })
-              .eq('id', matchId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, match };
-          } catch (error) {
-            console.error('Update match status error:', error);
-            return { success: false, error: error.message };
-          }
-        }
-        
-        async function enterMatchResult(matchId, homeScore, awayScore, minute) {
-          try {
-            const { data: match, error } = await supabase
-              .from('matches')
-              .update({
-                status: 'finished',
-                home_score: homeScore,
-                away_score: awayScore,
-                minute: minute
-              })
-              .eq('id', matchId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, match };
-          } catch (error) {
-            console.error('Enter match result error:', error);
-            return { success: false, error: error.message };
-          }
-        }
+        // createMatch, updateMatchStatus, enterMatchResult — admin only, removed from client
         
         // PREDICTION FUNCTIONS
         async function getPrediction(matchId, playerId) {
@@ -858,24 +793,17 @@
         
         async function savePrediction(matchId, playerId, homeScore, awayScore, minute) {
           try {
-            const { data: prediction, error } = await supabase
-              .from('predictions')
-              .upsert({
-                match_id: matchId,
-                player_id: playerId,
-                home_score: homeScore,
-                away_score: awayScore,
-                minute: minute,
-                updated_at: new Date().toISOString()
-              }, {
-                onConflict: 'match_id,player_id'
+            const resp = await fetch(PLAYER_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'save_prediction',
+                playerId, matchId, homeScore, awayScore, minute
               })
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, prediction };
+            });
+            const result = await resp.json();
+            if (!resp.ok || result.error) throw new Error(result.error || 'Lỗi lưu dự đoán');
+            return { success: true, prediction: result.prediction };
           } catch (error) {
             console.error('Save prediction error:', error);
             return { success: false, error: error.message };
@@ -1029,42 +957,21 @@
         
         async function selectFavoriteTeam(playerId, teamName) {
           try {
-            const { data: player, error } = await supabase
-              .from('players')
-              .update({
-                favorite_team: teamName,
-                favorite_team_status: 'active'
-              })
-              .eq('id', playerId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, player };
+            const resp = await fetch(PLAYER_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'select_favorite_team', playerId, teamName })
+            });
+            const result = await resp.json();
+            if (!resp.ok || result.error) throw new Error(result.error || 'Lỗi chọn đội yêu thích');
+            return { success: true, player: result.player };
           } catch (error) {
             console.error('Select favorite team error:', error);
             return { success: false, error: error.message };
           }
         }
         
-        async function updateFavoriteTeamSettings(groupId, settings) {
-          try {
-            const { data: group, error } = await supabase
-              .from('groups')
-              .update(settings)
-              .eq('id', groupId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, group };
-          } catch (error) {
-            console.error('Update favorite team settings error:', error);
-            return { success: false, error: error.message };
-          }
-        }
+        // updateFavoriteTeamSettings — admin only, removed from client
         
         // PLAYER FUNCTIONS
         async function getPlayers(grpId) {
@@ -1083,31 +990,7 @@
           }
         }
 
-        async function createPlayer(grpId, name, email, password, isAdmin = false) {
-          try {
-            const { data: player, error } = await supabase
-              .from('players')
-              .insert({
-                name,
-                email,
-                password,
-                is_admin: isAdmin
-              })
-              .select()
-              .single();
-
-            if (error) throw error;
-
-            if (grpId) {
-              await supabase.from('player_groups').insert({ player_id: player.id, group_id: grpId });
-            }
-
-            return { success: true, player };
-          } catch (error) {
-            console.error('Create player error:', error);
-            return { success: false, error: error.message };
-          }
-        }
+        // createPlayer — admin only, removed from client
         
         // PLAYER-GROUP MEMBERSHIP FUNCTIONS
         async function getPlayerGroups(playerId) {
@@ -1306,29 +1189,15 @@
 
         async function autoUpdateMatchStatuses() {
             try {
-                const now = new Date().toISOString();
-                const in24h = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-                // not-open → open: match starts within 24h
-                const { data: opened } = await supabase
-                    .from('matches')
-                    .update({ status: 'open' })
-                    .eq('status', 'not-open')
-                    .gt('match_date', now)
-                    .lte('match_date', in24h)
-                    .select('id');
-
-                // open → not-open: match already kicked off
-                const { data: closed } = await supabase
-                    .from('matches')
-                    .update({ status: 'not-open' })
-                    .eq('status', 'open')
-                    .lte('match_date', now)
-                    .select('id');
-
-                const total = (opened?.length || 0) + (closed?.length || 0);
+                const resp = await fetch(PLAYER_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'auto_update_statuses' })
+                });
+                const result = await resp.json();
+                const total = (result.opened || 0) + (result.closed || 0);
                 if (total > 0) {
-                    console.log(`⚡ Auto-updated ${total} match statuses (${opened?.length || 0} opened, ${closed?.length || 0} closed)`);
+                    console.log(`⚡ Auto-updated ${total} match statuses (${result.opened || 0} opened, ${result.closed || 0} closed)`);
                 }
             } catch (error) {
                 console.error('Auto-update statuses error:', error);
@@ -3012,26 +2881,17 @@
             console.log('🔐 Attempting login...', { email, groupCode });
 
             try {
-                // Verify group code against database
+                // Verify group code against database (read-only, anon OK)
                 const group = await getGroupByCode(groupCode);
                 if (!group) {
                     alert('Mã nhóm không đúng!');
                     return;
                 }
 
-                // Login
-                const result = await loginUser(email, password);
+                // Login via API (handles group join server-side)
+                const result = await loginUser(email, password, groupCode);
 
                 if (result.success) {
-                    // Verify player belongs to this group via player_groups
-                    const isMember = await isPlayerInGroup(result.player.id, group.id);
-                    if (!isMember) {
-                        alert('Tài khoản không thuộc nhóm này!');
-                        currentUser = null;
-                        localStorage.removeItem('currentUserId');
-                        return;
-                    }
-
                     console.log('✅ Login successful!');
                     currentPlayer = result.player;
                     currentGroup = group;
@@ -3040,7 +2900,14 @@
 
                     closeLoginModal();
 
-                    // Reload app with user data
+                    // Reload full user data from Supabase (read-only)
+                    const { data: fullPlayer } = await supabase
+                        .from('players')
+                        .select('*')
+                        .eq('id', result.player.id)
+                        .single();
+                    if (fullPlayer) currentPlayer = fullPlayer;
+
                     await initApp();
 
                     alert('Đăng nhập thành công!');
