@@ -917,6 +917,26 @@
                     </div>
                 </div>
 
+                <!-- Backup Predictions Card -->
+                <div class="card" style="border-left: 4px solid var(--orange);">
+                    <div class="card-header">
+                        <h2 class="card-title">Backup Predictions</h2>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-sm btn-warning" onclick="exportPredictions()">📥 Export JSON</button>
+                            <label class="btn btn-sm btn-primary" style="cursor: pointer; margin: 0;">
+                                📤 Import JSON
+                                <input type="file" accept=".json" onchange="importPredictions(event)" style="display: none;">
+                            </label>
+                        </div>
+                    </div>
+                    <div style="padding: 0 20px 16px;">
+                        <p style="color: var(--text-light); font-size: 13px;">
+                            Export: tải toàn bộ predictions về file JSON · Import: restore predictions từ file backup (ghi đè theo match_id + player_id)
+                        </p>
+                        <div id="backupStatus"></div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Trận đấu sắp tới</h2>
@@ -4357,6 +4377,96 @@
                 await syncFromOpenFootball();
             } finally {
                 if (btn) { btn.disabled = false; btn.textContent = '🔄 Đồng bộ toàn bộ'; }
+            }
+        }
+
+        // ============================================
+        // BACKUP: Export / Import Predictions
+        // ============================================
+
+        async function exportPredictions() {
+            const statusEl = document.getElementById('backupStatus');
+            const setStatus = (msg, type) => {
+                if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : '⏳'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
+            };
+
+            setStatus('Đang export predictions...', 'warning');
+
+            try {
+                const { data, error } = await supabase
+                    .from('predictions')
+                    .select('*');
+
+                if (error) throw error;
+
+                const backup = {
+                    exported_at: new Date().toISOString(),
+                    count: data.length,
+                    predictions: data
+                };
+
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 10);
+                a.href = url;
+                a.download = `predictions-backup-${dateStr}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                setStatus(`Đã export ${data.length} predictions`, 'success');
+            } catch (err) {
+                setStatus('Lỗi export: ' + err.message, 'warning');
+            }
+        }
+
+        async function importPredictions(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            event.target.value = '';
+
+            const statusEl = document.getElementById('backupStatus');
+            const setStatus = (msg, type) => {
+                if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : type === 'warning' ? '⏳' : '❌'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
+            };
+
+            try {
+                const text = await file.text();
+                const backup = JSON.parse(text);
+                const predictions = backup.predictions;
+
+                if (!Array.isArray(predictions) || predictions.length === 0) {
+                    setStatus('File không hợp lệ hoặc không có predictions', 'error');
+                    return;
+                }
+
+                if (!confirm(`Import ${predictions.length} predictions từ backup ${backup.exported_at || 'unknown'}?\n\nSẽ ghi đè predictions trùng match_id + player_id.`)) return;
+
+                setStatus(`Đang import ${predictions.length} predictions...`, 'warning');
+
+                const rows = predictions.map(p => ({
+                    match_id: p.match_id,
+                    player_id: p.player_id,
+                    home_score: p.home_score,
+                    away_score: p.away_score,
+                    minute: p.minute,
+                    total_points: p.total_points,
+                    points_rank: p.points_rank,
+                    points_exact_score: p.points_exact_score,
+                    points_minute: p.points_minute,
+                    updated_at: p.updated_at
+                }));
+
+                const { error } = await supabase
+                    .from('predictions')
+                    .upsert(rows, { onConflict: 'match_id,player_id' });
+
+                if (error) throw error;
+
+                setStatus(`Đã import ${rows.length} predictions thành công!`, 'success');
+                await loadPredictions();
+            } catch (err) {
+                setStatus('Lỗi import: ' + err.message, 'error');
             }
         }
 
