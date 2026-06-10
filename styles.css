@@ -1851,6 +1851,21 @@
             gap: 8px;
         }
 
+        /* Group Standings Grid */
+        .standings-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .standings-card {
+            background: var(--surface);
+            border: 1px solid var(--stroke);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
         /* Compact Group Cards - Horizontal Scroll */
         .groups-scroll {
             overflow-x: auto;
@@ -2075,6 +2090,10 @@
         }
 
         @media (max-width: 480px) {
+            .standings-grid {
+                grid-template-columns: 1fr;
+            }
+
             .compact-group-card {
                 width: 300px;
             }
@@ -2104,6 +2123,10 @@
             .matches-grid {
                 grid-template-columns: repeat(auto-fill, minmax(calc(var(--card-width) * 0.9), 1fr));
             }
+
+            .standings-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         @media (max-width: 768px) {
@@ -2113,6 +2136,10 @@
 
             .container {
                 padding: 12px;
+            }
+
+            .standings-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .nav-tabs {
