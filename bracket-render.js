@@ -206,9 +206,16 @@ function calculateGroupStandings(groupMatches) {
         else { teams[home].d++; teams[away].d++; }
     });
 
-    return Object.values(teams)
-        .map(t => ({ ...t, pts: t.w * 3 + t.d, gd: t.gf - t.ga }))
-        .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    const result = Object.values(teams)
+        .map(t => ({ ...t, pts: t.w * 3 + t.d, gd: t.gf - t.ga }));
+
+    const hasPlayed = result.some(t => t.mp > 0);
+    if (hasPlayed) {
+        result.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    } else {
+        result.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return result;
 }
 
 function renderStandingsTable(standings) {
@@ -245,12 +252,7 @@ function renderStandingsTable(standings) {
 // ============================================
 // GROUP STAGE RENDERER (sorted by date — chronological)
 // ============================================
-function renderScheduleGroupStageOnly() {
-    const container = document.getElementById('scheduleGroupStage');
-    if (!container) return;
-
-    container.innerHTML = '';
-
+function getGroupStageData() {
     const groupStageMatches = matches.filter(m => {
         const group = m.group || m.match_group || '';
         return /^[A-L]$/.test(group) || /^GROUP [A-L]$/i.test(group) || /^Bảng [A-L]$/i.test(group);
@@ -262,6 +264,46 @@ function renderScheduleGroupStageOnly() {
         if (!groups[group]) groups[group] = [];
         groups[group].push(match);
     });
+
+    return groups;
+}
+
+function renderGroupStandings() {
+    const container = document.getElementById('scheduleGroupStandings');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const groups = getGroupStageData();
+
+    Object.keys(groups).sort().forEach(groupName => {
+        const groupMatches = groups[groupName];
+        const standings = calculateGroupStandings(groupMatches);
+        if (standings.length === 0) return;
+
+        const label = groupName.replace(/^GROUP /i, '').replace(/^Bảng /i, '');
+
+        const card = document.createElement('div');
+        card.className = 'standings-card';
+
+        const title = document.createElement('div');
+        title.className = 'compact-group-title';
+        title.textContent = `Bảng ${label}`;
+        card.appendChild(title);
+
+        const tableDiv = document.createElement('div');
+        tableDiv.innerHTML = renderStandingsTable(standings);
+        card.appendChild(tableDiv);
+
+        container.appendChild(card);
+    });
+}
+
+function renderScheduleGroupStageOnly() {
+    const container = document.getElementById('scheduleGroupStage');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const groups = getGroupStageData();
 
     Object.keys(groups).sort().forEach(groupName => {
         const groupMatches = groups[groupName].sort((a, b) => {
@@ -278,18 +320,8 @@ function renderScheduleGroupStageOnly() {
         title.textContent = `Bảng ${groupName.replace(/^GROUP /i, '').replace(/^Bảng /i, '')}`;
         groupCard.appendChild(title);
 
-        // Standings table
-        const standings = calculateGroupStandings(groupMatches);
-        const hasFinished = groupMatches.some(m => m.status === 'finished');
-        if (hasFinished) {
-            const standingsDiv = document.createElement('div');
-            standingsDiv.innerHTML = renderStandingsTable(standings);
-            groupCard.appendChild(standingsDiv);
-        }
-
         const matchesList = document.createElement('div');
         matchesList.className = 'compact-group-list';
-        if (hasFinished) matchesList.style.marginTop = '12px';
 
         groupMatches.forEach(match => {
             matchesList.appendChild(renderMatchRowCard(match));

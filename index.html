@@ -125,7 +125,17 @@
                 </div>
             </div>
 
-            <!-- Theo bảng thi đấu -->
+            <!-- Bảng xếp hạng theo bảng đấu -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📊 BẢNG XẾP HẠNG CÁC BẢNG</h2>
+                </div>
+                <div class="standings-grid" id="scheduleGroupStandings">
+                    <!-- Standings tables rendered here -->
+                </div>
+            </section>
+
+            <!-- Lịch thi đấu theo bảng -->
             <section class="section">
                 <div class="section-header">
                     <h2 class="section-title">📋 LỊCH CÁC TRẬN THEO BẢNG ĐẤU</h2>
@@ -2069,7 +2079,8 @@
             // Render all schedule page sections
             renderScheduleUpcoming();
             renderScheduleStats();
-            renderScheduleGroupStageOnly();  // From bracket-render.js - Groups A-L only
+            renderGroupStandings();           // From bracket-render.js - Group standings
+            renderScheduleGroupStageOnly();  // From bracket-render.js - Group match schedule
             renderKnockoutBracket();         // From bracket-render.js - Bracket tree
             renderScheduleHistory();         // Finished matches section
         }
