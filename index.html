@@ -1153,10 +1153,22 @@
             `).join('');
         }
 
+        function positionNotifPanel(panel) {
+            const nav = document.querySelector('.nav-tabs');
+            const rect = nav.getBoundingClientRect();
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                panel.style.top = (rect.bottom + 10) + 'px';
+            } else {
+                panel.style.top = (rect.bottom + 12) + 'px';
+            }
+        }
+
         function toggleNotifPanel() {
             const panel = document.getElementById('notifPanel');
             notifPanelOpen = !notifPanelOpen;
             if (notifPanelOpen) {
+                positionNotifPanel(panel);
                 panel.classList.add('open');
                 renderNotifList();
             } else {

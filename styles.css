@@ -339,8 +339,8 @@
         .notif-panel {
             display: none;
             position: fixed;
-            top: 60px;
             right: 16px;
+            top: 0;
             width: 380px;
             max-height: 500px;
             background: var(--surface);
@@ -510,10 +510,8 @@
             }
 
             .notif-panel {
-                top: auto;
-                bottom: 80px;
-                right: 12px;
-                left: 12px;
+                right: 8px;
+                left: 8px;
                 width: auto;
                 max-height: 60vh;
             }
