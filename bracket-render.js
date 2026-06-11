@@ -98,7 +98,7 @@ function renderMatchRowCard(match) {
 
     const isFinished = match.status === 'finished';
     const scores = getMatchScores(match);
-    const notOpen = match.status === 'not-open';
+    const notOpen = match.status === 'not-open' || match.status === 'closed';
 
     let homeWin = false, awayWin = false;
     if (isFinished && scores.homeScore !== null) {
@@ -167,6 +167,8 @@ function renderMatchRowCard(match) {
         card.onclick = () => { alert('Vui lòng đăng nhập để dự đoán!'); openLoginModal(); };
     } else if (isFinished && match.actualScore) {
         card.onclick = () => openResultsModal(match);
+    } else if (match.status === 'closed') {
+        card.style.cursor = 'default';
     } else if (match.status === 'open' || (match.userPrediction && !isFinished)) {
         card.onclick = () => openModal(match);
     } else if (notOpen) {
@@ -218,35 +220,53 @@ function calculateGroupStandings(groupMatches) {
     return result;
 }
 
-function renderStandingsTable(standings) {
+function renderStandingsTableV2(standings, groupLabel) {
     if (standings.length === 0) return '';
 
     const rows = standings.map((t, i) => {
         const flag = (typeof countries !== 'undefined' && countries[t.name]?.flag) || '';
-        const abbr = (typeof countryAbbr !== 'undefined' && countryAbbr[t.name])
-            || t.name.substring(0, 3).toUpperCase();
-        const qualify = i < 2 ? ' class="qualify-row"' : '';
-        return `<tr${qualify}>
-            <td style="text-align:center;font-weight:600;">${i + 1}</td>
-            <td>${flag} ${abbr}</td>
-            <td style="text-align:center">${t.mp}</td>
-            <td style="text-align:center">${t.w}</td>
-            <td style="text-align:center">${t.d}</td>
-            <td style="text-align:center">${t.l}</td>
-            <td style="text-align:center">${t.gf}</td>
-            <td style="text-align:center">${t.ga}</td>
-            <td style="text-align:center;font-weight:600;color:${t.gd > 0 ? '#059669' : t.gd < 0 ? '#DC2626' : '#6B7280'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
-            <td style="text-align:center;font-weight:700;">${t.pts}</td>
+        const teamName = t.name;
+        const isQualify = i < 2;
+        const rowClass = isQualify ? 'qualify-row-v2' : '';
+        const qualifyBar = isQualify ? '<span class="standings-qualify-bar"></span>' : '';
+
+        return `<tr class="${rowClass}">
+            <td>
+                <div class="standings-team-cell">
+                    ${qualifyBar}
+                    <span class="standings-team-rank">${i + 1}</span>
+                    <span class="standings-team-flag">${flag}</span>
+                    <span class="standings-team-name">${teamName}</span>
+                </div>
+            </td>
+            <td>${t.mp}</td>
+            <td>${t.w}</td>
+            <td>${t.d}</td>
+            <td>${t.l}</td>
+            <td>${t.gf}</td>
+            <td>${t.ga}</td>
+            <td style="font-weight:600;color:${t.gd > 0 ? '#059669' : t.gd < 0 ? '#DC2626' : '#6B7280'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+            <td class="standings-pts-cell">${t.pts}</td>
         </tr>`;
     }).join('');
 
-    return `<table class="standings-table">
-        <thead><tr>
-            <th>#</th><th>Đội</th><th>ST</th><th>T</th><th>H</th><th>B</th>
-            <th>BT</th><th>BB</th><th>HS</th><th>Đ</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-    </table>`;
+    return `<div class="standings-card-v2">
+        <div class="standings-header-bar">
+            <span class="standings-header-title">Bảng ${groupLabel}</span>
+        </div>
+        <table class="standings-table-v2">
+            <thead><tr>
+                <th>Đội</th><th>Trận</th><th>Thắng</th><th>Hoà</th><th>Thua</th>
+                <th>BT</th><th>BB</th><th>+/-</th><th>Điểm</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <div class="standings-legend">
+            <span><strong>BT:</strong> Bàn thắng</span>
+            <span><strong>BB:</strong> Bàn bại</span>
+            <span><strong>+/-:</strong> Hiệu số</span>
+        </div>
+    </div>`;
 }
 
 // ============================================
@@ -268,34 +288,73 @@ function getGroupStageData() {
     return groups;
 }
 
+var standingsCarouselIndex = 0;
+var standingsGroupKeys = [];
+var standingsGroupData = {};
+
 function renderGroupStandings() {
     const container = document.getElementById('scheduleGroupStandings');
     if (!container) return;
 
-    container.innerHTML = '';
     const groups = getGroupStageData();
+    standingsGroupKeys = Object.keys(groups).sort();
+    standingsGroupData = {};
 
-    Object.keys(groups).sort().forEach(groupName => {
+    standingsGroupKeys.forEach(groupName => {
         const groupMatches = groups[groupName];
         const standings = calculateGroupStandings(groupMatches);
-        if (standings.length === 0) return;
-
         const label = groupName.replace(/^GROUP /i, '').replace(/^Bảng /i, '');
-
-        const card = document.createElement('div');
-        card.className = 'standings-card';
-
-        const title = document.createElement('div');
-        title.className = 'compact-group-title';
-        title.textContent = `Bảng ${label}`;
-        card.appendChild(title);
-
-        const tableDiv = document.createElement('div');
-        tableDiv.innerHTML = renderStandingsTable(standings);
-        card.appendChild(tableDiv);
-
-        container.appendChild(card);
+        standingsGroupData[groupName] = { standings, label };
     });
+
+    if (standingsGroupKeys.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    if (standingsCarouselIndex >= standingsGroupKeys.length) standingsCarouselIndex = 0;
+
+    renderStandingsCarouselPage(container);
+}
+
+function renderStandingsCarouselPage(container) {
+    if (!container) container = document.getElementById('scheduleGroupStandings');
+    if (!container || standingsGroupKeys.length === 0) return;
+
+    const key = standingsGroupKeys[standingsCarouselIndex];
+    const { standings, label } = standingsGroupData[key];
+
+    const tableHTML = renderStandingsTableV2(standings, label);
+
+    const dots = standingsGroupKeys.map((k, i) => {
+        const lbl = standingsGroupData[k].label;
+        const active = i === standingsCarouselIndex ? 'active' : '';
+        return `<span class="standings-nav-dot ${active}" onclick="goToStandingsPage(${i})" title="Bảng ${lbl}"></span>`;
+    }).join('');
+
+    container.innerHTML = `
+        ${tableHTML}
+        <div class="standings-nav">
+            <button class="standings-nav-btn" onclick="prevStandingsPage()">&#8249;</button>
+            <div class="standings-nav-dots">${dots}</div>
+            <button class="standings-nav-btn" onclick="nextStandingsPage()">&#8250;</button>
+        </div>
+    `;
+}
+
+function prevStandingsPage() {
+    standingsCarouselIndex = (standingsCarouselIndex - 1 + standingsGroupKeys.length) % standingsGroupKeys.length;
+    renderStandingsCarouselPage();
+}
+
+function nextStandingsPage() {
+    standingsCarouselIndex = (standingsCarouselIndex + 1) % standingsGroupKeys.length;
+    renderStandingsCarouselPage();
+}
+
+function goToStandingsPage(idx) {
+    standingsCarouselIndex = idx;
+    renderStandingsCarouselPage();
 }
 
 function renderScheduleGroupStageOnly() {
@@ -429,7 +488,7 @@ function renderBracketMiniCard(match, roundKey) {
 
     const isFinished = match.status === 'finished';
     const hasPrediction = match.userPrediction;
-    const notOpen = match.status === 'not-open';
+    const notOpen = match.status === 'not-open' || match.status === 'closed';
     const scores = getMatchScores(match);
     const matchNum = match.match_number;
 
