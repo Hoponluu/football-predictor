@@ -54,7 +54,7 @@
     </div>
 
     <!-- Mobile Floating Notification Bell -->
-    <button class="notif-float-btn" id="notifFloatBtn" onclick="toggleNotifPanel()" style="display:none;">
+    <button class="notif-float-btn" id="notifFloatBtn" onclick="toggleNotifPanel()">
         <span>🔔</span>
         <span class="notif-float-badge" id="notifFloatBadge" style="display:none;">0</span>
     </button>
@@ -1079,7 +1079,10 @@
 
             if (currentPlayer) {
                 bell.style.display = 'flex';
-                floatBtn.classList.add('visible');
+                floatBtn.classList.add('active');
+            } else {
+                bell.style.display = 'none';
+                floatBtn.classList.remove('active');
             }
 
             if (notifUnread > 0) {
