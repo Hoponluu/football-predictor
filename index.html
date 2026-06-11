@@ -19,27 +19,52 @@
     <div class="banner-wrapper">
         <img src="BannerWC.png" alt="FIFA World Cup 2026" class="banner-img">
         <nav class="nav-tabs">
-            <button class="nav-tab active" onclick="switchPage('homepage')" style="padding: 8px 12px;">🏠</button>
-            <button class="nav-tab" onclick="switchPage('schedule')">📅 Lịch thi đấu</button>
-            <button class="nav-tab" onclick="switchPage('leaderboard')">🏆 Bảng xếp hạng</button>
-            <button class="nav-tab" onclick="switchPage('rules')">📖 Luật chơi</button>
-            <div class="nav-user-section" id="navUserSection" style="display: none;">
-                <div class="group-switcher" id="groupSwitcher" style="display: none;">
-                    <select class="group-switcher-select" id="groupSwitcherSelect" onchange="handleGroupSwitch(this.value)">
-                    </select>
-                </div>
-                <button class="nav-user-btn" onclick="openProfilePage()" id="navUserBtn">User</button>
-                <button class="nav-logout-btn" onclick="handleLogout()">Đăng xuất</button>
+            <!-- Mobile hamburger -->
+            <button class="nav-hamburger" id="navHamburger" onclick="toggleMobileMenu()">
+                <span></span><span></span><span></span>
+            </button>
+
+            <!-- Desktop nav links -->
+            <div class="nav-links">
+                <button class="nav-tab active" onclick="switchPage('homepage')" data-page="homepage" style="padding: 8px 12px;">🏠</button>
+                <button class="nav-tab" onclick="switchPage('schedule')" data-page="schedule">📅 Lịch thi đấu</button>
+                <button class="nav-tab" onclick="switchPage('leaderboard')" data-page="leaderboard">🏆 Bảng xếp hạng</button>
+                <button class="nav-tab" onclick="switchPage('rules')" data-page="rules">📖 Luật chơi</button>
             </div>
-            <button class="nav-login" id="navLoginBtn" onclick="openLoginModal()">Đăng nhập</button>
-            <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Thông báo" style="display:none;">
-                <span class="notif-bell-icon">🔔</span>
-                <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
-            </button>
-            <button class="theme-toggle" onclick="toggleTheme()" title="Chuyển giao diện" aria-label="Toggle dark mode">
-                <span class="theme-icon" id="themeIcon">🌙</span>
-            </button>
+
+            <!-- Right side: user + notif + theme -->
+            <div class="nav-right">
+                <div class="nav-user-section" id="navUserSection" style="display: none;">
+                    <div class="group-switcher" id="groupSwitcher" style="display: none;">
+                        <select class="group-switcher-select" id="groupSwitcherSelect" onchange="handleGroupSwitch(this.value)">
+                        </select>
+                    </div>
+                    <button class="nav-user-btn" onclick="openProfilePage()" id="navUserBtn">User</button>
+                    <button class="nav-logout-btn" onclick="handleLogout()">Đăng xuất</button>
+                </div>
+                <button class="nav-login" id="navLoginBtn" onclick="openLoginModal()">Đăng nhập</button>
+                <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Thông báo" style="display:none;">
+                    <span class="notif-bell-icon">🔔</span>
+                    <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+                </button>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Chuyển giao diện" aria-label="Toggle dark mode">
+                    <span class="theme-icon" id="themeIcon">🌙</span>
+                </button>
+            </div>
         </nav>
+    </div>
+
+    <!-- Mobile menu drawer -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <span style="font-weight:700; font-size:16px;">Menu</span>
+            <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+        </div>
+        <button class="mobile-menu-item active" onclick="mobileNavTo('homepage')" data-page="homepage">🏠 Trang chủ</button>
+        <button class="mobile-menu-item" onclick="mobileNavTo('schedule')" data-page="schedule">📅 Lịch thi đấu</button>
+        <button class="mobile-menu-item" onclick="mobileNavTo('leaderboard')" data-page="leaderboard">🏆 Bảng xếp hạng</button>
+        <button class="mobile-menu-item" onclick="mobileNavTo('rules')" data-page="rules">📖 Luật chơi</button>
     </div>
 
     <!-- Notification Panel -->
@@ -53,11 +78,6 @@
         </div>
     </div>
 
-    <!-- Mobile Floating Notification Bell -->
-    <button class="notif-float-btn" id="notifFloatBtn" onclick="toggleNotifPanel()">
-        <span>🔔</span>
-        <span class="notif-float-badge" id="notifFloatBadge" style="display:none;">0</span>
-    </button>
 
     <!-- Side banners + Content wrapper -->
     <div class="page-layout">
@@ -1074,25 +1094,18 @@
         function updateNotifBadge() {
             const bell = document.getElementById('notifBell');
             const badge = document.getElementById('notifBadge');
-            const floatBtn = document.getElementById('notifFloatBtn');
-            const floatBadge = document.getElementById('notifFloatBadge');
 
             if (currentPlayer) {
                 bell.style.display = 'flex';
-                floatBtn.classList.add('active');
             } else {
                 bell.style.display = 'none';
-                floatBtn.classList.remove('active');
             }
 
             if (notifUnread > 0) {
                 badge.textContent = notifUnread > 99 ? '99+' : notifUnread;
                 badge.style.display = 'flex';
-                floatBadge.textContent = notifUnread > 99 ? '99+' : notifUnread;
-                floatBadge.style.display = 'flex';
             } else {
                 badge.style.display = 'none';
-                floatBadge.style.display = 'none';
             }
         }
 
@@ -1154,8 +1167,7 @@
         document.addEventListener('click', function(e) {
             const panel = document.getElementById('notifPanel');
             const bell = document.getElementById('notifBell');
-            const floatBtn = document.getElementById('notifFloatBtn');
-            if (notifPanelOpen && !panel.contains(e.target) && !bell.contains(e.target) && !floatBtn.contains(e.target)) {
+            if (notifPanelOpen && !panel.contains(e.target) && !bell.contains(e.target)) {
                 notifPanelOpen = false;
                 panel.classList.remove('open');
             }
@@ -3338,23 +3350,20 @@
             document.querySelectorAll('.page-content').forEach(page => {
                 page.classList.remove('active');
             });
-            
-            document.querySelectorAll('.nav-tab').forEach(tab => {
+
+            document.querySelectorAll('.nav-tab, .mobile-menu-item').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             const targetPage = document.getElementById(pageId);
             if (targetPage) {
                 targetPage.classList.add('active');
             }
-            
-            const tabs = document.querySelectorAll('.nav-tab');
-            tabs.forEach(tab => {
-                if (tab.onclick && tab.onclick.toString().includes(pageId)) {
-                    tab.classList.add('active');
-                }
+
+            document.querySelectorAll('[data-page="' + pageId + '"]').forEach(el => {
+                el.classList.add('active');
             });
-            
+
             // Trigger page-specific renders
             if (pageId === 'schedule') {
                 renderScheduleMatches();
@@ -3362,6 +3371,21 @@
                 renderLeaderboard();
                 renderLeaderboardUserStats();
             }
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('open');
+            document.getElementById('mobileMenuOverlay').classList.toggle('open');
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileMenuOverlay').classList.remove('open');
+        }
+
+        function mobileNavTo(pageId) {
+            closeMobileMenu();
+            switchPage(pageId);
         }
 
         // ============================================
