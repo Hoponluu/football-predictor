@@ -1595,7 +1595,7 @@
             const card = document.createElement('div');
             card.className = 'match-card';
             
-            if (match.status === 'not-open') {
+            if (match.status === 'not-open' || match.status === 'closed') {
                 card.classList.add('disabled');
             }
 
@@ -1692,7 +1692,14 @@
                 const now = new Date();
                 const matchStarted = now > match.date;
 
-                if (match.status === 'not-open') {
+                if (match.status === 'closed') {
+                    status.className = 'match-status not-open';
+                    if (match.userPrediction) {
+                        status.innerHTML = `🔒 ${match.userPrediction.homeScore}-${match.userPrediction.awayScore} | ${match.userPrediction.minute}'`;
+                    } else {
+                        status.textContent = '🔒 Đã đóng dự đoán';
+                    }
+                } else if (match.status === 'not-open') {
                     status.className = 'match-status not-open';
                     status.textContent = 'Chưa mở dự đoán';
                 } else if (match.status === 'open' && !match.userPrediction) {
@@ -1719,6 +1726,9 @@
                 };
             } else if (match.status === 'finished' && match.actualScore) {
                 card.onclick = () => openResultsModal(match);
+            } else if (match.status === 'closed') {
+                card.onclick = null;
+                card.style.cursor = 'default';
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
             }
@@ -1730,8 +1740,7 @@
             const card = document.createElement('div');
             card.className = 'mini-match-card';
             
-            // Add not-open class if match not open
-            if (match.status === 'not-open') {
+            if (match.status === 'not-open' || match.status === 'closed') {
                 card.classList.add('not-open');
             }
 
@@ -1827,6 +1836,9 @@
                 };
             } else if (match.status === 'finished' && match.actualScore) {
                 card.onclick = () => openResultsModal(match);
+            } else if (match.status === 'closed') {
+                card.onclick = null;
+                card.style.cursor = 'default';
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
             } else if (match.status === 'not-open') {
@@ -1936,7 +1948,12 @@
                 container.appendChild(favoriteCard);
             }
             
-            const upcoming = matches.filter(m => m.status === 'open');
+            const upcoming = matches.filter(m => m.status === 'open' || m.status === 'closed');
+            upcoming.sort((a, b) => {
+                if (a.status === 'closed' && b.status !== 'closed') return -1;
+                if (a.status !== 'closed' && b.status === 'closed') return 1;
+                return a.date - b.date;
+            });
             upcoming.forEach(match => {
                 container.appendChild(renderMatchCard(match));
             });
@@ -1963,16 +1980,15 @@
             container.innerHTML = '';
             
             // Filter: Open first, then pending (future), ordered by date
+            const statusOrder = { 'closed': 0, 'open': 1, 'not-open': 2 };
             const upcoming = matches
                 .filter(m => m.status !== 'finished')
                 .sort((a, b) => {
-                    // Priority: open > pending
-                    if (a.status === 'open' && b.status !== 'open') return -1;
-                    if (a.status !== 'open' && b.status === 'open') return 1;
-                    // Then by date
+                    const oa = statusOrder[a.status] ?? 9;
+                    const ob = statusOrder[b.status] ?? 9;
+                    if (oa !== ob) return oa - ob;
                     return a.date - b.date;
-                })
-                ; // Show all non-finished
+                });
             
             if (upcoming.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Không có trận sắp diễn ra</p>';
@@ -2601,10 +2617,13 @@
                 return;
             }
             
-            // Security: Check if match already started
+            if (match.status === 'closed') {
+                alert('🔒 Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
+                return;
+            }
+
             const now = new Date();
             const matchDate = new Date(match.date);
-            
             if (matchDate <= now && match.status !== 'finished') {
                 alert('⏰ Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
                 return;
