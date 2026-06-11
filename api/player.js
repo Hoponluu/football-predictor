@@ -143,7 +143,7 @@ module.exports = async function handler(req, res) {
 
       const { data: closed } = await sb
         .from('matches')
-        .update({ status: 'not-open' })
+        .update({ status: 'closed' })
         .eq('status', 'open')
         .lte('match_date', now)
         .select('id');

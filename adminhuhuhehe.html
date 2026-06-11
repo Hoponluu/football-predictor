@@ -1326,6 +1326,7 @@
                     <select class="form-select" id="matchStatus">
                         <option value="not-open">Chưa mở dự đoán</option>
                         <option value="open">Đang mở dự đoán</option>
+                        <option value="closed">Đã đóng dự đoán</option>
                         <option value="finished">Đã kết thúc</option>
                     </select>
                 </div>
@@ -2018,14 +2019,16 @@
                 let statusBadge = '';
                 if (match.status === 'open') {
                     statusBadge = '<span class="badge success">Mở</span>';
+                } else if (match.status === 'closed') {
+                    statusBadge = '<span class="badge" style="background:#EF4444;color:white;">Đã đóng</span>';
                 } else {
                     statusBadge = '<span class="badge warning">Chưa mở</span>';
                 }
-                
+
                 const matchPredictions = allPredictions.filter(p => p.match_id === match.id).length;
-                
+
                 const groupDisplay = match.match_group || match.group_name || 'Vòng bảng';
-                
+
                 html += `
                     <tr>
                         <td><strong>${match.home_team} vs ${match.away_team}</strong><br><small>${groupDisplay}</small></td>
@@ -2086,10 +2089,12 @@
                     statusBadge = '<span class="badge info">Kết thúc</span>';
                 } else if (match.status === 'open') {
                     statusBadge = '<span class="badge success">Mở</span>';
+                } else if (match.status === 'closed') {
+                    statusBadge = '<span class="badge" style="background:#EF4444;color:white;">Đã đóng</span>';
                 } else {
                     statusBadge = '<span class="badge warning">Chưa mở</span>';
                 }
-                
+
                 const penText = match.home_penalty != null ? ` (PEN ${match.home_penalty}-${match.away_penalty})` : '';
                 const resultText = match.home_score !== null && match.away_score !== null
                     ? `${match.home_score}-${match.away_score}${penText} (${match.minute}')`
