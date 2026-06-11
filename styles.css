@@ -1851,22 +1851,202 @@
             gap: 8px;
         }
 
-        /* Group Standings - Horizontal Scroll */
-        .standings-grid {
-            display: flex;
-            gap: 16px;
-            width: max-content;
-            padding-bottom: 8px;
+        /* Group Standings - Carousel (one table at a time) */
+        .standings-carousel {
+            max-width: 640px;
+            margin: 0 auto;
         }
 
-        .standings-card {
+        .standings-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .standings-nav-btn {
+            background: none;
+            border: 1px solid var(--stroke);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .standings-nav-btn:hover {
+            background: var(--stroke);
+        }
+
+        .standings-nav-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .standings-nav-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--stroke);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .standings-nav-dot.active {
+            background: var(--text-primary);
+            width: 10px;
+            height: 10px;
+        }
+
+        .standings-card-v2 {
             background: var(--surface);
             border: 1px solid var(--stroke);
-            border-radius: var(--border-radius);
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            width: 380px;
-            flex-shrink: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 12px;
+        }
+
+        .standings-header-bar {
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+        }
+
+        .standings-header-title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .standings-header-nav {
+            color: #d1d5db;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .standings-header-nav:hover {
+            color: #fff;
+        }
+
+        /* ===== Standings Table V2 ===== */
+        .standings-table-v2 {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .standings-table-v2 th {
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-weight: 400;
+            font-size: 13px;
+            padding: 8px 6px;
+            text-align: center;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .standings-table-v2 th:first-child {
+            text-align: left;
+            padding-left: 14px;
+            width: 40%;
+        }
+
+        .standings-table-v2 th:last-child {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .standings-table-v2 td {
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 15px;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--surface);
+        }
+
+        .standings-table-v2 tbody tr {
+            background: var(--bg);
+            transition: background 0.18s;
+            cursor: default;
+        }
+
+        .standings-table-v2 tbody tr:hover {
+            background: #EFF6FF;
+        }
+
+        .standings-table-v2 tbody tr.qualify-row-v2 {
+            background: var(--surface-secondary, #f8f9fa);
+        }
+
+        .standings-table-v2 tbody tr.qualify-row-v2:hover {
+            background: #EFF6FF;
+        }
+
+        .standings-team-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-left: 14px;
+            position: relative;
+        }
+
+        .standings-qualify-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            border-radius: 0 3px 3px 0;
+            background: #3B82F6;
+        }
+
+        .standings-team-rank {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-primary);
+            min-width: 16px;
+        }
+
+        .standings-team-flag {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .standings-team-name {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .standings-pts-cell {
+            font-weight: 700 !important;
+            color: var(--text-primary) !important;
+            font-size: 15px !important;
+        }
+
+        .standings-legend {
+            background: var(--bg);
+            border-top: 1px solid var(--stroke);
+            padding: 8px 14px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: rgba(0, 0, 0, 0.65);
+        }
+
+        [data-theme="dark"] .standings-table-v2 tbody tr:hover,
+        [data-theme="dark"] .standings-table-v2 tbody tr.qualify-row-v2:hover {
+            background: #1e293b;
         }
 
         /* Compact Group Cards - Horizontal Scroll */
@@ -2082,7 +2262,6 @@
 
         /* Mobile adjustments */
         @media (max-width: 768px) {
-            .standings-card,
             .compact-group-card {
                 width: 340px;
             }
@@ -2094,10 +2273,6 @@
         }
 
         @media (max-width: 480px) {
-            .standings-card {
-                width: 300px;
-            }
-
             .compact-group-card {
                 width: 300px;
             }
