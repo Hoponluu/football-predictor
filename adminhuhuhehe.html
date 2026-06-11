@@ -3301,14 +3301,21 @@
                 
                 console.log('✅ Match saved!', matchData);
                 
+                // Send notification: match result available
+                const matchLabel = `${currentResultMatch.home_team} vs ${currentResultMatch.away_team}`;
+                fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ action: 'notify', notifyType: 'match_result', matchId: currentResultMatch.id, matchLabel })
+                }).catch(e => console.warn('Notify error:', e));
+
                 // Refresh UI
                 await loadMatches();
                 renderMatchesTable();
                 renderDashboard();
-                
-                // Success message
+
                 alert('✅ Đã lưu kết quả trận đấu!\n\n⚠️ Lưu ý: Điểm predictions chưa tính tự động.\nCó thể tính thủ công sau.');
-                
+
                 closeModal('enterResultModal');
                 
             } catch (error) {
@@ -3356,14 +3363,24 @@
                     console.warn('⚠️ Could not set points_calculated flag:', flagError);
                 }
                 
+                // Send congrats notifications
+                const calcMatch = allMatches.find(m => m.id === matchId);
+                if (calcMatch) {
+                    const mLabel = `${calcMatch.home_team} vs ${calcMatch.away_team}`;
+                    fetch(ADMIN_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                        body: JSON.stringify({ action: 'notify', notifyType: 'scores_calculated', matchId, matchLabel: mLabel })
+                    }).catch(e => console.warn('Notify error:', e));
+                }
+
                 // Refresh data
-                await loadMatches(); // Reload to update button visibility
+                await loadMatches();
                 await loadPredictions();
                 await loadPlayers();
                 renderMatchesTable();
                 renderDashboard();
-                
-                // Success message
+
                 alert('✅ Đã tính điểm thành công!\n\n📊 Đã cập nhật:\n- Predictions table (điểm chi tiết)\n- Players table (tổng điểm)\n\n💡 Nút ⚡ đã ẩn để tránh tính trùng.\nNếu cần tính lại, dùng nút 🔄 Reset trước!');
                 
             } catch (error) {
