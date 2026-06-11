@@ -393,8 +393,8 @@
                 display: none !important;
             }
 
-            .notif-float-btn.visible {
-                display: flex;
+            .notif-float-btn.active {
+                display: flex !important;
             }
 
             .notif-panel {
