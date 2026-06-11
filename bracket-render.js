@@ -254,13 +254,15 @@ function renderStandingsTableV2(standings, groupLabel) {
         <div class="standings-header-bar">
             <span class="standings-header-title">Bảng ${groupLabel}</span>
         </div>
-        <table class="standings-table-v2">
-            <thead><tr>
-                <th>Đội</th><th>Trận</th><th>Thắng</th><th>Hoà</th><th>Thua</th>
-                <th>BT</th><th>BB</th><th>+/-</th><th>Điểm</th>
-            </tr></thead>
-            <tbody>${rows}</tbody>
-        </table>
+        <div style="overflow-x:auto;">
+            <table class="standings-table-v2">
+                <thead><tr>
+                    <th>Đội</th><th>Trận</th><th>Thắng</th><th>Hoà</th><th>Thua</th>
+                    <th>BT</th><th>BB</th><th>+/-</th><th>Điểm</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
         <div class="standings-legend">
             <span><strong>BT:</strong> Bàn thắng</span>
             <span><strong>BB:</strong> Bàn bại</span>
@@ -288,9 +290,18 @@ function getGroupStageData() {
     return groups;
 }
 
-var standingsCarouselIndex = 0;
+var standingsPageIndex = 0;
 var standingsGroupKeys = [];
 var standingsGroupData = {};
+
+function getStandingsPerPage() {
+    return window.innerWidth > 768 ? 2 : 1;
+}
+
+function getStandingsTotalPages() {
+    const perPage = getStandingsPerPage();
+    return Math.ceil(standingsGroupKeys.length / perPage);
+}
 
 function renderGroupStandings() {
     const container = document.getElementById('scheduleGroupStandings');
@@ -312,7 +323,8 @@ function renderGroupStandings() {
         return;
     }
 
-    if (standingsCarouselIndex >= standingsGroupKeys.length) standingsCarouselIndex = 0;
+    const totalPages = getStandingsTotalPages();
+    if (standingsPageIndex >= totalPages) standingsPageIndex = 0;
 
     renderStandingsCarouselPage(container);
 }
@@ -321,19 +333,23 @@ function renderStandingsCarouselPage(container) {
     if (!container) container = document.getElementById('scheduleGroupStandings');
     if (!container || standingsGroupKeys.length === 0) return;
 
-    const key = standingsGroupKeys[standingsCarouselIndex];
-    const { standings, label } = standingsGroupData[key];
+    const perPage = getStandingsPerPage();
+    const totalPages = getStandingsTotalPages();
+    const startIdx = standingsPageIndex * perPage;
+    const pageKeys = standingsGroupKeys.slice(startIdx, startIdx + perPage);
 
-    const tableHTML = renderStandingsTableV2(standings, label);
+    const tablesHTML = pageKeys.map(key => {
+        const { standings, label } = standingsGroupData[key];
+        return renderStandingsTableV2(standings, label);
+    }).join('');
 
-    const dots = standingsGroupKeys.map((k, i) => {
-        const lbl = standingsGroupData[k].label;
-        const active = i === standingsCarouselIndex ? 'active' : '';
-        return `<span class="standings-nav-dot ${active}" onclick="goToStandingsPage(${i})" title="Bảng ${lbl}"></span>`;
+    const dots = Array.from({ length: totalPages }, (_, i) => {
+        const active = i === standingsPageIndex ? 'active' : '';
+        return `<span class="standings-nav-dot ${active}" onclick="goToStandingsPage(${i})"></span>`;
     }).join('');
 
     container.innerHTML = `
-        ${tableHTML}
+        <div class="standings-carousel-grid">${tablesHTML}</div>
         <div class="standings-nav">
             <button class="standings-nav-btn" onclick="prevStandingsPage()">&#8249;</button>
             <div class="standings-nav-dots">${dots}</div>
@@ -343,17 +359,19 @@ function renderStandingsCarouselPage(container) {
 }
 
 function prevStandingsPage() {
-    standingsCarouselIndex = (standingsCarouselIndex - 1 + standingsGroupKeys.length) % standingsGroupKeys.length;
+    const totalPages = getStandingsTotalPages();
+    standingsPageIndex = (standingsPageIndex - 1 + totalPages) % totalPages;
     renderStandingsCarouselPage();
 }
 
 function nextStandingsPage() {
-    standingsCarouselIndex = (standingsCarouselIndex + 1) % standingsGroupKeys.length;
+    const totalPages = getStandingsTotalPages();
+    standingsPageIndex = (standingsPageIndex + 1) % totalPages;
     renderStandingsCarouselPage();
 }
 
 function goToStandingsPage(idx) {
-    standingsCarouselIndex = idx;
+    standingsPageIndex = idx;
     renderStandingsCarouselPage();
 }
 

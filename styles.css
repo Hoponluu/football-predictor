@@ -1851,16 +1851,29 @@
             gap: 8px;
         }
 
-        /* Group Standings - Carousel (one table at a time) */
+        /* Group Standings - Carousel */
         .standings-carousel {
-            max-width: 640px;
-            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        .standings-carousel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .standings-carousel-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .standings-nav {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            gap: 12px;
         }
 
         .standings-nav-btn {
@@ -1909,7 +1922,6 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            margin-bottom: 12px;
         }
 
         .standings-header-bar {
@@ -1955,13 +1967,16 @@
         .standings-table-v2 th:first-child {
             text-align: left;
             padding-left: 14px;
-            width: 40%;
         }
 
         .standings-table-v2 th:last-child {
             font-weight: 700;
             color: var(--text-primary);
             font-size: 14px;
+            position: sticky;
+            right: 0;
+            background: var(--surface);
+            z-index: 1;
         }
 
         .standings-table-v2 td {
@@ -1995,6 +2010,9 @@
             align-items: center;
             gap: 10px;
             padding-left: 14px;
+        }
+
+        .standings-table-v2 td:first-child {
             position: relative;
         }
 
@@ -2004,7 +2022,6 @@
             top: 0;
             bottom: 0;
             width: 3px;
-            border-radius: 0 3px 3px 0;
             background: #3B82F6;
         }
 
@@ -2031,6 +2048,10 @@
             font-weight: 700 !important;
             color: var(--text-primary) !important;
             font-size: 15px !important;
+            position: sticky;
+            right: 0;
+            background: inherit;
+            z-index: 1;
         }
 
         .standings-legend {
