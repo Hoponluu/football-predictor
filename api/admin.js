@@ -136,5 +136,60 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  if (action === 'notify') {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token || !verifyToken(token)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { notifyType, matchId, matchLabel } = req.body;
+    const sb = getServiceClient();
+
+    try {
+      const { data: allPlayers } = await sb.from('players').select('id');
+      const playerIds = (allPlayers || []).map(p => p.id);
+
+      if (notifyType === 'match_result') {
+        const rows = playerIds.map(pid => ({
+          player_id: pid, type: 'match_result',
+          title: matchLabel || 'Kết quả trận đấu',
+          body: 'Đã có kết quả! Xem điểm của bạn.',
+          match_id: matchId || null, action: 'view_match', seen: false
+        }));
+        await sb.from('notifications').insert(rows);
+      }
+
+      if (notifyType === 'scores_calculated') {
+        if (!matchId) return res.status(200).json({ success: true });
+
+        const { data: preds } = await sb
+          .from('predictions')
+          .select('player_id, points_rank, points_exact_score, points_minute')
+          .eq('match_id', matchId);
+
+        for (const p of (preds || [])) {
+          const msgs = [];
+          if (p.points_exact_score > 0) msgs.push('Dự đoán đúng tỉ số!');
+          if (p.points_minute > 0) msgs.push('Dự đoán đúng phút ghi bàn!');
+          if (p.points_rank === 4) msgs.push('Top 1 dự đoán trận này!');
+
+          if (msgs.length > 0) {
+            await sb.from('notifications').insert({
+              player_id: p.player_id, type: 'congrats',
+              title: matchLabel || 'Chúc mừng!',
+              body: msgs.join(' '),
+              match_id: matchId, action: 'view_match', seen: false
+            });
+          }
+        }
+      }
+
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   return res.status(400).json({ error: 'Unknown action' });
 };
