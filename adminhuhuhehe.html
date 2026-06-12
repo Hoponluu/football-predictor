@@ -4416,6 +4416,36 @@
                     }
                 }
 
+                // Send notifications for opened matches
+                if (openedCount > 0) {
+                    try {
+                        const { data: allPlayers } = await supabase.from('players').select('id');
+                        const playerIds = (allPlayers || []).map(p => p.id);
+
+                        const notifRows = [];
+                        for (const match of matchesToOpen) {
+                            const matchDate = new Date(match.match_date);
+                            const timeStr = matchDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                            for (const pid of playerIds) {
+                                notifRows.push({
+                                    player_id: pid,
+                                    type: 'match_open',
+                                    title: `${match.home_team} vs ${match.away_team}`,
+                                    body: `Đã mở dự đoán! Trận đấu lúc ${timeStr}`,
+                                    match_id: match.id,
+                                    action: 'predict',
+                                    seen: false
+                                });
+                            }
+                        }
+                        if (notifRows.length > 0) {
+                            await supabase.from('notifications').insert(notifRows);
+                        }
+                    } catch (notifErr) {
+                        console.warn('Failed to send open notifications:', notifErr);
+                    }
+                }
+
                 await loadMatches();
                 renderMatchesTable();
                 renderDashboard();

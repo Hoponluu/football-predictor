@@ -855,13 +855,27 @@
               .from('predictions')
               .select(`
                 *,
-                matches (*)
+                matches (*),
+                prediction_group_scores (
+                  group_id,
+                  points_rank,
+                  points_minute,
+                  total_points
+                )
               `)
               .eq('player_id', playerId);
-            
+
             if (error) throw error;
-            
-            return predictions || [];
+
+            return (predictions || []).map(p => {
+              const gs = (p.prediction_group_scores || []).find(s => s.group_id === groupId);
+              return {
+                ...p,
+                points_rank: gs ? gs.points_rank : 0,
+                points_minute: gs ? gs.points_minute : 0,
+                total_points: gs ? gs.total_points : 0
+              };
+            });
           } catch (error) {
             console.error('Get player predictions error:', error);
             return [];
@@ -1224,7 +1238,7 @@
 
             if (action === 'leaderboard') {
                 switchPage('leaderboard');
-            } else if (matchId && (action === 'open_match' || action === 'view_match')) {
+            } else if (matchId && (action === 'open_match' || action === 'view_match' || action === 'predict')) {
                 switchPage('schedule');
                 setTimeout(() => {
                     const card = document.querySelector(`[data-match-id="${matchId}"]`);
