@@ -4333,6 +4333,18 @@
                     const awayName = mapFdTeamName(rawAway);
 
                     let lastMinute = getFdLastGoalMinute(fdMatch);
+
+                    if (lastMinute === 0 && (score.home > 0 || score.away > 0)) {
+                        try {
+                            const detail = await fetchFootballDataMatches(fdMatch.id);
+                            lastMinute = getFdLastGoalMinute(detail);
+                            needMinuteCount++;
+                            await new Promise(r => setTimeout(r, 200));
+                        } catch (e) {
+                            console.warn(`Could not fetch match detail for ${fdMatch.id}:`, e);
+                        }
+                    }
+
                     const penStr = score.homePenalty != null ? ` (pen ${score.homePenalty}-${score.awayPenalty})` : '';
                     fetchedResults.push(`⚽ ${rawHome} ${score.home}-${score.away}${penStr} ${rawAway} · phút ${lastMinute || '?'}`);
 
@@ -4348,17 +4360,6 @@
                             unmatchedTeams.push(`⚠️ "${rawHome}" (→${homeName}) vs "${rawAway}" (→${awayName}) — ${score.home}-${score.away}`);
                         }
                         continue;
-                    }
-
-                    if (lastMinute === 0 && (score.home > 0 || score.away > 0)) {
-                        try {
-                            const detail = await fetchFootballDataMatches(fdMatch.id);
-                            lastMinute = getFdLastGoalMinute(detail);
-                            needMinuteCount++;
-                            await new Promise(r => setTimeout(r, 200));
-                        } catch (e) {
-                            console.warn(`Could not fetch match detail for ${fdMatch.id}:`, e);
-                        }
                     }
 
                     const updateData = {
