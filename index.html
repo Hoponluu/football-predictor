@@ -1238,7 +1238,7 @@
 
             if (action === 'leaderboard') {
                 switchPage('leaderboard');
-            } else if (matchId && (action === 'open_match' || action === 'view_match')) {
+            } else if (matchId && (action === 'open_match' || action === 'view_match' || action === 'predict')) {
                 switchPage('schedule');
                 setTimeout(() => {
                     const card = document.querySelector(`[data-match-id="${matchId}"]`);
