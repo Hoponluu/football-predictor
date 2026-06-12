@@ -21,20 +21,34 @@ module.exports = async function handler(req, res) {
     if (!groups || groups.length === 0) return res.status(200).json({ message: 'No groups' });
 
     for (const group of groups) {
-      // Get players in group with their total points
       const { data: memberships } = await sb
         .from('player_groups')
-        .select('players (id, name, favorite_points, predictions (total_points))')
+        .select('player_id, players (id, name, favorite_points)')
         .eq('group_id', group.id);
 
       if (!memberships || memberships.length < 2) continue;
 
-      const leaderboard = memberships
-        .map(m => m.players)
-        .filter(Boolean)
-        .map(p => {
-          const predPoints = (p.predictions || []).reduce((s, pr) => s + (pr.total_points || 0), 0);
-          return { id: p.id, name: p.name, points: predPoints + (p.favorite_points || 0) };
+      const playerMap = {};
+      for (const m of memberships) {
+        if (m.players) playerMap[m.player_id] = m.players;
+      }
+
+      const { data: groupScores } = await sb
+        .from('prediction_group_scores')
+        .select('total_points, predictions (player_id)')
+        .eq('group_id', group.id);
+
+      const pointsByPlayer = {};
+      for (const gs of (groupScores || [])) {
+        const pid = gs.predictions?.player_id;
+        if (!pid || !playerMap[pid]) continue;
+        pointsByPlayer[pid] = (pointsByPlayer[pid] || 0) + (gs.total_points || 0);
+      }
+
+      const leaderboard = Object.keys(playerMap)
+        .map(pid => {
+          const p = playerMap[pid];
+          return { id: p.id, name: p.name, points: (pointsByPlayer[pid] || 0) + (p.favorite_points || 0) };
         })
         .sort((a, b) => b.points - a.points);
 

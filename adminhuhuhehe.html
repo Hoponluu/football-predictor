@@ -898,19 +898,19 @@
 
                 <div id="dashboardAlerts"></div>
 
-                <!-- OpenFootball Sync Card -->
+                <!-- Football Data Sync Card -->
                 <div class="card" style="border-left: 4px solid var(--primary-green);">
                     <div class="card-header">
                         <h2 class="card-title">Tự động hóa</h2>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-sm btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán cho các trận trong 24h tới">🟢 Mở dự đoán (24h)</button>
-                            <button class="btn btn-sm btn-primary" onclick="syncFromOpenFootball()" title="Cập nhật kết quả từ OpenFootball GitHub">📡 Sync kết quả</button>
+                            <button class="btn btn-sm btn-primary" onclick="syncFromFootballData()" title="Cập nhật kết quả từ football-data.org">📡 Sync kết quả</button>
                             <button class="btn btn-sm btn-warning" id="btnFullSync" onclick="runFullSync()" title="Mở dự đoán + Sync kết quả">🔄 Đồng bộ toàn bộ</button>
                         </div>
                     </div>
                     <div style="padding: 0 20px 16px;">
                         <p style="color: var(--text-light); font-size: 13px; margin-bottom: 12px;">
-                            Nguồn dữ liệu: <a href="https://github.com/openfootball/worldcup.json" target="_blank" style="color: var(--blue);">openfootball/worldcup.json</a> —
+                            Nguồn dữ liệu: <a href="https://www.football-data.org" target="_blank" style="color: var(--blue);">football-data.org</a> (API v4) —
                             Dự đoán tự mở trước giờ thi đấu 24h · Kết quả tự cập nhật tỉ số & phút ghi bàn cuối
                         </p>
                         <div id="syncStatus"></div>
@@ -973,7 +973,7 @@
                         <h2 class="card-title">Danh sách trận đấu</h2>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán 24h trước trận">🟢 Mở DĐ</button>
-                            <button class="btn btn-info" onclick="syncFromOpenFootball()" title="Sync kết quả từ OpenFootball" style="background: var(--blue); color: white;">📡 Sync KQ</button>
+                            <button class="btn btn-info" onclick="syncFromFootballData()" title="Sync kết quả từ football-data.org" style="background: var(--blue); color: white;">📡 Sync KQ</button>
                             <button class="btn btn-success" onclick="calculateUncalculatedMatches()" title="Tính điểm các trận chưa tính">⚡ Tính điểm trận mới</button>
                             <button class="btn btn-warning" onclick="recalculateAllPlayerPoints()" title="Tính lại toàn bộ điểm từ đầu">🔄 Tính lại toàn bộ điểm</button>
                             <button class="btn btn-primary" onclick="openAddMatchModal()">+ Thêm trận đấu</button>
@@ -3424,6 +3424,14 @@
                 } else {
                     console.log(`🔄 Resetting ${predictions.length} predictions...`);
 
+                    const predIds = predictions.map(p => p.id);
+
+                    // Delete per-group scores
+                    await supabase
+                        .from('prediction_group_scores')
+                        .delete()
+                        .in('prediction_id', predIds);
+
                     // Reset prediction points to 0
                     for (const pred of predictions) {
                         await supabase
@@ -3473,26 +3481,21 @@
         async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
             try {
                 console.log('🔄 Calculating points for match:', matchId);
-                
-                // Get all predictions for this match
+
                 const { data: predictions, error: predError} = await supabase
                     .from('predictions')
                     .select('id, player_id, home_score, away_score, minute')
                     .eq('match_id', matchId);
-                
-                if (predError) {
-                    console.error('Error loading predictions:', predError);
-                    throw predError;
-                }
-                
+
+                if (predError) throw predError;
+
                 if (!predictions || predictions.length === 0) {
                     console.log('ℹ️ No predictions for this match');
                     return;
                 }
-                
+
                 console.log(`📊 Found ${predictions.length} predictions to score`);
-                
-                // Get scoring rules
+
                 const rules = scoringRules || {
                     points_rank_1: 5,
                     points_rank_2: 4,
@@ -3501,148 +3504,148 @@
                     points_exact_score: 5,
                     points_exact_minute: 3
                 };
-                
-                // Calculate scores for all predictions
-                // Ranking priority: 1) Exact score  2) Goal difference  3) Total score diff  4) Minute
+
                 const actualGoalDiff = actualHome - actualAway;
 
                 const scoredPredictions = predictions.map(pred => {
                     const exactScore = (pred.home_score === actualHome && pred.away_score === actualAway);
-
-                    // Goal difference accuracy: |predicted_diff - actual_diff|
                     const predGoalDiff = pred.home_score - pred.away_score;
                     const goalDiffAccuracy = Math.abs(predGoalDiff - actualGoalDiff);
-
-                    // Total individual score difference
                     const totalDiff = Math.abs(pred.home_score - actualHome) + Math.abs(pred.away_score - actualAway);
-
-                    // Minute prediction closeness
                     const minuteDiff = Math.abs(pred.minute - actualMinute);
+                    const exactScorePoints = exactScore ? rules.points_exact_score : 0;
 
                     return {
                         id: pred.id,
                         player_id: pred.player_id,
                         exactScore,
+                        exactScorePoints,
                         goalDiffAccuracy,
                         totalDiff,
                         minuteDiff
                     };
                 });
 
-                // Multi-level sort:
-                // 1. Exact score first (true > false)
-                // 2. Goal difference accuracy (lower = better)
-                // 3. Total score difference (lower = better)
-                // 4. Minute prediction (lower = better)
-                scoredPredictions.sort((a, b) => {
-                    if (a.exactScore !== b.exactScore) return a.exactScore ? -1 : 1;
-                    if (a.goalDiffAccuracy !== b.goalDiffAccuracy) return a.goalDiffAccuracy - b.goalDiffAccuracy;
-                    if (a.totalDiff !== b.totalDiff) return a.totalDiff - b.totalDiff;
-                    return a.minuteDiff - b.minuteDiff;
-                });
-                
-                // Find closest minute prediction (minimum difference)
-                const closestMinuteDiff = Math.min(...scoredPredictions.map(p => p.minuteDiff));
-                console.log(`🕐 Closest minute prediction: ${closestMinuteDiff} minutes difference`);
-                
-                // Calculate points and prepare updates
-                const updates = [];
-                const playerPointsMap = {};
-                const playerStatsMap = {};
-                
-                for (let i = 0; i < scoredPredictions.length; i++) {
-                    const pred = scoredPredictions[i];
-                    
-                    // Rank points
-                    let rankPoints = 0;
-                    if (i === 0) rankPoints = rules.points_rank_1;
-                    else if (i === 1) rankPoints = rules.points_rank_2;
-                    else if (i === 2) rankPoints = rules.points_rank_3;
-                    else rankPoints = rules.points_rank_other;
-                    
-                    const exactScorePoints = pred.exactScore ? rules.points_exact_score : 0;
-                    
-                    // Award minute points to CLOSEST prediction (not just exact)
-                    const exactMinutePoints = (pred.minuteDiff === closestMinuteDiff) ? rules.points_exact_minute : 0;
-                    
-                    const totalPoints = rankPoints + exactScorePoints + exactMinutePoints;
-                    
-                    updates.push({
-                        id: pred.id,
-                        player_id: pred.player_id,
-                        points_rank: rankPoints,
-                        points_exact_score: exactScorePoints,
-                        points_minute: exactMinutePoints,
-                        total_points: totalPoints
-                    });
-                    
-                    // Accumulate player stats
-                    if (!playerPointsMap[pred.player_id]) {
-                        playerPointsMap[pred.player_id] = 0;
-                        playerStatsMap[pred.player_id] = { exactScoreCount: 0, top1Count: 0 };
-                    }
-                    playerPointsMap[pred.player_id] += totalPoints;
-                    if (pred.exactScore) playerStatsMap[pred.player_id].exactScoreCount++;
-                    if (i === 0) playerStatsMap[pred.player_id].top1Count++;
-                    
-                    console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints}) [goalDiff:${pred.goalDiffAccuracy}, totalDiff:${pred.totalDiff}, minDiff:${pred.minuteDiff}]`);
+                // Update predictions with exact_score bonus (same for all groups)
+                console.log('💾 Updating predictions exact_score...');
+                for (const pred of scoredPredictions) {
+                    const { error } = await supabase
+                        .from('predictions')
+                        .update({ points_exact_score: pred.exactScorePoints })
+                        .eq('id', pred.id);
+                    if (error) console.error(`  ❌ Error updating prediction ${pred.id}:`, error);
+                    await new Promise(resolve => setTimeout(resolve, 20));
                 }
-                
-                console.log('💾 Updating predictions table (direct SQL)...');
-                
-                // Update predictions using direct SQL (RLS is disabled)
+
+                // Get all groups that have players who predicted this match
+                const playerIds = [...new Set(scoredPredictions.map(p => p.player_id))];
+                const { data: memberships } = await supabase
+                    .from('player_groups')
+                    .select('player_id, group_id')
+                    .in('player_id', playerIds);
+
+                const groupPlayerMap = {};
+                for (const m of (memberships || [])) {
+                    if (!groupPlayerMap[m.group_id]) groupPlayerMap[m.group_id] = new Set();
+                    groupPlayerMap[m.group_id].add(m.player_id);
+                }
+
+                console.log(`📊 Scoring across ${Object.keys(groupPlayerMap).length} group(s)`);
+
+                // Calculate per-group ranking + closest minute
+                const allGroupScores = [];
+
+                for (const [groupId, groupPlayerIds] of Object.entries(groupPlayerMap)) {
+                    const groupPreds = scoredPredictions.filter(p => groupPlayerIds.has(p.player_id));
+                    if (groupPreds.length === 0) continue;
+
+                    groupPreds.sort((a, b) => {
+                        if (a.exactScore !== b.exactScore) return a.exactScore ? -1 : 1;
+                        if (a.goalDiffAccuracy !== b.goalDiffAccuracy) return a.goalDiffAccuracy - b.goalDiffAccuracy;
+                        if (a.totalDiff !== b.totalDiff) return a.totalDiff - b.totalDiff;
+                        return a.minuteDiff - b.minuteDiff;
+                    });
+
+                    const closestMinuteDiff = Math.min(...groupPreds.map(p => p.minuteDiff));
+
+                    for (let i = 0; i < groupPreds.length; i++) {
+                        const pred = groupPreds[i];
+                        let rankPoints = 0;
+                        if (i === 0) rankPoints = rules.points_rank_1;
+                        else if (i === 1) rankPoints = rules.points_rank_2;
+                        else if (i === 2) rankPoints = rules.points_rank_3;
+                        else rankPoints = rules.points_rank_other;
+
+                        const minutePoints = (pred.minuteDiff === closestMinuteDiff) ? rules.points_exact_minute : 0;
+                        const total = rankPoints + pred.exactScorePoints + minutePoints;
+
+                        allGroupScores.push({
+                            prediction_id: pred.id,
+                            group_id: groupId,
+                            points_rank: rankPoints,
+                            points_minute: minutePoints,
+                            total_points: total
+                        });
+
+                        console.log(`  [${groupId.substring(0,8)}] #${i+1} Player ${pred.player_id.substring(0,8)}: ${total} pts (rank:${rankPoints}, exact:${pred.exactScorePoints}, min:${minutePoints}) [minDiff:${pred.minuteDiff}, closest:${closestMinuteDiff}]`);
+                    }
+                }
+
+                // Delete old group scores for this match's predictions, then insert new ones
+                const predictionIds = scoredPredictions.map(p => p.id);
+                console.log('💾 Updating prediction_group_scores...');
+
+                await supabase
+                    .from('prediction_group_scores')
+                    .delete()
+                    .in('prediction_id', predictionIds);
+
                 let successCount = 0;
                 let failCount = 0;
-                
-                for (const update of updates) {
-                    try {
-                        const { error } = await supabase
-                            .from('predictions')
-                            .update({
-                                points_rank: update.points_rank,
-                                points_exact_score: update.points_exact_score,
-                                points_minute: update.points_minute,
-                                total_points: update.total_points
-                            })
-                            .eq('id', update.id);
-                        
-                        if (error) {
-                            console.error(`  ❌ Error updating prediction ${update.id}:`, error);
-                            failCount++;
-                        } else {
-                            successCount++;
-                        }
-                        
-                        await new Promise(resolve => setTimeout(resolve, 20));
-                        
-                    } catch (err) {
-                        console.error(`  ❌ Failed to update prediction ${update.id}:`, err);
+                for (const score of allGroupScores) {
+                    const { error } = await supabase
+                        .from('prediction_group_scores')
+                        .insert(score);
+                    if (error) {
+                        console.error('  ❌ Insert group score error:', error);
                         failCount++;
+                    } else {
+                        successCount++;
                     }
+                    await new Promise(resolve => setTimeout(resolve, 20));
                 }
-                
-                console.log(`  ✅ ${successCount} predictions updated, ${failCount} failed`);
-                
-                console.log('💾 Recalculating player totals from all predictions...');
 
-                // Recalculate player stats from scratch (sum ALL predictions, not incremental)
-                for (const playerId of Object.keys(playerPointsMap)) {
+                console.log(`  ✅ ${successCount} group scores inserted, ${failCount} failed`);
+
+                // Also update predictions.total_points for backward compat (max across groups)
+                for (const pred of scoredPredictions) {
+                    const predGroupScores = allGroupScores.filter(s => s.prediction_id === pred.id);
+                    const maxTotal = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.total_points)) : pred.exactScorePoints;
+                    const maxRank = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.points_rank)) : 0;
+                    const maxMinute = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.points_minute)) : 0;
+                    await supabase
+                        .from('predictions')
+                        .update({ points_rank: maxRank, points_minute: maxMinute, total_points: maxTotal })
+                        .eq('id', pred.id);
+                    await new Promise(resolve => setTimeout(resolve, 20));
+                }
+
+                console.log('💾 Recalculating player totals...');
+                for (const playerId of playerIds) {
                     try {
                         await updatePlayerStats(playerId);
-                        console.log(`  ✅ Player ${playerId.substring(0,8)}: recalculated from all predictions`);
+                        console.log(`  ✅ Player ${playerId.substring(0,8)}: recalculated`);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     } catch (err) {
                         console.error(`  ❌ Failed to update player ${playerId}:`, err);
                     }
                 }
-                
+
                 if (failCount > 0) {
-                    console.warn(`⚠️ Some predictions failed to update (${failCount}/${updates.length})`);
-                    throw new Error(`${failCount} predictions failed to update. Check console for details.`);
-                } else {
-                    console.log('✅ All points calculated and updated successfully!');
+                    throw new Error(`${failCount} group scores failed to insert.`);
                 }
-                
+                console.log('✅ All points calculated and updated successfully!');
+
             } catch (error) {
                 console.error('❌ Calculate points error:', error);
                 throw error;
@@ -4203,67 +4206,87 @@
         }
 
         // ============================================
-        // OPENFOOTBALL SYNC & AUTO-OPEN
+        // FOOTBALL-DATA.ORG SYNC & AUTO-OPEN
         // ============================================
 
-        const OPENFOOTBALL_URL = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
-
-        const openFootballNameMap = {
-            'Brazil': 'Brasil'
+        const fdTeamNameMap = {
+            'Korea Republic': 'South Korea',
+            'Korea DPR': 'North Korea',
+            'IR Iran': 'Iran',
+            'Türkiye': 'Turkey',
+            'Côte d\'Ivoire': 'Ivory Coast',
+            'Congo DR': 'DR Congo',
+            'Chinese Taipei': 'Taiwan',
+            'Bosnia and Herzegovina': 'Bosnia-Herzegovina',
+            'Trinidad and Tobago': 'Trinidad & Tobago'
         };
 
-        function mapTeamName(ofName) {
-            return openFootballNameMap[ofName] || ofName;
+        function mapFdTeamName(fdName) {
+            return fdTeamNameMap[fdName] || fdName;
         }
 
-        function findLastGoalMinute(match) {
-            const allGoals = [...(match.goals1 || []), ...(match.goals2 || [])];
-            if (allGoals.length === 0) return 0;
+        function getFdFinalScore(fdMatch) {
+            const s = fdMatch.score;
+            if (!s || !s.fullTime || s.fullTime.home === null) return null;
+            const hasET = s.extraTime && s.extraTime.home !== null;
+            const hasPen = s.penalties && s.penalties.home !== null;
+            return {
+                home: hasET ? s.extraTime.home : s.fullTime.home,
+                away: hasET ? s.extraTime.away : s.fullTime.away,
+                homePenalty: hasPen ? s.penalties.home : null,
+                awayPenalty: hasPen ? s.penalties.away : null
+            };
+        }
+
+        function getFdLastGoalMinute(fdMatch) {
+            const goals = fdMatch.goals;
+            if (!goals || goals.length === 0) return 0;
             let maxMinute = 0;
-            allGoals.forEach(g => {
-                const total = g.minute + (g.offset || 0);
+            for (const g of goals) {
+                const total = (g.minute || 0) + (g.injuryTime || 0);
                 if (total > maxMinute) maxMinute = total;
-            });
+            }
             return Math.min(maxMinute, 120);
         }
 
-        function getFinalScore(match) {
-            if (!match.score) return null;
-            const ft = match.score.et || match.score.ft;
-            if (!ft || ft.length < 2) return null;
-            const result = { home: ft[0], away: ft[1], homePenalty: null, awayPenalty: null };
-            if (match.score.p && match.score.p.length >= 2) {
-                result.homePenalty = match.score.p[0];
-                result.awayPenalty = match.score.p[1];
+        async function fetchFootballDataMatches(fdMatchId) {
+            const resp = await fetch(ADMIN_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                body: JSON.stringify({ action: 'fetch_football_data', fdMatchId: fdMatchId || null })
+            });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || `API error ${resp.status}`);
             }
-            return result;
+            return resp.json();
         }
 
-        async function syncFromOpenFootball() {
+        async function syncFromFootballData() {
             const statusEl = document.getElementById('syncStatus');
             const setStatus = (msg, type) => {
                 if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : type === 'warning' ? '⏳' : '❌'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
             };
 
-            setStatus('Đang tải dữ liệu từ OpenFootball...', 'warning');
+            setStatus('Đang tải dữ liệu từ football-data.org...', 'warning');
 
             try {
-                const response = await fetch(OPENFOOTBALL_URL);
-                if (!response.ok) throw new Error('Không thể tải dữ liệu OpenFootball');
-                const data = await response.json();
+                const data = await fetchFootballDataMatches();
+                const fdMatches = data.matches || [];
+                const finishedMatches = fdMatches.filter(m => m.status === 'FINISHED');
 
-                const ofMatches = data.matches || [];
                 let updatedCount = 0;
                 let skippedCount = 0;
                 let errorCount = 0;
+                let needMinuteCount = 0;
                 const details = [];
 
-                for (const ofMatch of ofMatches) {
-                    const score = getFinalScore(ofMatch);
+                for (const fdMatch of finishedMatches) {
+                    const score = getFdFinalScore(fdMatch);
                     if (!score) continue;
 
-                    const homeName = mapTeamName(ofMatch.team1);
-                    const awayName = mapTeamName(ofMatch.team2);
+                    const homeName = mapFdTeamName(fdMatch.homeTeam?.name || fdMatch.homeTeam?.shortName || '');
+                    const awayName = mapFdTeamName(fdMatch.awayTeam?.name || fdMatch.awayTeam?.shortName || '');
 
                     const dbMatch = allMatches.find(m =>
                         m.home_team === homeName &&
@@ -4275,13 +4298,22 @@
                         const alreadyFinished = allMatches.find(m =>
                             m.home_team === homeName && m.away_team === awayName && m.status === 'finished'
                         );
-                        if (alreadyFinished) {
-                            skippedCount++;
-                        }
+                        if (alreadyFinished) skippedCount++;
                         continue;
                     }
 
-                    const lastMinute = findLastGoalMinute(ofMatch);
+                    let lastMinute = getFdLastGoalMinute(fdMatch);
+
+                    if (lastMinute === 0 && (score.home > 0 || score.away > 0)) {
+                        try {
+                            const detail = await fetchFootballDataMatches(fdMatch.id);
+                            lastMinute = getFdLastGoalMinute(detail);
+                            needMinuteCount++;
+                            await new Promise(r => setTimeout(r, 200));
+                        } catch (e) {
+                            console.warn(`Could not fetch match detail for ${fdMatch.id}:`, e);
+                        }
+                    }
 
                     const updateData = {
                         home_score: score.home,
@@ -4396,7 +4428,7 @@
             try {
                 await autoOpenPredictions();
                 await new Promise(r => setTimeout(r, 500));
-                await syncFromOpenFootball();
+                await syncFromFootballData();
             } finally {
                 if (btn) { btn.disabled = false; btn.textContent = '🔄 Đồng bộ toàn bộ'; }
             }
