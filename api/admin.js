@@ -217,8 +217,8 @@ module.exports = async function handler(req, res) {
         const errBody = await response.text();
         throw new Error(`worldcup26.ir API ${response.status}: ${errBody}`);
       }
-      const games = await response.json();
-      return res.status(200).json({ games });
+      const result = await response.json();
+      return res.status(200).json(result);
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
