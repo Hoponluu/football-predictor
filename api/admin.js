@@ -165,14 +165,22 @@ module.exports = async function handler(req, res) {
 
         const { data: preds } = await sb
           .from('predictions')
-          .select('player_id, points_rank, points_exact_score, points_minute')
+          .select('id, player_id, points_exact_score')
           .eq('match_id', matchId);
 
         for (const p of (preds || [])) {
+          const { data: gs } = await sb
+            .from('prediction_group_scores')
+            .select('points_rank, points_minute')
+            .eq('prediction_id', p.id);
+
+          const hasMinuteBonus = (gs || []).some(s => s.points_minute > 0);
+          const hasTop1 = (gs || []).some(s => s.points_rank >= 5);
+
           const msgs = [];
           if (p.points_exact_score > 0) msgs.push('Dự đoán đúng tỉ số!');
-          if (p.points_minute > 0) msgs.push('Dự đoán đúng phút ghi bàn!');
-          if (p.points_rank === 4) msgs.push('Top 1 dự đoán trận này!');
+          if (hasMinuteBonus) msgs.push('Dự đoán phút gần nhất!');
+          if (hasTop1) msgs.push('Top 1 dự đoán trận này!');
 
           if (msgs.length > 0) {
             await sb.from('notifications').insert({

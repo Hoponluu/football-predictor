@@ -277,47 +277,55 @@ async function getPlayerPredictions(playerId) {
 
 async function getLeaderboard(groupId) {
   try {
+    // Get players in this group
     const { data: memberships, error } = await supabase
       .from('player_groups')
-      .select(`
-        players (
-          id,
-          name,
-          favorite_team,
-          favorite_points,
-          predictions (
-            total_points,
-            points_rank,
-            points_exact_score,
-            points_minute
-          )
-        )
-      `)
+      .select('player_id, players (id, name, favorite_team, favorite_points)')
       .eq('group_id', groupId);
 
     if (error) throw error;
 
-    const players = (memberships || []).map(m => m.players).filter(Boolean);
+    const playerMap = {};
+    for (const m of (memberships || [])) {
+      if (m.players) playerMap[m.player_id] = m.players;
+    }
+    const playerIds = Object.keys(playerMap);
 
-    const leaderboard = players.map(player => {
-      const predictions = player.predictions || [];
-      const predictionPoints = predictions.reduce((sum, p) => sum + (p.total_points || 0), 0);
+    // Get per-group scores
+    const { data: groupScores, error: gsError } = await supabase
+      .from('prediction_group_scores')
+      .select('prediction_id, points_rank, points_minute, total_points, predictions (player_id, points_exact_score)')
+      .eq('group_id', groupId);
+
+    if (gsError) throw gsError;
+
+    // Aggregate per player from per-group scores
+    const playerTotals = {};
+    for (const gs of (groupScores || [])) {
+      const pid = gs.predictions?.player_id;
+      if (!pid || !playerMap[pid]) continue;
+      if (!playerTotals[pid]) playerTotals[pid] = { total: 0, top1: 0, exactScore: 0, exactMinute: 0 };
+      playerTotals[pid].total += gs.total_points || 0;
+      if (gs.points_rank === (window.scoringRules?.points_rank_1 || 5)) playerTotals[pid].top1++;
+      if (gs.predictions.points_exact_score > 0) playerTotals[pid].exactScore++;
+      if (gs.points_minute > 0) playerTotals[pid].exactMinute++;
+    }
+
+    const leaderboard = playerIds.map(pid => {
+      const player = playerMap[pid];
+      const totals = playerTotals[pid] || { total: 0, top1: 0, exactScore: 0, exactMinute: 0 };
       const favPoints = player.favorite_points || 0;
-      const totalPoints = predictionPoints + favPoints;
-      const top1Count = predictions.filter(p => p.points_rank === 4).length;
-      const exactScoreCount = predictions.filter(p => p.points_exact_score > 0).length;
-      const exactMinuteCount = predictions.filter(p => p.points_minute > 0).length;
 
       return {
         id: player.id,
         name: player.name,
-        points: totalPoints,
-        predictionPoints,
+        points: totals.total + favPoints,
+        predictionPoints: totals.total,
         favPoints,
         favoriteTeam: player.favorite_team,
-        top1: top1Count,
-        exactScore: exactScoreCount,
-        exactMinute: exactMinuteCount
+        top1: totals.top1,
+        exactScore: totals.exactScore,
+        exactMinute: totals.exactMinute
       };
     });
 
