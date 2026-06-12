@@ -4333,20 +4333,28 @@
                     const awayName = mapFdTeamName(rawAway);
 
                     let lastMinute = getFdLastGoalMinute(fdMatch);
+                    let goalSource = 'list';
 
                     if (lastMinute === 0 && (score.home > 0 || score.away > 0)) {
                         try {
                             const detail = await fetchFootballDataMatches(fdMatch.id);
+                            console.log(`📋 Match detail for ${rawHome} vs ${rawAway}:`, JSON.stringify(detail?.goals || detail?.match?.goals || 'no-goals-field').substring(0, 500));
                             lastMinute = getFdLastGoalMinute(detail);
+                            if (lastMinute === 0 && detail.match) {
+                                lastMinute = getFdLastGoalMinute(detail.match);
+                            }
+                            goalSource = 'detail';
                             needMinuteCount++;
                             await new Promise(r => setTimeout(r, 200));
                         } catch (e) {
                             console.warn(`Could not fetch match detail for ${fdMatch.id}:`, e);
+                            goalSource = 'error';
                         }
                     }
 
                     const penStr = score.homePenalty != null ? ` (pen ${score.homePenalty}-${score.awayPenalty})` : '';
-                    fetchedResults.push(`⚽ ${rawHome} ${score.home}-${score.away}${penStr} ${rawAway} · phút ${lastMinute || '?'}`);
+                    const goalsRaw = (fdMatch.goals || []).length;
+                    fetchedResults.push(`⚽ ${rawHome} ${score.home}-${score.away}${penStr} ${rawAway} · phút ${lastMinute || '?'} [src:${goalSource}, list-goals:${goalsRaw}]`);
 
                     console.log(`🔍 Matching: "${rawHome}" → "${homeName}" vs "${rawAway}" → "${awayName}"`);
 
