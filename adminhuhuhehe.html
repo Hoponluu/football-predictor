@@ -4210,19 +4210,53 @@
         // ============================================
 
         const fdTeamNameMap = {
+            'Brazil': 'Brasil',
+            'United States': 'USA',
             'Korea Republic': 'South Korea',
-            'Korea DPR': 'North Korea',
-            'IR Iran': 'Iran',
             'Türkiye': 'Turkey',
             'Côte d\'Ivoire': 'Ivory Coast',
+            'Cote d\'Ivoire': 'Ivory Coast',
+            'Bosnia and Herzegovina': 'Bosnia & Herzegovina',
+            'Bosnia-Herzegovina': 'Bosnia & Herzegovina',
+            'Cabo Verde': 'Cape Verde',
+            'Czechia': 'Czech Republic',
             'Congo DR': 'DR Congo',
-            'Chinese Taipei': 'Taiwan',
-            'Bosnia and Herzegovina': 'Bosnia-Herzegovina',
+            'IR Iran': 'Iran',
+            'Korea DPR': 'North Korea',
+            'Curacao': 'Curaçao',
             'Trinidad and Tobago': 'Trinidad & Tobago'
         };
 
+        function normalizeTeamName(name) {
+            return name
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toLowerCase()
+                .replace(/[&]/g, 'and')
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
         function mapFdTeamName(fdName) {
-            return fdTeamNameMap[fdName] || fdName;
+            if (fdTeamNameMap[fdName]) return fdTeamNameMap[fdName];
+            return fdName;
+        }
+
+        function findDbMatch(homeName, awayName, excludeFinished) {
+            let dbMatch = allMatches.find(m =>
+                m.home_team === homeName &&
+                m.away_team === awayName &&
+                (excludeFinished ? m.status !== 'finished' : true)
+            );
+            if (dbMatch) return dbMatch;
+
+            const normHome = normalizeTeamName(homeName);
+            const normAway = normalizeTeamName(awayName);
+            return allMatches.find(m =>
+                normalizeTeamName(m.home_team) === normHome &&
+                normalizeTeamName(m.away_team) === normAway &&
+                (excludeFinished ? m.status !== 'finished' : true)
+            );
         }
 
         function getFdFinalScore(fdMatch) {
@@ -4275,30 +4309,39 @@
                 const fdMatches = data.matches || [];
                 const finishedMatches = fdMatches.filter(m => m.status === 'FINISHED');
 
+                console.log(`📡 football-data.org: ${fdMatches.length} total, ${finishedMatches.length} finished`);
+
                 let updatedCount = 0;
                 let skippedCount = 0;
                 let errorCount = 0;
                 let needMinuteCount = 0;
                 const details = [];
+                const unmatchedTeams = [];
+
+                const dbTeamNames = new Set();
+                allMatches.forEach(m => { dbTeamNames.add(m.home_team); dbTeamNames.add(m.away_team); });
+                console.log('📋 DB team names:', [...dbTeamNames].sort().join(', '));
 
                 for (const fdMatch of finishedMatches) {
                     const score = getFdFinalScore(fdMatch);
                     if (!score) continue;
 
-                    const homeName = mapFdTeamName(fdMatch.homeTeam?.name || fdMatch.homeTeam?.shortName || '');
-                    const awayName = mapFdTeamName(fdMatch.awayTeam?.name || fdMatch.awayTeam?.shortName || '');
+                    const rawHome = fdMatch.homeTeam?.name || '';
+                    const rawAway = fdMatch.awayTeam?.name || '';
+                    const homeName = mapFdTeamName(rawHome);
+                    const awayName = mapFdTeamName(rawAway);
 
-                    const dbMatch = allMatches.find(m =>
-                        m.home_team === homeName &&
-                        m.away_team === awayName &&
-                        m.status !== 'finished'
-                    );
+                    console.log(`🔍 Matching: "${rawHome}" → "${homeName}" vs "${rawAway}" → "${awayName}"`);
+
+                    const dbMatch = findDbMatch(homeName, awayName, true);
 
                     if (!dbMatch) {
-                        const alreadyFinished = allMatches.find(m =>
-                            m.home_team === homeName && m.away_team === awayName && m.status === 'finished'
-                        );
-                        if (alreadyFinished) skippedCount++;
+                        const alreadyFinished = findDbMatch(homeName, awayName, false);
+                        if (alreadyFinished && alreadyFinished.status === 'finished') {
+                            skippedCount++;
+                        } else {
+                            unmatchedTeams.push(`⚠️ "${rawHome}" (→${homeName}) vs "${rawAway}" (→${awayName}) — ${score.home}-${score.away}`);
+                        }
                         continue;
                     }
 
@@ -4344,11 +4387,18 @@
                 renderMatchesTable();
                 renderDashboard();
 
-                const detailsHtml = details.length > 0
-                    ? `<br><small>${details.join('<br>')}</small>` : '';
+                const allDetails = [...details, ...unmatchedTeams];
+                const detailsHtml = allDetails.length > 0
+                    ? `<br><small>${allDetails.join('<br>')}</small>` : '';
+
+                if (unmatchedTeams.length > 0) {
+                    console.warn('⚠️ Unmatched teams:', unmatchedTeams);
+                }
 
                 if (updatedCount > 0) {
-                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${errorCount} lỗi${detailsHtml}`, 'success');
+                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${unmatchedTeams.length} không khớp tên | ${errorCount} lỗi${detailsHtml}`, 'success');
+                } else if (unmatchedTeams.length > 0) {
+                    setStatus(`Tên đội không khớp! ${unmatchedTeams.length} trận có KQ nhưng không match được tên trong DB (${skippedCount} đã có KQ)${detailsHtml}`, 'danger');
                 } else {
                     setStatus(`Không có trận mới cần cập nhật (${skippedCount} đã có KQ)${detailsHtml}`, 'warning');
                 }
