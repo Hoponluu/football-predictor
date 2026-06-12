@@ -4317,6 +4317,7 @@
                 let needMinuteCount = 0;
                 const details = [];
                 const unmatchedTeams = [];
+                const fetchedResults = [];
 
                 const dbTeamNames = new Set();
                 allMatches.forEach(m => { dbTeamNames.add(m.home_team); dbTeamNames.add(m.away_team); });
@@ -4330,6 +4331,10 @@
                     const rawAway = fdMatch.awayTeam?.name || '';
                     const homeName = mapFdTeamName(rawHome);
                     const awayName = mapFdTeamName(rawAway);
+
+                    let lastMinute = getFdLastGoalMinute(fdMatch);
+                    const penStr = score.homePenalty != null ? ` (pen ${score.homePenalty}-${score.awayPenalty})` : '';
+                    fetchedResults.push(`⚽ ${rawHome} ${score.home}-${score.away}${penStr} ${rawAway} · phút ${lastMinute || '?'}`);
 
                     console.log(`🔍 Matching: "${rawHome}" → "${homeName}" vs "${rawAway}" → "${awayName}"`);
 
@@ -4391,16 +4396,20 @@
                 const detailsHtml = allDetails.length > 0
                     ? `<br><small>${allDetails.join('<br>')}</small>` : '';
 
+                const fetchedHtml = fetchedResults.length > 0
+                    ? `<br><br><b>📡 Kết quả fetch về từ football-data.org (${fetchedResults.length} trận):</b><br><small>${fetchedResults.join('<br>')}</small>`
+                    : '<br><small>Không có trận nào có kết quả từ API</small>';
+
                 if (unmatchedTeams.length > 0) {
                     console.warn('⚠️ Unmatched teams:', unmatchedTeams);
                 }
 
                 if (updatedCount > 0) {
-                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${unmatchedTeams.length} không khớp tên | ${errorCount} lỗi${detailsHtml}`, 'success');
+                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${unmatchedTeams.length} không khớp tên | ${errorCount} lỗi${detailsHtml}${fetchedHtml}`, 'success');
                 } else if (unmatchedTeams.length > 0) {
-                    setStatus(`Tên đội không khớp! ${unmatchedTeams.length} trận có KQ nhưng không match được tên trong DB (${skippedCount} đã có KQ)${detailsHtml}`, 'danger');
+                    setStatus(`Tên đội không khớp! ${unmatchedTeams.length} trận có KQ nhưng không match được tên trong DB (${skippedCount} đã có KQ)${detailsHtml}${fetchedHtml}`, 'danger');
                 } else {
-                    setStatus(`Không có trận mới cần cập nhật (${skippedCount} đã có KQ)${detailsHtml}`, 'warning');
+                    setStatus(`Không có trận mới cần cập nhật (${skippedCount} đã có KQ)${detailsHtml}${fetchedHtml}`, 'warning');
                 }
 
                 return { updatedCount, skippedCount, errorCount };
