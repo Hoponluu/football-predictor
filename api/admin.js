@@ -199,5 +199,34 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  if (action === 'fetch_football_data') {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '');
+    if (!token || !verifyToken(token)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const apiKey = process.env.FOOTBALL_DATA_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'FOOTBALL_DATA_API_KEY not configured on Vercel' });
+
+    try {
+      const { fdMatchId } = req.body;
+      let url = 'https://api.football-data.org/v4/competitions/WC/matches';
+      if (fdMatchId) url = `https://api.football-data.org/v4/matches/${fdMatchId}`;
+
+      const response = await fetch(url, {
+        headers: { 'X-Auth-Token': apiKey }
+      });
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(`football-data.org API ${response.status}: ${errBody}`);
+      }
+      const data = await response.json();
+      return res.status(200).json(data);
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   return res.status(400).json({ error: 'Unknown action' });
 };
