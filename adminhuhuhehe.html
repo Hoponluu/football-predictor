@@ -4229,7 +4229,7 @@
 
         function normalizeTeamName(name) {
             return name
-                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 .toLowerCase()
                 .replace(/[&]/g, 'and')
                 .replace(/[^a-z0-9\s]/g, '')
@@ -4349,8 +4349,6 @@
                         }
                         continue;
                     }
-
-                    let lastMinute = getFdLastGoalMinute(fdMatch);
 
                     if (lastMinute === 0 && (score.home > 0 || score.away > 0)) {
                         try {
