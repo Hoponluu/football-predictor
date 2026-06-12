@@ -206,23 +206,19 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const apiKey = process.env.FOOTBALL_DATA_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'FOOTBALL_DATA_API_KEY not configured on Vercel' });
+    const wcToken = process.env.WC2026_API_TOKEN;
+    if (!wcToken) return res.status(500).json({ error: 'WC2026_API_TOKEN not configured on Vercel' });
 
     try {
-      const { fdMatchId } = req.body;
-      let url = 'https://api.football-data.org/v4/competitions/WC/matches';
-      if (fdMatchId) url = `https://api.football-data.org/v4/matches/${fdMatchId}`;
-
-      const response = await fetch(url, {
-        headers: { 'X-Auth-Token': apiKey }
+      const response = await fetch('https://worldcup26.ir/get/games', {
+        headers: { 'Authorization': `Bearer ${wcToken}` }
       });
       if (!response.ok) {
         const errBody = await response.text();
-        throw new Error(`football-data.org API ${response.status}: ${errBody}`);
+        throw new Error(`worldcup26.ir API ${response.status}: ${errBody}`);
       }
-      const data = await response.json();
-      return res.status(200).json(data);
+      const games = await response.json();
+      return res.status(200).json({ games });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
