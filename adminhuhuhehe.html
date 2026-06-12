@@ -904,13 +904,13 @@
                         <h2 class="card-title">Tự động hóa</h2>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-sm btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán cho các trận trong 24h tới">🟢 Mở dự đoán (24h)</button>
-                            <button class="btn btn-sm btn-primary" onclick="syncFromFootballData()" title="Cập nhật kết quả từ football-data.org">📡 Sync kết quả</button>
+                            <button class="btn btn-sm btn-primary" onclick="syncFromFootballData()" title="Cập nhật kết quả từ worldcup26.ir">📡 Sync kết quả</button>
                             <button class="btn btn-sm btn-warning" id="btnFullSync" onclick="runFullSync()" title="Mở dự đoán + Sync kết quả">🔄 Đồng bộ toàn bộ</button>
                         </div>
                     </div>
                     <div style="padding: 0 20px 16px;">
                         <p style="color: var(--text-light); font-size: 13px; margin-bottom: 12px;">
-                            Nguồn dữ liệu: <a href="https://www.football-data.org" target="_blank" style="color: var(--blue);">football-data.org</a> (API v4) —
+                            Nguồn dữ liệu: <a href="https://worldcup26.ir" target="_blank" style="color: var(--blue);">worldcup26.ir</a> —
                             Dự đoán tự mở trước giờ thi đấu 24h · Kết quả tự cập nhật tỉ số & phút ghi bàn cuối
                         </p>
                         <div id="syncStatus"></div>
@@ -973,7 +973,7 @@
                         <h2 class="card-title">Danh sách trận đấu</h2>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán 24h trước trận">🟢 Mở DĐ</button>
-                            <button class="btn btn-info" onclick="syncFromFootballData()" title="Sync kết quả từ football-data.org" style="background: var(--blue); color: white;">📡 Sync KQ</button>
+                            <button class="btn btn-info" onclick="syncFromFootballData()" title="Sync kết quả từ worldcup26.ir" style="background: var(--blue); color: white;">📡 Sync KQ</button>
                             <button class="btn btn-success" onclick="calculateUncalculatedMatches()" title="Tính điểm các trận chưa tính">⚡ Tính điểm trận mới</button>
                             <button class="btn btn-warning" onclick="recalculateAllPlayerPoints()" title="Tính lại toàn bộ điểm từ đầu">🔄 Tính lại toàn bộ điểm</button>
                             <button class="btn btn-primary" onclick="openAddMatchModal()">+ Thêm trận đấu</button>
@@ -4206,26 +4206,8 @@
         }
 
         // ============================================
-        // FOOTBALL-DATA.ORG SYNC & AUTO-OPEN
+        // WORLDCUP26.IR SYNC & AUTO-OPEN
         // ============================================
-
-        const fdTeamNameMap = {
-            'Brazil': 'Brasil',
-            'United States': 'USA',
-            'Korea Republic': 'South Korea',
-            'Türkiye': 'Turkey',
-            'Côte d\'Ivoire': 'Ivory Coast',
-            'Cote d\'Ivoire': 'Ivory Coast',
-            'Bosnia and Herzegovina': 'Bosnia & Herzegovina',
-            'Bosnia-Herzegovina': 'Bosnia & Herzegovina',
-            'Cabo Verde': 'Cape Verde',
-            'Czechia': 'Czech Republic',
-            'Congo DR': 'DR Congo',
-            'IR Iran': 'Iran',
-            'Korea DPR': 'North Korea',
-            'Curacao': 'Curaçao',
-            'Trinidad and Tobago': 'Trinidad & Tobago'
-        };
 
         function normalizeTeamName(name) {
             return name
@@ -4235,11 +4217,6 @@
                 .replace(/[^a-z0-9\s]/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
-        }
-
-        function mapFdTeamName(fdName) {
-            if (fdTeamNameMap[fdName]) return fdTeamNameMap[fdName];
-            return fdName;
         }
 
         function findDbMatch(homeName, awayName, excludeFinished) {
@@ -4259,35 +4236,30 @@
             );
         }
 
-        function getFdFinalScore(fdMatch) {
-            const s = fdMatch.score;
-            if (!s || !s.fullTime || s.fullTime.home === null) return null;
-            const hasET = s.extraTime && s.extraTime.home !== null;
-            const hasPen = s.penalties && s.penalties.home !== null;
-            return {
-                home: hasET ? s.extraTime.home : s.fullTime.home,
-                away: hasET ? s.extraTime.away : s.fullTime.away,
-                homePenalty: hasPen ? s.penalties.home : null,
-                awayPenalty: hasPen ? s.penalties.away : null
-            };
-        }
-
-        function getFdLastGoalMinute(fdMatch) {
-            const goals = fdMatch.goals;
-            if (!goals || goals.length === 0) return 0;
-            let maxMinute = 0;
-            for (const g of goals) {
-                const total = (g.minute || 0) + (g.injuryTime || 0);
-                if (total > maxMinute) maxMinute = total;
+        function parseScorersMinutes(scorersStr) {
+            if (!scorersStr || scorersStr === 'null' || scorersStr === '{}') return [];
+            const minutes = [];
+            const regex = /(\d+)'/g;
+            let match;
+            while ((match = regex.exec(scorersStr)) !== null) {
+                minutes.push(parseInt(match[1], 10));
             }
-            return Math.min(maxMinute, 120);
+            return minutes;
         }
 
-        async function fetchFootballDataMatches(fdMatchId) {
+        function getLastGoalMinute(game) {
+            const homeMinutes = parseScorersMinutes(game.home_scorers);
+            const awayMinutes = parseScorersMinutes(game.away_scorers);
+            const allMinutes = [...homeMinutes, ...awayMinutes];
+            if (allMinutes.length === 0) return 0;
+            return Math.min(Math.max(...allMinutes), 120);
+        }
+
+        async function fetchWcGames() {
             const resp = await fetch(ADMIN_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-                body: JSON.stringify({ action: 'fetch_football_data', fdMatchId: fdMatchId || null })
+                body: JSON.stringify({ action: 'fetch_football_data' })
             });
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
@@ -4302,61 +4274,32 @@
                 if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : type === 'warning' ? '⏳' : '❌'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
             };
 
-            setStatus('Đang tải dữ liệu từ football-data.org...', 'warning');
+            setStatus('Đang tải dữ liệu từ worldcup26.ir...', 'warning');
 
             try {
-                const data = await fetchFootballDataMatches();
-                const fdMatches = data.matches || [];
-                const finishedMatches = fdMatches.filter(m => m.status === 'FINISHED');
+                const data = await fetchWcGames();
+                const allGames = data.games || [];
+                const finishedGames = allGames.filter(g => g.finished === 'TRUE');
 
-                console.log(`📡 football-data.org: ${fdMatches.length} total, ${finishedMatches.length} finished`);
+                console.log(`📡 worldcup26.ir: ${allGames.length} total, ${finishedGames.length} finished`);
 
                 let updatedCount = 0;
                 let skippedCount = 0;
                 let errorCount = 0;
-                let needMinuteCount = 0;
                 const details = [];
                 const unmatchedTeams = [];
                 const fetchedResults = [];
 
-                const dbTeamNames = new Set();
-                allMatches.forEach(m => { dbTeamNames.add(m.home_team); dbTeamNames.add(m.away_team); });
-                console.log('📋 DB team names:', [...dbTeamNames].sort().join(', '));
+                for (const game of finishedGames) {
+                    const homeScore = parseInt(game.home_score, 10);
+                    const awayScore = parseInt(game.away_score, 10);
+                    if (isNaN(homeScore) || isNaN(awayScore)) continue;
 
-                for (const fdMatch of finishedMatches) {
-                    const score = getFdFinalScore(fdMatch);
-                    if (!score) continue;
+                    const homeName = game.home_team_name_en || '';
+                    const awayName = game.away_team_name_en || '';
+                    const lastMinute = getLastGoalMinute(game);
 
-                    const rawHome = fdMatch.homeTeam?.name || '';
-                    const rawAway = fdMatch.awayTeam?.name || '';
-                    const homeName = mapFdTeamName(rawHome);
-                    const awayName = mapFdTeamName(rawAway);
-
-                    let lastMinute = getFdLastGoalMinute(fdMatch);
-                    let goalSource = 'list';
-
-                    if (lastMinute === 0 && (score.home > 0 || score.away > 0)) {
-                        try {
-                            const detail = await fetchFootballDataMatches(fdMatch.id);
-                            console.log(`📋 Match detail for ${rawHome} vs ${rawAway}:`, JSON.stringify(detail?.goals || detail?.match?.goals || 'no-goals-field').substring(0, 500));
-                            lastMinute = getFdLastGoalMinute(detail);
-                            if (lastMinute === 0 && detail.match) {
-                                lastMinute = getFdLastGoalMinute(detail.match);
-                            }
-                            goalSource = 'detail';
-                            needMinuteCount++;
-                            await new Promise(r => setTimeout(r, 200));
-                        } catch (e) {
-                            console.warn(`Could not fetch match detail for ${fdMatch.id}:`, e);
-                            goalSource = 'error';
-                        }
-                    }
-
-                    const penStr = score.homePenalty != null ? ` (pen ${score.homePenalty}-${score.awayPenalty})` : '';
-                    const goalsRaw = (fdMatch.goals || []).length;
-                    fetchedResults.push(`⚽ ${rawHome} ${score.home}-${score.away}${penStr} ${rawAway} · phút ${lastMinute || '?'} [src:${goalSource}, list-goals:${goalsRaw}]`);
-
-                    console.log(`🔍 Matching: "${rawHome}" → "${homeName}" vs "${rawAway}" → "${awayName}"`);
+                    fetchedResults.push(`⚽ ${homeName} ${homeScore}-${awayScore} ${awayName} · phút ${lastMinute || '?'}`);
 
                     const dbMatch = findDbMatch(homeName, awayName, true);
 
@@ -4365,16 +4308,19 @@
                         if (alreadyFinished && alreadyFinished.status === 'finished') {
                             skippedCount++;
                         } else {
-                            unmatchedTeams.push(`⚠️ "${rawHome}" (→${homeName}) vs "${rawAway}" (→${awayName}) — ${score.home}-${score.away}`);
+                            unmatchedTeams.push(`⚠️ "${homeName}" vs "${awayName}" — ${homeScore}-${awayScore}`);
                         }
                         continue;
                     }
 
+                    const homePenalty = game.home_penalty != null && game.home_penalty !== '' ? parseInt(game.home_penalty, 10) : null;
+                    const awayPenalty = game.away_penalty != null && game.away_penalty !== '' ? parseInt(game.away_penalty, 10) : null;
+
                     const updateData = {
-                        home_score: score.home,
-                        away_score: score.away,
-                        home_penalty: score.homePenalty,
-                        away_penalty: score.awayPenalty,
+                        home_score: homeScore,
+                        away_score: awayScore,
+                        home_penalty: isNaN(homePenalty) ? null : homePenalty,
+                        away_penalty: isNaN(awayPenalty) ? null : awayPenalty,
                         minute: lastMinute,
                         status: 'finished',
                         points_calculated: false
@@ -4390,8 +4336,8 @@
                         details.push(`❌ ${homeName} vs ${awayName}: ${error.message}`);
                     } else {
                         updatedCount++;
-                        const penStr = score.homePenalty != null ? ` (PEN ${score.homePenalty}-${score.awayPenalty})` : '';
-                        details.push(`✅ ${homeName} ${score.home}-${score.away}${penStr} ${awayName} (${lastMinute}')`);
+                        const penStr = homePenalty != null ? ` (PEN ${homePenalty}-${awayPenalty})` : '';
+                        details.push(`✅ ${homeName} ${homeScore}-${awayScore}${penStr} ${awayName} (${lastMinute}')`);
                     }
                 }
 
@@ -4404,7 +4350,7 @@
                     ? `<br><small>${allDetails.join('<br>')}</small>` : '';
 
                 const fetchedHtml = fetchedResults.length > 0
-                    ? `<br><br><b>📡 Kết quả fetch về từ football-data.org (${fetchedResults.length} trận):</b><br><small>${fetchedResults.join('<br>')}</small>`
+                    ? `<br><br><b>📡 Kết quả fetch về từ worldcup26.ir (${fetchedResults.length} trận):</b><br><small>${fetchedResults.join('<br>')}</small>`
                     : '<br><small>Không có trận nào có kết quả từ API</small>';
 
                 if (unmatchedTeams.length > 0) {
