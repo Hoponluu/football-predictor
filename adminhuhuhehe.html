@@ -4275,18 +4275,29 @@
                 const fdMatches = data.matches || [];
                 const finishedMatches = fdMatches.filter(m => m.status === 'FINISHED');
 
+                console.log(`📡 football-data.org: ${fdMatches.length} total, ${finishedMatches.length} finished`);
+
                 let updatedCount = 0;
                 let skippedCount = 0;
                 let errorCount = 0;
                 let needMinuteCount = 0;
                 const details = [];
+                const unmatchedTeams = [];
+
+                const dbTeamNames = new Set();
+                allMatches.forEach(m => { dbTeamNames.add(m.home_team); dbTeamNames.add(m.away_team); });
+                console.log('📋 DB team names:', [...dbTeamNames].sort().join(', '));
 
                 for (const fdMatch of finishedMatches) {
                     const score = getFdFinalScore(fdMatch);
                     if (!score) continue;
 
-                    const homeName = mapFdTeamName(fdMatch.homeTeam?.name || fdMatch.homeTeam?.shortName || '');
-                    const awayName = mapFdTeamName(fdMatch.awayTeam?.name || fdMatch.awayTeam?.shortName || '');
+                    const rawHome = fdMatch.homeTeam?.name || '';
+                    const rawAway = fdMatch.awayTeam?.name || '';
+                    const homeName = mapFdTeamName(rawHome);
+                    const awayName = mapFdTeamName(rawAway);
+
+                    console.log(`🔍 Matching: "${rawHome}" → "${homeName}" vs "${rawAway}" → "${awayName}"`);
 
                     const dbMatch = allMatches.find(m =>
                         m.home_team === homeName &&
@@ -4298,7 +4309,11 @@
                         const alreadyFinished = allMatches.find(m =>
                             m.home_team === homeName && m.away_team === awayName && m.status === 'finished'
                         );
-                        if (alreadyFinished) skippedCount++;
+                        if (alreadyFinished) {
+                            skippedCount++;
+                        } else {
+                            unmatchedTeams.push(`⚠️ "${rawHome}" (→${homeName}) vs "${rawAway}" (→${awayName}) — ${score.home}-${score.away}`);
+                        }
                         continue;
                     }
 
@@ -4344,11 +4359,18 @@
                 renderMatchesTable();
                 renderDashboard();
 
-                const detailsHtml = details.length > 0
-                    ? `<br><small>${details.join('<br>')}</small>` : '';
+                const allDetails = [...details, ...unmatchedTeams];
+                const detailsHtml = allDetails.length > 0
+                    ? `<br><small>${allDetails.join('<br>')}</small>` : '';
+
+                if (unmatchedTeams.length > 0) {
+                    console.warn('⚠️ Unmatched teams:', unmatchedTeams);
+                }
 
                 if (updatedCount > 0) {
-                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${errorCount} lỗi${detailsHtml}`, 'success');
+                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${unmatchedTeams.length} không khớp tên | ${errorCount} lỗi${detailsHtml}`, 'success');
+                } else if (unmatchedTeams.length > 0) {
+                    setStatus(`Tên đội không khớp! ${unmatchedTeams.length} trận có KQ nhưng không match được tên trong DB (${skippedCount} đã có KQ)${detailsHtml}`, 'danger');
                 } else {
                     setStatus(`Không có trận mới cần cập nhật (${skippedCount} đã có KQ)${detailsHtml}`, 'warning');
                 }
