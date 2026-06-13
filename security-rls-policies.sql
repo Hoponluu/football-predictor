@@ -294,32 +294,13 @@ CREATE TRIGGER trg_protect_prediction_points
   EXECUTE FUNCTION protect_prediction_points();
 
 -- =============================================
--- BƯỚC 10: TRIGGER - NGĂN SỬA KẾT QUẢ TRẬN ĐẤU TỪ CLIENT
--- Không cần vì RLS đã block rồi, nhưng thêm cho chắc
+-- BƯỚC 10: (ĐÃ XÓA) TRIGGER NGĂN SỬA KẾT QUẢ
+-- Trigger protect_match_results đã bị xóa vì nó chặn admin sửa kết quả.
+-- RLS đã đủ bảo vệ — anon users không thể UPDATE matches.
 -- =============================================
 
-CREATE OR REPLACE FUNCTION protect_match_results()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Nếu trận đã finished, không cho sửa lại kết quả
-  IF OLD.status = 'finished' AND NEW.status = 'finished' THEN
-    -- Giữ nguyên kết quả cũ
-    NEW.home_score := OLD.home_score;
-    NEW.away_score := OLD.away_score;
-    NEW.minute := OLD.minute;
-    NEW.home_penalty := OLD.home_penalty;
-    NEW.away_penalty := OLD.away_penalty;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 DROP TRIGGER IF EXISTS trg_protect_match_results ON matches;
-CREATE TRIGGER trg_protect_match_results
-  BEFORE UPDATE ON matches
-  FOR EACH ROW
-  EXECUTE FUNCTION protect_match_results();
+DROP FUNCTION IF EXISTS protect_match_results();
 
 -- =============================================
 -- VERIFY: Kiểm tra RLS đã bật
