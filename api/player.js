@@ -177,6 +177,14 @@ module.exports = async function handler(req, res) {
         .lte('match_date', now)
         .select('id, home_team, away_team');
 
+      // not-open → closed (missed the open window)
+      const { data: directClosed } = await sb
+        .from('matches')
+        .update({ status: 'closed' })
+        .eq('status', 'not-open')
+        .lte('match_date', now)
+        .select('id, home_team, away_team');
+
       // Generate notifications for newly opened matches
       if (opened && opened.length > 0) {
         const allPlayers = await getAllPlayerIds(sb);
