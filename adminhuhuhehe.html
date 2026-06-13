@@ -4296,10 +4296,7 @@
                         continue;
                     }
 
-                    if (dbMatch.status === 'finished' &&
-                        dbMatch.home_score === homeScore &&
-                        dbMatch.away_score === awayScore &&
-                        dbMatch.minute === lastMinute) {
+                    if (dbMatch.status === 'finished') {
                         skippedCount++;
                         continue;
                     }
