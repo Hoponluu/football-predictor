@@ -4191,8 +4191,14 @@
         // WORLDCUP26.IR SYNC & AUTO-OPEN
         // ============================================
 
+        const TEAM_ALIASES = {
+            'United States': 'USA',
+            'Korea Republic': 'South Korea',
+        };
+
         function normalizeTeamName(name) {
-            return name
+            const mapped = TEAM_ALIASES[name] || name;
+            return mapped
                 .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 .toLowerCase()
                 .replace(/[&]/g, 'and')
