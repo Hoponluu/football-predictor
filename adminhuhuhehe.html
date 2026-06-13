@@ -2388,24 +2388,6 @@
             alert('Chức năng thêm trận đấu - Đang phát triển...');
         }
 
-        function editMatch(id) {
-            alert('Chức năng sửa trận đấu ID: ' + id + ' - Đang phát triển...');
-        }
-
-        function deleteMatch(id) {
-            if (confirm('Bạn có chắc muốn xóa trận đấu này?')) {
-                alert('Delete match ID: ' + id);
-            }
-        }
-
-        function openEnterResultModal(id) {
-            alert('Chức năng nhập kết quả match ID: ' + id + ' - Đang phát triển...');
-        }
-
-        function viewMatchDetails(id) {
-            alert('Xem chi tiết match ID: ' + id);
-        }
-
         function openAddPlayerModal() {
             alert('Chức năng thêm người chơi - Đang phát triển...');
         }
@@ -4301,15 +4283,18 @@
 
                     fetchedResults.push(`⚽ ${homeName} ${homeScore}-${awayScore} ${awayName} · phút ${lastMinute || '?'}`);
 
-                    const dbMatch = findDbMatch(homeName, awayName, true);
+                    const dbMatch = findDbMatch(homeName, awayName, false);
 
                     if (!dbMatch) {
-                        const alreadyFinished = findDbMatch(homeName, awayName, false);
-                        if (alreadyFinished && alreadyFinished.status === 'finished') {
-                            skippedCount++;
-                        } else {
-                            unmatchedTeams.push(`⚠️ "${homeName}" vs "${awayName}" — ${homeScore}-${awayScore}`);
-                        }
+                        unmatchedTeams.push(`⚠️ "${homeName}" vs "${awayName}" — ${homeScore}-${awayScore}`);
+                        continue;
+                    }
+
+                    if (dbMatch.status === 'finished' &&
+                        dbMatch.home_score === homeScore &&
+                        dbMatch.away_score === awayScore &&
+                        dbMatch.minute === lastMinute) {
+                        skippedCount++;
                         continue;
                     }
 

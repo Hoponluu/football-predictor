@@ -5,6 +5,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/auto-status",
+      "schedule": "0 0 * * *"
+    },
+    {
       "path": "/api/cron/daily-leaderboard",
       "schedule": "0 11 * * *"
     }
