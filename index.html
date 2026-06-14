@@ -3056,8 +3056,7 @@
                     return;
                 }
                 
-                // Sort by total points descending
-                predictions.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+                predictions.sort((a, b) => (b.points_rank || 0) - (a.points_rank || 0));
                 
                 // Create table structure (compact design like image 2)
                 let tableHTML = `
