@@ -456,6 +456,18 @@
             border-bottom: 2px solid var(--stroke);
         }
 
+        .sortable-th {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.15s;
+        }
+        .sortable-th:hover {
+            color: var(--primary);
+        }
+        .sortable-th.active {
+            color: var(--primary);
+        }
+
         .table td {
             padding: 16px;
             border-bottom: 1px solid var(--stroke);
@@ -986,8 +998,8 @@
                                     <th>M#</th>
                                     <th>Trận đấu</th>
                                     <th>Bảng</th>
-                                    <th>Thời gian (GMT+7)</th>
-                                    <th>Trạng thái</th>
+                                    <th class="sortable-th active" onclick="sortMatches('date')" id="sortDate">Thời gian (GMT+7) ▼</th>
+                                    <th class="sortable-th" onclick="sortMatches('status')" id="sortStatus">Trạng thái ⇅</th>
                                     <th>Kết quả</th>
                                     <th></th>
                                 </tr>
@@ -2071,16 +2083,57 @@
             }
         }
 
+        let matchSortField = 'date';
+        let matchSortAsc = true;
+
+        const STATUS_ORDER = { finished: 0, open: 1, closed: 2, 'not-open': 3 };
+
+        function sortMatches(field) {
+            if (matchSortField === field) {
+                matchSortAsc = !matchSortAsc;
+            } else {
+                matchSortField = field;
+                matchSortAsc = field === 'date';
+            }
+
+            const dateEl = document.getElementById('sortDate');
+            const statusEl = document.getElementById('sortStatus');
+            if (field === 'date') {
+                dateEl.textContent = 'Thời gian (GMT+7) ' + (matchSortAsc ? '▲' : '▼');
+                dateEl.classList.add('active');
+                statusEl.textContent = 'Trạng thái ⇅';
+                statusEl.classList.remove('active');
+            } else {
+                statusEl.textContent = 'Trạng thái ' + (matchSortAsc ? '▲' : '▼');
+                statusEl.classList.add('active');
+                dateEl.textContent = 'Thời gian (GMT+7) ⇅';
+                dateEl.classList.remove('active');
+            }
+
+            renderMatchesTable();
+        }
+
         function renderMatchesTable() {
             const tbody = document.getElementById('matchesTable');
-            
+
             if (allMatches.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Chưa có trận đấu nào</div></td></tr>';
                 return;
             }
-            
+
+            const sorted = [...allMatches].sort((a, b) => {
+                let cmp = 0;
+                if (matchSortField === 'date') {
+                    cmp = a.date - b.date;
+                } else {
+                    cmp = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+                    if (cmp === 0) cmp = a.date - b.date;
+                }
+                return matchSortAsc ? cmp : -cmp;
+            });
+
             let html = '';
-            allMatches.forEach(match => {
+            sorted.forEach(match => {
                 const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' });
                 const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
                 
@@ -3475,10 +3528,10 @@
                 console.log(`📊 Found ${predictions.length} predictions to score`);
 
                 const rules = scoringRules || {
-                    points_rank_1: 5,
-                    points_rank_2: 4,
-                    points_rank_3: 3,
-                    points_rank_other: 2,
+                    points_rank_1: 4,
+                    points_rank_2: 3,
+                    points_rank_3: 2,
+                    points_rank_other: 1,
                     points_exact_score: 5,
                     points_exact_minute: 3
                 };

@@ -949,12 +949,21 @@
             }
             const playerIds = Object.keys(playerMap);
 
-            const { data: groupScores, error: gsError } = await supabase
-              .from('prediction_group_scores')
-              .select('prediction_id, points_rank, points_minute, total_points, predictions (player_id, points_exact_score)')
-              .eq('group_id', grpId);
+            const [{ data: groupScores, error: gsError }, { data: rulesRow }] = await Promise.all([
+              supabase
+                .from('prediction_group_scores')
+                .select('prediction_id, points_rank, points_minute, total_points, predictions (player_id, points_exact_score)')
+                .eq('group_id', grpId),
+              supabase
+                .from('scoring_rules')
+                .select('points_rank_1')
+                .limit(1)
+                .maybeSingle()
+            ]);
 
             if (gsError) throw gsError;
+
+            const rank1Points = rulesRow?.points_rank_1 ?? 4;
 
             const playerTotals = {};
             for (const gs of (groupScores || [])) {
@@ -962,7 +971,7 @@
               if (!pid || !playerMap[pid]) continue;
               if (!playerTotals[pid]) playerTotals[pid] = { total: 0, top1: 0, exactScore: 0, exactMinute: 0 };
               playerTotals[pid].total += gs.total_points || 0;
-              if (gs.points_rank >= 5) playerTotals[pid].top1++;
+              if (gs.points_rank >= rank1Points) playerTotals[pid].top1++;
               if (gs.predictions.points_exact_score > 0) playerTotals[pid].exactScore++;
               if (gs.points_minute > 0) playerTotals[pid].exactMinute++;
             }
