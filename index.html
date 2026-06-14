@@ -2515,20 +2515,21 @@
                 if (cp) otherPlayers = [{ ...cp, _label: isUserTop1 ? 'Top 2' : 'Top 1' }];
             }
 
-            // Fetch all other players' predictions in one query
+            // Fetch other players' per-group scores
             if (otherPlayers.length > 0) {
                 try {
                     const otherIds = otherPlayers.map(p => p.id);
                     const { data: allPreds } = await supabase
                         .from('predictions')
-                        .select('player_id, match_id, total_points')
+                        .select('player_id, match_id, prediction_group_scores (group_id, total_points)')
                         .in('player_id', otherIds);
 
                     if (allPreds) {
                         const predsByPlayer = {};
                         allPreds.forEach(p => {
                             if (!predsByPlayer[p.player_id]) predsByPlayer[p.player_id] = {};
-                            predsByPlayer[p.player_id][p.match_id] = p.total_points || 0;
+                            const gs = (p.prediction_group_scores || []).find(s => s.group_id === groupId);
+                            predsByPlayer[p.player_id][p.match_id] = gs ? (gs.total_points || 0) : 0;
                         });
 
                         for (const op of otherPlayers) {
