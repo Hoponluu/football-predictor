@@ -3345,21 +3345,15 @@
                     console.warn('⚠️ Could not set points_calculated flag:', flagError);
                 }
                 
-                // Send congrats notifications
+                // Send notifications + refresh data in parallel
                 const calcMatch = allMatches.find(m => m.id === matchId);
-                if (calcMatch) {
-                    const mLabel = `${calcMatch.home_team} vs ${calcMatch.away_team}`;
-                    fetch(ADMIN_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-                        body: JSON.stringify({ action: 'notify', notifyType: 'scores_calculated', matchId, matchLabel: mLabel })
-                    }).catch(e => console.warn('Notify error:', e));
-                }
+                const notifyPromise = calcMatch ? fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ action: 'notify', notifyType: 'scores_calculated', matchId, matchLabel: `${calcMatch.home_team} vs ${calcMatch.away_team}` })
+                }).catch(e => console.warn('Notify error:', e)) : Promise.resolve();
 
-                // Refresh data
-                await loadMatches();
-                await loadPredictions();
-                await loadPlayers();
+                await Promise.all([notifyPromise, loadMatches(), loadPredictions(), loadPlayers()]);
                 renderMatchesTable();
                 renderDashboard();
 
@@ -3463,6 +3457,7 @@
         async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
             try {
                 console.log('🔄 Calculating points for match:', matchId);
+                console.time('⏱️ Total scoring time');
 
                 const { data: predictions, error: predError} = await supabase
                     .from('predictions')
@@ -3473,6 +3468,7 @@
 
                 if (!predictions || predictions.length === 0) {
                     console.log('ℹ️ No predictions for this match');
+                    console.timeEnd('⏱️ Total scoring time');
                     return;
                 }
 
@@ -3508,18 +3504,6 @@
                     };
                 });
 
-                // Update predictions with exact_score bonus (same for all groups)
-                console.log('💾 Updating predictions exact_score...');
-                for (const pred of scoredPredictions) {
-                    const { error } = await supabase
-                        .from('predictions')
-                        .update({ points_exact_score: pred.exactScorePoints })
-                        .eq('id', pred.id);
-                    if (error) console.error(`  ❌ Error updating prediction ${pred.id}:`, error);
-                    await new Promise(resolve => setTimeout(resolve, 20));
-                }
-
-                // Get all groups that have players who predicted this match
                 const playerIds = [...new Set(scoredPredictions.map(p => p.player_id))];
                 const { data: memberships } = await supabase
                     .from('player_groups')
@@ -3534,7 +3518,6 @@
 
                 console.log(`📊 Scoring across ${Object.keys(groupPlayerMap).length} group(s)`);
 
-                // Calculate per-group ranking + closest minute
                 const allGroupScores = [];
 
                 for (const [groupId, groupPlayerIds] of Object.entries(groupPlayerMap)) {
@@ -3568,64 +3551,62 @@
                             points_minute: minutePoints,
                             total_points: total
                         });
-
-                        console.log(`  [${groupId.substring(0,8)}] #${i+1} Player ${pred.player_id.substring(0,8)}: ${total} pts (rank:${rankPoints}, exact:${pred.exactScorePoints}, min:${minutePoints}) [minDiff:${pred.minuteDiff}, closest:${closestMinuteDiff}]`);
                     }
                 }
 
-                // Delete old group scores for this match's predictions, then insert new ones
                 const predictionIds = scoredPredictions.map(p => p.id);
-                console.log('💾 Updating prediction_group_scores...');
 
-                await supabase
-                    .from('prediction_group_scores')
-                    .delete()
-                    .in('prediction_id', predictionIds);
+                // Parallel batch: delete old scores + update exact_score in parallel
+                console.log('💾 Batch updating...');
+                const exactScoreUpdates = scoredPredictions.map(pred =>
+                    supabase.from('predictions')
+                        .update({ points_exact_score: pred.exactScorePoints })
+                        .eq('id', pred.id)
+                );
+                await Promise.all([
+                    supabase.from('prediction_group_scores').delete().in('prediction_id', predictionIds),
+                    ...exactScoreUpdates
+                ]);
 
-                let successCount = 0;
-                let failCount = 0;
-                for (const score of allGroupScores) {
-                    const { error } = await supabase
+                // Bulk insert all group scores in one call
+                if (allGroupScores.length > 0) {
+                    const { error: insertErr } = await supabase
                         .from('prediction_group_scores')
-                        .insert(score);
-                    if (error) {
-                        console.error('  ❌ Insert group score error:', error);
-                        failCount++;
-                    } else {
-                        successCount++;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 20));
+                        .insert(allGroupScores);
+                    if (insertErr) console.error('❌ Bulk insert group scores error:', insertErr);
                 }
 
-                console.log(`  ✅ ${successCount} group scores inserted, ${failCount} failed`);
-
-                // Also update predictions.total_points for backward compat (max across groups)
-                for (const pred of scoredPredictions) {
+                // Parallel: update predictions backward compat
+                const predUpdates = scoredPredictions.map(pred => {
                     const predGroupScores = allGroupScores.filter(s => s.prediction_id === pred.id);
                     const maxTotal = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.total_points)) : pred.exactScorePoints;
                     const maxRank = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.points_rank)) : 0;
                     const maxMinute = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.points_minute)) : 0;
-                    await supabase
-                        .from('predictions')
+                    return supabase.from('predictions')
                         .update({ points_rank: maxRank, points_minute: maxMinute, total_points: maxTotal })
                         .eq('id', pred.id);
-                    await new Promise(resolve => setTimeout(resolve, 20));
-                }
+                });
+                await Promise.all(predUpdates);
 
+                // Parallel: update player stats (fetch all predictions once, then update all players)
                 console.log('💾 Recalculating player totals...');
-                for (const playerId of playerIds) {
-                    try {
-                        await updatePlayerStats(playerId);
-                        console.log(`  ✅ Player ${playerId.substring(0,8)}: recalculated`);
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                    } catch (err) {
-                        console.error(`  ❌ Failed to update player ${playerId}:`, err);
-                    }
-                }
+                const { data: allPlayerPreds } = await supabase
+                    .from('predictions')
+                    .select('player_id, total_points, points_exact_score, points_rank')
+                    .in('player_id', playerIds);
 
-                if (failCount > 0) {
-                    throw new Error(`${failCount} group scores failed to insert.`);
-                }
+                const playerUpdates = playerIds.map(playerId => {
+                    const pPreds = (allPlayerPreds || []).filter(p => p.player_id === playerId);
+                    const totalPoints = pPreds.reduce((sum, p) => sum + (p.total_points || 0), 0);
+                    const exactScoreCount = pPreds.filter(p => p.points_exact_score > 0).length;
+                    const top1Count = pPreds.filter(p => p.points_rank === (rules.points_rank_1 || 5)).length;
+                    return supabase.from('players')
+                        .update({ total_points: totalPoints, exact_score_count: exactScoreCount, top1_count: top1Count })
+                        .eq('id', playerId);
+                });
+                await Promise.all(playerUpdates);
+
+                console.timeEnd('⏱️ Total scoring time');
                 console.log('✅ All points calculated and updated successfully!');
 
             } catch (error) {
