@@ -138,6 +138,7 @@
             min-width: 0;
             padding: 20px;
             position: relative;
+            overflow-x: hidden;
         }
 
         @media (max-width: 1360px) {
@@ -2405,6 +2406,53 @@
             background: #1e293b;
         }
 
+        /* 3rd Place Comparison Table */
+        .third-place-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .third-place-table thead {
+            background: var(--bg);
+        }
+
+        .third-place-table th {
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--stroke);
+        }
+
+        .third-place-table th:nth-child(2) {
+            text-align: left;
+        }
+
+        .third-place-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid var(--stroke);
+            color: var(--text-primary);
+        }
+
+        .third-place-table tbody tr:hover {
+            background: rgba(74, 222, 128, 0.06);
+        }
+
+        .third-place-table tr.third-qualify {
+            background: rgba(74, 222, 128, 0.08);
+        }
+
+        .third-place-table tr.third-qualify td:first-child {
+            border-left: 3px solid var(--primary);
+        }
+
+        [data-theme="dark"] .third-place-table tr.third-qualify {
+            background: rgba(74, 222, 128, 0.1);
+        }
+
         /* Compact Group Cards - Horizontal Scroll */
         .groups-scroll {
             overflow-x: auto;
@@ -2645,12 +2693,44 @@
             .history-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-number {
+                font-size: 36px;
+            }
+
+            .stat-card {
+                padding: 14px;
+            }
+
+            .leaderboard-table th,
+            .leaderboard-table td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+
+            .section {
+                padding: 16px 12px;
+            }
         }
 
         /* Chart Styles */
         #chartCanvas {
             max-width: 100%;
             height: auto;
+        }
+
+        #performanceChart {
+            overflow: hidden;
+        }
+
+        @media (max-width: 480px) {
+            #performanceChart {
+                padding: 12px 8px !important;
+            }
         }
 
         /* Responsive */
