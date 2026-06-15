@@ -2807,3 +2807,13 @@
 
             --card-width: 160px;
         }
+
+        @media (max-width: 480px) {
+            .history-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .matches-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            }
+        }
