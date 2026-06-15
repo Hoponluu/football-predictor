@@ -327,6 +327,7 @@ function renderGroupStandings() {
     if (standingsPageIndex >= totalPages) standingsPageIndex = 0;
 
     renderStandingsCarouselPage(container);
+    renderThirdPlaceComparison();
 }
 
 function renderStandingsCarouselPage(container) {
@@ -696,4 +697,91 @@ function hexToRgba(hex, alpha) {
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// ============================================
+// 3RD PLACE COMPARISON TABLE
+// World Cup 2026: 8 best 3rd-placed teams advance to R32
+// ============================================
+function renderThirdPlaceComparison() {
+    const container = document.getElementById('thirdPlaceComparison');
+    if (!container || !standingsGroupData || standingsGroupKeys.length === 0) {
+        if (container) container.innerHTML = '';
+        return;
+    }
+
+    const thirdPlaceTeams = [];
+    standingsGroupKeys.forEach(groupName => {
+        const { standings, label } = standingsGroupData[groupName];
+        if (standings.length >= 3) {
+            const team = standings[2];
+            thirdPlaceTeams.push({ ...team, group: label });
+        }
+    });
+
+    if (thirdPlaceTeams.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const hasPlayed = thirdPlaceTeams.some(t => t.mp > 0);
+    if (hasPlayed) {
+        thirdPlaceTeams.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    } else {
+        thirdPlaceTeams.sort((a, b) => a.group.localeCompare(b.group));
+    }
+
+    const qualifyCount = 8;
+
+    const rows = thirdPlaceTeams.map((t, i) => {
+        const flag = (typeof countries !== 'undefined' && countries[t.name]?.flag) || '';
+        const isQualify = hasPlayed && i < qualifyCount;
+        const rowClass = isQualify ? 'third-qualify' : '';
+
+        return `<tr class="${rowClass}">
+            <td style="text-align:center;font-weight:600;font-size:12px;color:var(--text-tertiary);">${i + 1}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:14px;">${flag}</span>
+                    <span style="font-weight:600;font-size:13px;">${t.name}</span>
+                    <span style="font-size:10px;color:var(--text-tertiary);background:var(--bg);padding:1px 5px;border-radius:4px;">${t.group}</span>
+                </div>
+            </td>
+            <td style="text-align:center;">${t.mp}</td>
+            <td style="text-align:center;">${t.w}</td>
+            <td style="text-align:center;">${t.d}</td>
+            <td style="text-align:center;">${t.l}</td>
+            <td style="text-align:center;">${t.gf}:${t.ga}</td>
+            <td style="text-align:center;font-weight:600;color:${t.gd > 0 ? '#059669' : t.gd < 0 ? '#DC2626' : '#6B7280'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+            <td style="text-align:center;font-weight:700;">${t.pts}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="background:var(--surface);border-radius:var(--border-radius);border:1px solid var(--stroke);overflow:hidden;">
+            <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--stroke);">
+                <span style="font-size:16px;">🔄</span>
+                <span style="font-weight:700;font-size:14px;color:var(--text-primary);">SO SÁNH CÁC ĐỘI HẠNG 3</span>
+                <span style="font-size:11px;color:var(--text-tertiary);margin-left:auto;">Top 8 đi tiếp</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="third-place-table">
+                    <thead>
+                        <tr>
+                            <th style="width:30px;">#</th>
+                            <th>Đội</th>
+                            <th>T</th>
+                            <th>Th</th>
+                            <th>H</th>
+                            <th>B</th>
+                            <th>BT</th>
+                            <th>HS</th>
+                            <th>Đ</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
 }
