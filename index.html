@@ -2341,7 +2341,9 @@
             
             container.innerHTML = '';
             
-            const history = matches.filter(m => m.status === 'finished').slice(0, 5);
+            const history = matches.filter(m => m.status === 'finished')
+                .sort((a, b) => b.date - a.date)
+                .slice(0, 5);
             history.forEach(match => {
                 container.appendChild(renderMatchCard(match));
             });
