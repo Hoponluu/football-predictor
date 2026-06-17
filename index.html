@@ -1995,7 +1995,7 @@
             const card = document.createElement('div');
             card.className = 'mini-match-card';
             
-            if (match.status === 'not-open' || match.status === 'closed') {
+            if (match.status === 'not-open') {
                 card.classList.add('not-open');
             }
 
@@ -2925,14 +2925,14 @@
             }
             
             if (match.status === 'closed') {
-                alert('🔒 Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
+                openResultsModal(match);
                 return;
             }
 
             const now = new Date();
             const matchDate = new Date(match.date);
             if (matchDate <= now && match.status !== 'finished') {
-                alert('⏰ Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
+                openResultsModal(match);
                 return;
             }
             
