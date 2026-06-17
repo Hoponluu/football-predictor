@@ -1983,8 +1983,7 @@
             } else if (match.status === 'finished' && match.actualScore) {
                 card.onclick = () => openResultsModal(match);
             } else if (match.status === 'closed') {
-                card.onclick = null;
-                card.style.cursor = 'default';
+                card.onclick = () => openResultsModal(match);
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
             }
@@ -2093,8 +2092,7 @@
             } else if (match.status === 'finished' && match.actualScore) {
                 card.onclick = () => openResultsModal(match);
             } else if (match.status === 'closed') {
-                card.onclick = null;
-                card.style.cursor = 'default';
+                card.onclick = () => openResultsModal(match);
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
             } else if (match.status === 'not-open') {
@@ -3083,96 +3081,98 @@
 
         function openResultsModal(match) {
             const modal = document.getElementById('resultsModal');
-            
+
             if (!countries[match.home] || !countries[match.away]) {
                 console.error(`Team not found in countries database: ${match.home} or ${match.away}`);
                 alert('Lỗi: Không tìm thấy thông tin đội bóng. Vui lòng liên hệ admin.');
                 return;
             }
-            
+
+            const hasResult = match.actualScore && match.actualScore.homeScore !== null && match.actualScore.homeScore !== undefined;
+
             document.getElementById('resultsHomeFlag').innerHTML = countries[match.home].flag;
             document.getElementById('resultsHomeFlag').style.background = countries[match.home].color;
             document.getElementById('resultsAwayFlag').innerHTML = countries[match.away].flag;
             document.getElementById('resultsAwayFlag').style.background = countries[match.away].color;
             document.getElementById('resultsHomeName').textContent = match.home;
             document.getElementById('resultsAwayName').textContent = match.away;
-            
-            // Display scores with penalty support
-            const hasPenalty = match.actualScore.home_penalty !== null && 
-                              match.actualScore.home_penalty !== undefined &&
-                              match.actualScore.away_penalty !== null &&
-                              match.actualScore.away_penalty !== undefined;
-            
-            if (hasPenalty) {
-                document.getElementById('resultsHomeScore').textContent = `${match.actualScore.homeScore}(${match.actualScore.home_penalty})`;
-                document.getElementById('resultsAwayScore').textContent = `${match.actualScore.awayScore}(${match.actualScore.away_penalty})`;
+
+            if (hasResult) {
+                const hasPenalty = match.actualScore.home_penalty !== null &&
+                                  match.actualScore.home_penalty !== undefined &&
+                                  match.actualScore.away_penalty !== null &&
+                                  match.actualScore.away_penalty !== undefined;
+
+                if (hasPenalty) {
+                    document.getElementById('resultsHomeScore').textContent = `${match.actualScore.homeScore}(${match.actualScore.home_penalty})`;
+                    document.getElementById('resultsAwayScore').textContent = `${match.actualScore.awayScore}(${match.actualScore.away_penalty})`;
+                } else {
+                    document.getElementById('resultsHomeScore').textContent = match.actualScore.homeScore;
+                    document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
+                }
+                document.getElementById('resultsMinute').textContent = `${match.actualScore.minute}'`;
             } else {
-                document.getElementById('resultsHomeScore').textContent = match.actualScore.homeScore;
-                document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
+                document.getElementById('resultsHomeScore').textContent = '-';
+                document.getElementById('resultsAwayScore').textContent = '-';
+                document.getElementById('resultsMinute').textContent = 'Đang đá';
             }
-            document.getElementById('resultsMinute').textContent = `${match.actualScore.minute}'`;
-            
-            // Load all predictions for this match from all players in group
+
             const resultsList = document.getElementById('resultsList');
             resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Đang tải dự đoán...</p>';
-            
+
             getMatchPredictions(match.id).then(predictions => {
                 resultsList.innerHTML = '';
-                
+
                 if (predictions.length === 0) {
                     resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Chưa có ai dự đoán trận này</p>';
                     return;
                 }
-                
-                predictions.sort((a, b) => (b.points_rank || 0) - (a.points_rank || 0));
-                
-                // Create table structure (compact design like image 2)
-                let tableHTML = `
-                    <table class="predictions-table">
-                        <tbody>
-                `;
+
+                if (hasResult) {
+                    predictions.sort((a, b) => (b.points_rank || 0) - (a.points_rank || 0));
+                } else {
+                    predictions.sort((a, b) => a.player_name.localeCompare(b.player_name));
+                }
+
+                let tableHTML = `<table class="predictions-table"><tbody>`;
 
                 predictions.forEach((pred, index) => {
                     const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
 
-                    const totalPoints = pred.total_points || 0;
-                    const pointsRank = pred.points_rank || 0;
-                    const pointsExact = pred.points_exact_score || 0;
-                    const pointsMinute = pred.points_minute || 0;
+                    if (hasResult) {
+                        const totalPoints = pred.total_points || 0;
+                        const pointsRank = pred.points_rank || 0;
+                        const pointsExact = pred.points_exact_score || 0;
+                        const pointsMinute = pred.points_minute || 0;
+                        const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
 
-                    const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
-
-                    tableHTML += `
-                        <tr class="${isCurrentUser ? 'current-user-row' : ''}">
-                            <td class="pred-rank-cell">
-                                ${rankBadge}
-                            </td>
-                            <td class="pred-name-cell ${isCurrentUser ? 'is-current' : ''}">
-                                ${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}
-                            </td>
-                            <td class="pred-score-cell">
-                                ${pred.home_score}-${pred.away_score}
-                            </td>
-                            <td class="pred-minute-cell">
-                                ${pred.minute}'
-                            </td>
-                            <td class="pred-badges-cell">
-                                ${pointsRank ? `<span class="pred-badge pred-badge-rank">🏆 +${pointsRank}</span>` : ''}
-                                ${pointsExact ? `<span class="pred-badge pred-badge-exact">🎯 +${pointsExact}</span>` : ''}
-                                ${pointsMinute ? `<span class="pred-badge pred-badge-minute">💡 +${pointsMinute}</span>` : ''}
-                            </td>
-                            <td class="pred-total-cell">
-                                +${totalPoints}
-                            </td>
-                        </tr>
-                    `;
+                        tableHTML += `
+                            <tr class="${isCurrentUser ? 'current-user-row' : ''}">
+                                <td class="pred-rank-cell">${rankBadge}</td>
+                                <td class="pred-name-cell ${isCurrentUser ? 'is-current' : ''}">${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}</td>
+                                <td class="pred-score-cell">${pred.home_score}-${pred.away_score}</td>
+                                <td class="pred-minute-cell">${pred.minute}'</td>
+                                <td class="pred-badges-cell">
+                                    ${pointsRank ? `<span class="pred-badge pred-badge-rank">🏆 +${pointsRank}</span>` : ''}
+                                    ${pointsExact ? `<span class="pred-badge pred-badge-exact">🎯 +${pointsExact}</span>` : ''}
+                                    ${pointsMinute ? `<span class="pred-badge pred-badge-minute">💡 +${pointsMinute}</span>` : ''}
+                                </td>
+                                <td class="pred-total-cell">+${totalPoints}</td>
+                            </tr>`;
+                    } else {
+                        tableHTML += `
+                            <tr class="${isCurrentUser ? 'current-user-row' : ''}">
+                                <td class="pred-rank-cell" style="color:var(--text-tertiary);">${index + 1}</td>
+                                <td class="pred-name-cell ${isCurrentUser ? 'is-current' : ''}">${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}</td>
+                                <td class="pred-score-cell">${pred.home_score}-${pred.away_score}</td>
+                                <td class="pred-minute-cell">${pred.minute}'</td>
+                                <td class="pred-badges-cell"></td>
+                                <td class="pred-total-cell" style="color:var(--text-tertiary);">-</td>
+                            </tr>`;
+                    }
                 });
-                
-                tableHTML += `
-                        </tbody>
-                    </table>
-                `;
-                
+
+                tableHTML += `</tbody></table>`;
                 resultsList.innerHTML = tableHTML;
             }).catch(error => {
                 console.error('Error loading predictions:', error);
