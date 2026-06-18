@@ -770,23 +770,26 @@
             display: flex;
             gap: 0;
             overflow-x: auto;
-            padding: 16px 0 24px;
+            padding: 20px 0 28px;
             position: relative;
+            scrollbar-width: thin;
         }
+        .sim-bracket-wrapper::-webkit-scrollbar { height: 6px; }
+        .sim-bracket-wrapper::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
         .sim-round {
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 170px;
+            min-width: 185px;
         }
         .sim-round-title {
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 3px 10px;
+            padding: 4px 14px;
             border-radius: 6px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             letter-spacing: 0.5px;
             position: sticky;
             top: 0;
@@ -807,60 +810,77 @@
         .sim-match-card {
             background: var(--white);
             border: 1px solid var(--stroke);
-            border-radius: 8px;
-            padding: 5px 8px;
+            border-radius: 6px;
+            padding: 0;
             border-left: 3px solid #3B82F6;
-            transition: box-shadow 0.15s;
+            transition: box-shadow 0.15s, transform 0.15s;
             font-size: 11px;
-            width: 155px;
+            width: 168px;
             flex-shrink: 0;
+            overflow: hidden;
         }
         .sim-match-card:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+            transform: translateY(-1px);
         }
         .sim-match-card.type-a { border-left-color: #3B82F6; }
         .sim-match-card.type-b { border-left-color: #10B981; }
         .sim-match-card.type-c { border-left-color: #F59E0B; }
-        .sim-match-card.round-r16 { border-left-color: #10B981; }
-        .sim-match-card.round-qf { border-left-color: #F59E0B; }
+        .sim-match-card.round-r16 { border-left-color: #6366F1; }
+        .sim-match-card.round-qf { border-left-color: #EC4899; }
         .sim-match-card.round-sf { border-left-color: #8B5CF6; }
         .sim-match-card.round-final { border-left-color: #EAB308; border-left-width: 4px; }
-        .sim-match-card.round-3rd { border-left-color: #6B7280; }
+        .sim-match-card.round-3rd { border-left-color: #78716C; }
+        .sim-match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 8px;
+            background: var(--bg-gray);
+            border-bottom: 1px solid var(--stroke);
+        }
         .sim-match-num {
             font-size: 9px;
             color: var(--text-light);
-            font-weight: 600;
-            margin-bottom: 2px;
-            display: flex;
-            justify-content: space-between;
+            font-weight: 700;
+        }
+        .sim-match-date {
+            font-size: 8px;
+            color: var(--text-light);
+            font-weight: 500;
         }
         .sim-match-teams {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 0;
         }
         .sim-team-row {
             display: flex;
             align-items: center;
             gap: 5px;
+            padding: 3px 8px;
+        }
+        .sim-team-row:first-child {
+            border-bottom: 1px solid var(--stroke);
         }
         .sim-team-flag {
-            font-size: 13px;
+            font-size: 14px;
             width: 18px;
             text-align: center;
             flex-shrink: 0;
         }
         .sim-team-name {
             font-weight: 600;
-            font-size: 10px;
+            font-size: 11px;
             color: var(--text-dark);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 80px;
+            flex: 1;
+            min-width: 0;
         }
         .sim-team-name.tbd {
-            color: var(--text-light);
+            color: #94A3B8;
             font-style: italic;
             font-weight: 500;
         }
@@ -868,24 +888,24 @@
             font-size: 8px;
             color: var(--text-light);
             background: var(--bg-gray);
-            padding: 0px 3px;
+            padding: 1px 4px;
             border-radius: 3px;
-            margin-left: auto;
+            flex-shrink: 0;
             white-space: nowrap;
         }
-        .sim-vs-divider {
-            height: 1px;
-            background: var(--stroke);
-            margin: 1px 0;
-        }
-        .sim-match-date {
-            font-size: 8px;
-            color: var(--text-light);
-            margin-top: 2px;
+        .sim-match-venue {
+            font-size: 7px;
+            color: #94A3B8;
+            padding: 2px 8px 3px;
+            background: #F8FAFC;
+            border-top: 1px solid var(--stroke);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .sim-connector-col {
             flex-shrink: 0;
-            width: 24px;
+            width: 28px;
             position: relative;
         }
         .sim-connector-col svg {
@@ -926,17 +946,17 @@
             display: flex;
             gap: 16px;
             flex-wrap: wrap;
-            margin-top: 12px;
+            margin-top: 14px;
             font-size: 11px;
             color: var(--text-light);
         }
         .sim-legend-item {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
         }
         .sim-legend-color {
-            width: 12px;
+            width: 14px;
             height: 4px;
             border-radius: 2px;
         }
@@ -4894,20 +4914,36 @@
         const SIM_3RD   = { 103: { home: 'L101', away: 'L102' } };
 
         const SIM_MATCH_DATES = {
-            73:'2026-06-29T02:00+07:00',74:'2026-06-30T03:30+07:00',75:'2026-06-30T08:00+07:00',
-            76:'2026-06-30T00:00+07:00',77:'2026-07-01T04:00+07:00',78:'2026-07-01T00:00+07:00',
-            79:'2026-07-01T08:00+07:00',80:'2026-07-01T23:00+07:00',81:'2026-07-02T07:00+07:00',
-            82:'2026-07-02T03:00+07:00',83:'2026-07-03T06:00+07:00',84:'2026-07-03T02:00+07:00',
-            85:'2026-07-03T10:00+07:00',86:'2026-07-04T05:00+07:00',87:'2026-07-04T08:30+07:00',
-            88:'2026-07-04T01:00+07:00',
-            89:'2026-07-05T03:00+07:00',90:'2026-07-05T07:00+07:00',
-            91:'2026-07-06T03:00+07:00',92:'2026-07-07T03:00+07:00',
-            93:'2026-07-07T07:00+07:00',94:'2026-07-08T03:00+07:00',
-            95:'2026-07-08T07:00+07:00',96:'2026-07-08T10:00+07:00',
-            97:'2026-07-10T03:00+07:00',98:'2026-07-11T02:00+07:00',
-            99:'2026-07-12T04:00+07:00',100:'2026-07-13T08:00+07:00',
-            101:'2026-07-15T02:00+07:00',102:'2026-07-16T02:00+07:00',
-            103:'2026-07-19T04:00+07:00',104:'2026-07-20T02:00+07:00'
+            // R32 (FOX Sports ET + 11h = GMT+7)
+            73:'2026-06-29T06:00+07:00',74:'2026-06-30T07:30+07:00',75:'2026-06-30T12:00+07:00',
+            76:'2026-06-30T04:00+07:00',77:'2026-07-01T08:00+07:00',78:'2026-07-01T04:00+07:00',
+            79:'2026-07-01T12:00+07:00',80:'2026-07-02T03:00+07:00',81:'2026-07-02T11:00+07:00',
+            82:'2026-07-02T07:00+07:00',83:'2026-07-03T10:00+07:00',84:'2026-07-03T06:00+07:00',
+            85:'2026-07-03T14:00+07:00',86:'2026-07-04T09:00+07:00',87:'2026-07-04T12:30+07:00',
+            88:'2026-07-04T05:00+07:00',
+            // R16
+            89:'2026-07-05T08:00+07:00',90:'2026-07-05T04:00+07:00',
+            91:'2026-07-06T07:00+07:00',92:'2026-07-06T11:00+07:00',
+            93:'2026-07-07T06:00+07:00',94:'2026-07-07T11:00+07:00',
+            95:'2026-07-08T03:00+07:00',96:'2026-07-08T07:00+07:00',
+            // QF
+            97:'2026-07-10T07:00+07:00',98:'2026-07-11T06:00+07:00',
+            99:'2026-07-12T08:00+07:00',100:'2026-07-12T12:00+07:00',
+            // SF
+            101:'2026-07-15T06:00+07:00',102:'2026-07-16T06:00+07:00',
+            // 3rd & Final
+            103:'2026-07-19T08:00+07:00',104:'2026-07-20T06:00+07:00'
+        };
+
+        const SIM_MATCH_VENUES = {
+            73:'Los Angeles',74:'Boston',75:'Monterrey',76:'Houston',
+            77:'New York/NJ',78:'Dallas',79:'Mexico City',80:'Atlanta',
+            81:'San Francisco',82:'Seattle',83:'Toronto',84:'Los Angeles',
+            85:'Vancouver',86:'Miami',87:'Kansas City',88:'Dallas',
+            89:'Philadelphia',90:'Houston',91:'New York/NJ',92:'Mexico City',
+            93:'Dallas',94:'Seattle',95:'Atlanta',96:'Vancouver',
+            97:'Boston',98:'Los Angeles',99:'Miami',100:'Kansas City',
+            101:'Dallas',102:'Atlanta',103:'Miami',104:'New York/NJ'
         };
 
         async function loadAnnexCData() {
@@ -5213,8 +5249,8 @@
             };
 
             const roundColors = {
-                R32: '#3B82F6', R16: '#10B981', QF: '#F59E0B',
-                SF: '#8B5CF6', FINAL: '#EAB308', '3RD': '#6B7280'
+                R32: '#3B82F6', R16: '#6366F1', QF: '#EC4899',
+                SF: '#8B5CF6', FINAL: '#EAB308', '3RD': '#78716C'
             };
 
             const formatDate = (dateStr) => {
@@ -5236,14 +5272,18 @@
 
             const renderMatchCard = (m, roundKey) => {
                 const typeClass = m.type ? `type-${m.type.toLowerCase()}` : `round-${roundKey.toLowerCase()}`;
-                const typeLabel = m.type ? ` • Loại ${m.type}` : '';
+                const typeLabel = m.type ? ` • ${m.type}` : '';
+                const venue = SIM_MATCH_VENUES[m.match_number] || '';
                 return `<div class="sim-match-card ${typeClass}" data-sim-match="${m.match_number}">
-                    <div class="sim-match-num"><span>M${m.match_number}${typeLabel}</span><span>${formatDate(m.date)}</span></div>
+                    <div class="sim-match-header">
+                        <span class="sim-match-num">M${m.match_number}${typeLabel}</span>
+                        <span class="sim-match-date">${formatDate(m.date)}</span>
+                    </div>
                     <div class="sim-match-teams">
                         ${renderTeamRow(m.home_team, m.home_seed, m.tbd)}
-                        <div class="sim-vs-divider"></div>
                         ${renderTeamRow(m.away_team, m.away_seed, m.tbd)}
                     </div>
+                    ${venue ? `<div class="sim-match-venue">📍 ${venue}</div>` : ''}
                 </div>`;
             };
 
@@ -5253,10 +5293,10 @@
             // QF: 4 cards, each slot = 4*H
             // SF: 2 cards, each slot = 8*H
             // Final: 1 card, slot = 16*H
-            const CARD_H = 68;
+            const CARD_H = 82;
             const GAP = 6;
             const SLOT_H = CARD_H + GAP;
-            const CONNECTOR_W = 24;
+            const CONNECTOR_W = 28;
 
             const rounds = ['R32', 'R16', 'QF', 'SF', 'FINAL'];
             const roundLabels = { R32: 'Vòng 32', R16: 'Vòng 16', QF: 'Tứ kết', SF: 'Bán kết', FINAL: 'Chung kết' };
@@ -5313,9 +5353,13 @@
 
             // Legend
             html += `<div class="sim-legend">
-                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#3B82F6;"></span> Loại A (Nhì vs Nhì)</div>
-                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#10B981;"></span> Loại B (Nhất vs Nhì)</div>
-                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#F59E0B;"></span> Loại C (Nhất vs Hạng 3)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#3B82F6;"></span> R32 Loại A (Nhì vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#10B981;"></span> R32 Loại B (Nhất vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#F59E0B;"></span> R32 Loại C (Nhất vs Hạng 3)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#6366F1;"></span> Vòng 16</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#EC4899;"></span> Tứ kết</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#8B5CF6;"></span> Bán kết</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#EAB308;"></span> Chung kết</div>
             </div>`;
 
             container.innerHTML = html;
@@ -5329,7 +5373,7 @@
             if (!wrapper) return;
 
             const roundColors = {
-                R32: '#3B82F6', R16: '#10B981', QF: '#F59E0B', SF: '#8B5CF6'
+                R32: '#3B82F6', R16: '#6366F1', QF: '#EC4899', SF: '#8B5CF6'
             };
 
             const connectorCols = wrapper.querySelectorAll('.sim-connector-col');
