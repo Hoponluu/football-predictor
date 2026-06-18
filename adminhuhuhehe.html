@@ -831,6 +831,16 @@
         .sim-match-card.round-sf { border-left-color: #8B5CF6; }
         .sim-match-card.round-final { border-left-color: #EAB308; border-left-width: 4px; }
         .sim-match-card.round-3rd { border-left-color: #78716C; }
+        .sim-match-card.right-side {
+            border-left: 1px solid var(--stroke);
+            border-right: 3px solid #3B82F6;
+        }
+        .sim-match-card.right-side.type-a { border-right-color: #3B82F6; }
+        .sim-match-card.right-side.type-b { border-right-color: #10B981; }
+        .sim-match-card.right-side.type-c { border-right-color: #F59E0B; }
+        .sim-match-card.right-side.round-r16 { border-right-color: #6366F1; }
+        .sim-match-card.right-side.round-qf { border-right-color: #EC4899; }
+        .sim-match-card.right-side.round-sf { border-right-color: #8B5CF6; }
         .sim-match-header {
             display: flex;
             justify-content: space-between;
@@ -5239,19 +5249,36 @@
             const container = document.getElementById('simBracketContainer');
             card.style.display = 'block';
 
-            const bracketOrder = {
-                R32: [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87],
-                R16: [89, 90, 93, 94, 91, 92, 95, 96],
-                QF: [97, 98, 99, 100],
-                SF: [101, 102],
-                FINAL: [104],
-                '3RD': [103]
-            };
+            const leftR32 = [74, 77, 73, 75, 83, 84, 81, 82];
+            const leftR16 = [89, 90, 93, 94];
+            const leftQF = [97, 98];
+            const leftSF = [101];
+            const rightR32 = [76, 78, 79, 80, 86, 88, 85, 87];
+            const rightR16 = [91, 92, 95, 96];
+            const rightQF = [99, 100];
+            const rightSF = [102];
 
             const roundColors = {
                 R32: '#3B82F6', R16: '#6366F1', QF: '#EC4899',
                 SF: '#8B5CF6', FINAL: '#EAB308', '3RD': '#78716C'
             };
+
+            const CARD_H = 82;
+            const GAP = 6;
+            const SLOT_H = CARD_H + GAP;
+            const HALF_DIVIDER = 24;
+            const totalH = 8 * SLOT_H + HALF_DIVIDER;
+
+            const r32Centers = [];
+            for (let i = 0; i < 8; i++) {
+                const base = i < 4 ? 0 : 4 * SLOT_H + HALF_DIVIDER;
+                const local = i < 4 ? i : i - 4;
+                r32Centers.push(base + local * SLOT_H + SLOT_H / 2);
+            }
+            const r16Centers = [0,1,2,3].map(j => (r32Centers[j*2] + r32Centers[j*2+1]) / 2);
+            const qfCenters = [0,1].map(k => (r16Centers[k*2] + r16Centers[k*2+1]) / 2);
+            const sfCenter = (qfCenters[0] + qfCenters[1]) / 2;
+            const finalCenter = totalH / 2;
 
             const formatDate = (dateStr) => {
                 if (!dateStr) return '';
@@ -5264,17 +5291,18 @@
                 const teamData = countries[name];
                 const flag = teamData ? teamData.flag : '❓';
                 return `<div class="sim-team-row">
-                    <span class="sim-team-flag">${teamData ? flag : '❓'}</span>
+                    <span class="sim-team-flag">${flag}</span>
                     <span class="sim-team-name ${isTbd ? 'tbd' : ''}">${name}</span>
                     <span class="sim-team-seed">${seed}</span>
                 </div>`;
             };
 
-            const renderMatchCard = (m, roundKey) => {
+            const renderMatchCard = (m, roundKey, rightSide) => {
                 const typeClass = m.type ? `type-${m.type.toLowerCase()}` : `round-${roundKey.toLowerCase()}`;
+                const sideClass = rightSide ? 'right-side' : '';
                 const typeLabel = m.type ? ` • ${m.type}` : '';
                 const venue = SIM_MATCH_VENUES[m.match_number] || '';
-                return `<div class="sim-match-card ${typeClass}" data-sim-match="${m.match_number}">
+                return `<div class="sim-match-card ${typeClass} ${sideClass}" data-sim-match="${m.match_number}">
                     <div class="sim-match-header">
                         <span class="sim-match-num">M${m.match_number}${typeLabel}</span>
                         <span class="sim-match-date">${formatDate(m.date)}</span>
@@ -5287,75 +5315,65 @@
                 </div>`;
             };
 
-            // Card height + gap calculations for vertical centering
-            // R32: 16 cards, each in a slot of height H
-            // R16: 8 cards, each slot = 2*H (centered between pair)
-            // QF: 4 cards, each slot = 4*H
-            // SF: 2 cards, each slot = 8*H
-            // Final: 1 card, slot = 16*H
-            const CARD_H = 82;
-            const GAP = 6;
-            const SLOT_H = CARD_H + GAP;
-            const CONNECTOR_W = 28;
+            const roundLabels = { R32: 'Vòng 32', R16: 'Vòng 16', QF: 'Tứ kết', SF: 'Bán kết' };
 
-            const rounds = ['R32', 'R16', 'QF', 'SF', 'FINAL'];
-            const roundLabels = { R32: 'Vòng 32', R16: 'Vòng 16', QF: 'Tứ kết', SF: 'Bán kết', FINAL: 'Chung kết' };
-
-            // Total bracket height based on 16 R32 slots (+1 for half separator)
-            // Top half: 8 slots, divider, Bottom half: 8 slots
-            const HALF_DIVIDER = 16;
-            const totalH = 16 * SLOT_H + HALF_DIVIDER;
-
-            let html = `<div class="sim-bracket-wrapper" style="height:${totalH + 40}px;">`;
-
-            rounds.forEach((roundKey, ri) => {
-                const matchNums = bracketOrder[roundKey];
-                const count = matchNums.length;
-                const slotMultiplier = Math.pow(2, ri);
-                const slotHeight = SLOT_H * slotMultiplier;
+            const buildRoundCol = (roundKey, matchNums, centers, rightSide, roundId) => {
                 const color = roundColors[roundKey];
+                let h = `<div class="sim-round" data-sim-round="${roundId}">`;
+                h += `<div class="sim-round-title" style="background:${color}15;color:${color};">${roundLabels[roundKey]}</div>`;
+                h += `<div class="sim-round-matches" style="height:${totalH}px;">`;
+                matchNums.forEach((num, i) => {
+                    const m = simMatches[num];
+                    if (!m) return;
+                    const y = centers[i] - CARD_H / 2;
+                    h += `<div class="sim-match-slot" style="position:absolute;top:${y}px;left:0;right:0;">${renderMatchCard(m, roundKey, rightSide)}</div>`;
+                });
+                h += `</div></div>`;
+                return h;
+            };
 
-                // Round column
-                html += `<div class="sim-round" data-sim-round="${roundKey}">`;
-                html += `<div class="sim-round-title" style="background:${color}15;color:${color};">${roundLabels[roundKey]}</div>`;
-                html += `<div class="sim-round-matches" style="height:${totalH}px;">`;
+            let html = `<div class="sim-bracket-wrapper" style="min-height:${totalH + 50}px;">`;
 
-                if (roundKey === 'FINAL') {
-                    // Final + 3rd placed at center
-                    const finalY = (totalH - CARD_H) / 2 - 30;
-                    const thirdY = finalY + CARD_H + 20;
-                    const fm = simMatches[104];
-                    const tm = simMatches[103];
-                    if (fm) html += `<div class="sim-match-slot" style="position:absolute;top:${finalY}px;left:0;right:0;">${renderMatchCard(fm, 'FINAL')}</div>`;
-                    if (tm) html += `<div class="sim-match-slot" style="position:absolute;top:${thirdY}px;left:0;right:0;">${renderMatchCard(tm, '3RD')}</div>`;
-                } else {
-                    // Each half: count/2 cards
-                    const halfCount = count / 2;
-                    for (let i = 0; i < count; i++) {
-                        const m = simMatches[matchNums[i]];
-                        if (!m) continue;
-                        const halfIdx = i < halfCount ? i : i - halfCount;
-                        const baseOffset = i < halfCount ? 0 : (8 * SLOT_H + HALF_DIVIDER);
-                        const y = baseOffset + halfIdx * slotHeight + (slotHeight - CARD_H) / 2;
-                        html += `<div class="sim-match-slot" style="position:absolute;top:${y}px;left:0;right:0;">${renderMatchCard(m, roundKey)}</div>`;
-                    }
-                }
+            // LEFT BRACKET: R32 → R16 → QF → SF
+            html += buildRoundCol('R32', leftR32, r32Centers, false, 'R32-L');
+            html += `<div class="sim-connector-col" data-connector="R32-L"></div>`;
+            html += buildRoundCol('R16', leftR16, r16Centers, false, 'R16-L');
+            html += `<div class="sim-connector-col" data-connector="R16-L"></div>`;
+            html += buildRoundCol('QF', leftQF, qfCenters, false, 'QF-L');
+            html += `<div class="sim-connector-col" data-connector="QF-L"></div>`;
+            html += buildRoundCol('SF', leftSF, [sfCenter], false, 'SF-L');
+            html += `<div class="sim-connector-col" data-connector="SF-L"></div>`;
 
-                html += `</div></div>`; // close round-matches + round
+            // CENTER: Final + 3rd place
+            const fColor = roundColors.FINAL;
+            html += `<div class="sim-round" style="min-width:195px;" data-sim-round="FINAL">`;
+            html += `<div class="sim-round-title" style="background:${fColor}25;color:${fColor};font-size:12px;">🏆 Chung kết</div>`;
+            html += `<div class="sim-round-matches" style="height:${totalH}px;">`;
+            const fm = simMatches[104];
+            const tm = simMatches[103];
+            const finalY = finalCenter - CARD_H - 14;
+            const thirdY = finalCenter + 14;
+            if (fm) html += `<div class="sim-match-slot" style="position:absolute;top:${finalY}px;left:0;right:0;">${renderMatchCard(fm, 'FINAL', false)}</div>`;
+            if (tm) html += `<div class="sim-match-slot" style="position:absolute;top:${thirdY}px;left:0;right:0;">${renderMatchCard(tm, '3RD', false)}</div>`;
+            html += `</div></div>`;
 
-                // Connector column between rounds (except after FINAL)
-                if (ri < rounds.length - 1) {
-                    html += `<div class="sim-connector-col" data-connector="${roundKey}"></div>`;
-                }
-            });
+            // RIGHT BRACKET (mirrored): SF ← QF ← R16 ← R32
+            html += `<div class="sim-connector-col" data-connector="SF-R"></div>`;
+            html += buildRoundCol('SF', rightSF, [sfCenter], true, 'SF-R');
+            html += `<div class="sim-connector-col" data-connector="QF-R"></div>`;
+            html += buildRoundCol('QF', rightQF, qfCenters, true, 'QF-R');
+            html += `<div class="sim-connector-col" data-connector="R16-R"></div>`;
+            html += buildRoundCol('R16', rightR16, r16Centers, true, 'R16-R');
+            html += `<div class="sim-connector-col" data-connector="R32-R"></div>`;
+            html += buildRoundCol('R32', rightR32, r32Centers, true, 'R32-R');
 
             html += '</div>';
 
             // Legend
             html += `<div class="sim-legend">
-                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#3B82F6;"></span> R32 Loại A (Nhì vs Nhì)</div>
-                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#10B981;"></span> R32 Loại B (Nhất vs Nhì)</div>
-                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#F59E0B;"></span> R32 Loại C (Nhất vs Hạng 3)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#3B82F6;"></span> R32 A (Nhì vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#10B981;"></span> R32 B (Nhất vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#F59E0B;"></span> R32 C (Nhất vs Hạng 3)</div>
                 <div class="sim-legend-item"><span class="sim-legend-color" style="background:#6366F1;"></span> Vòng 16</div>
                 <div class="sim-legend-item"><span class="sim-legend-color" style="background:#EC4899;"></span> Tứ kết</div>
                 <div class="sim-legend-item"><span class="sim-legend-color" style="background:#8B5CF6;"></span> Bán kết</div>
@@ -5363,8 +5381,6 @@
             </div>`;
 
             container.innerHTML = html;
-
-            // Draw SVG connectors after DOM is ready
             requestAnimationFrame(() => drawSimConnectors(totalH));
         }
 
@@ -5372,70 +5388,83 @@
             const wrapper = document.querySelector('.sim-bracket-wrapper');
             if (!wrapper) return;
 
-            const roundColors = {
-                R32: '#3B82F6', R16: '#6366F1', QF: '#EC4899', SF: '#8B5CF6'
+            const defs = [
+                { id:'R32-L', src:'R32-L', tgt:'R16-L', color:'#3B82F6', mirror:false },
+                { id:'R16-L', src:'R16-L', tgt:'QF-L',  color:'#6366F1', mirror:false },
+                { id:'QF-L',  src:'QF-L',  tgt:'SF-L',  color:'#EC4899', mirror:false },
+                { id:'SF-L',  src:'SF-L',  tgt:'FINAL',  color:'#8B5CF6', mirror:false, single:true },
+                { id:'SF-R',  src:'SF-R',  tgt:'FINAL',  color:'#8B5CF6', mirror:true,  single:true },
+                { id:'QF-R',  src:'QF-R',  tgt:'SF-R',  color:'#EC4899', mirror:true },
+                { id:'R16-R', src:'R16-R', tgt:'QF-R',  color:'#6366F1', mirror:true },
+                { id:'R32-R', src:'R32-R', tgt:'R16-R', color:'#3B82F6', mirror:true },
+            ];
+
+            const getY = (card, colRect) => {
+                const r = card.getBoundingClientRect();
+                return (r.top + r.height / 2) - colRect.top;
             };
 
-            const connectorCols = wrapper.querySelectorAll('.sim-connector-col');
-            connectorCols.forEach(col => {
-                const roundKey = col.getAttribute('data-connector');
-                const color = roundColors[roundKey] || '#CBD5E1';
+            defs.forEach(def => {
+                const col = wrapper.querySelector(`[data-connector="${def.id}"]`);
+                if (!col) return;
+                const srcEl = wrapper.querySelector(`[data-sim-round="${def.src}"]`);
+                const tgtEl = wrapper.querySelector(`[data-sim-round="${def.tgt}"]`);
+                if (!srcEl || !tgtEl) return;
 
-                const roundEl = wrapper.querySelector(`[data-sim-round="${roundKey}"]`);
-                if (!roundEl) return;
+                const srcCards = [...srcEl.querySelectorAll('.sim-match-card')];
+                let tgtCards = [...tgtEl.querySelectorAll('.sim-match-card')];
+                if (def.tgt === 'FINAL') tgtCards = tgtCards.filter(c => c.dataset.simMatch === '104');
+                if (!srcCards.length || !tgtCards.length) return;
 
-                const cards = [...roundEl.querySelectorAll('.sim-match-card')];
-                if (cards.length < 2) return;
-
-                const nextRounds = { R32: 'R16', R16: 'QF', QF: 'SF', SF: 'FINAL' };
-                const nextRoundKey = nextRounds[roundKey];
-                const nextRoundEl = wrapper.querySelector(`[data-sim-round="${nextRoundKey}"]`);
-                if (!nextRoundEl) return;
-                const nextCards = [...nextRoundEl.querySelectorAll('.sim-match-card')];
-
-                const wrapperRect = wrapper.getBoundingClientRect();
                 const colRect = col.getBoundingClientRect();
-                const colOffsetX = colRect.left - wrapperRect.left;
                 const colW = colRect.width;
-
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svg.setAttribute('width', colW);
-                svg.setAttribute('height', totalH + 40);
-                svg.style.position = 'absolute';
-                svg.style.top = '0';
-                svg.style.left = '0';
+                svg.setAttribute('height', totalH + 50);
+                svg.style.cssText = 'position:absolute;top:0;left:0;';
 
-                for (let i = 0; i < cards.length - 1; i += 2) {
-                    const card1 = cards[i];
-                    const card2 = cards[i + 1];
-                    const targetCard = nextCards[Math.floor(i / 2)];
-                    if (!card1 || !card2 || !targetCard) continue;
+                const makePath = (d) => {
+                    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    p.setAttribute('d', d);
+                    p.setAttribute('fill', 'none');
+                    p.setAttribute('stroke', def.color);
+                    p.setAttribute('stroke-width', '1.5');
+                    p.setAttribute('stroke-opacity', '0.45');
+                    p.setAttribute('stroke-linecap', 'round');
+                    return p;
+                };
 
-                    const r1 = card1.getBoundingClientRect();
-                    const r2 = card2.getBoundingClientRect();
-                    const rt = targetCard.getBoundingClientRect();
-
-                    const y1 = (r1.top + r1.height / 2) - colRect.top;
-                    const y2 = (r2.top + r2.height / 2) - colRect.top;
-                    const yT = (rt.top + rt.height / 2) - colRect.top;
-
-                    const xStart = 0;
+                if (def.single) {
+                    const ys = getY(srcCards[0], colRect);
+                    const yt = getY(tgtCards[0], colRect);
+                    if (def.mirror) {
+                        svg.appendChild(makePath(`M ${colW} ${ys} C ${colW*0.35} ${ys}, ${colW*0.65} ${yt}, 0 ${yt}`));
+                    } else {
+                        svg.appendChild(makePath(`M 0 ${ys} C ${colW*0.65} ${ys}, ${colW*0.35} ${yt}, ${colW} ${yt}`));
+                    }
+                } else {
                     const xMid = colW / 2;
-                    const xEnd = colW;
-
-                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    path.setAttribute('d', [
-                        `M ${xStart} ${y1} H ${xMid}`,
-                        `M ${xStart} ${y2} H ${xMid}`,
-                        `M ${xMid} ${y1} V ${y2}`,
-                        `M ${xMid} ${yT} H ${xEnd}`
-                    ].join(' '));
-                    path.setAttribute('fill', 'none');
-                    path.setAttribute('stroke', color);
-                    path.setAttribute('stroke-width', '1.5');
-                    path.setAttribute('stroke-opacity', '0.4');
-                    path.setAttribute('stroke-linecap', 'round');
-                    svg.appendChild(path);
+                    for (let i = 0; i < srcCards.length - 1; i += 2) {
+                        const c1 = srcCards[i], c2 = srcCards[i+1];
+                        const tc = tgtCards[Math.floor(i/2)];
+                        if (!c1 || !c2 || !tc) continue;
+                        const y1 = getY(c1, colRect), y2 = getY(c2, colRect), yT = getY(tc, colRect);
+                        if (def.mirror) {
+                            svg.appendChild(makePath([
+                                `M ${colW} ${y1} H ${xMid}`,
+                                `M ${colW} ${y2} H ${xMid}`,
+                                `M ${xMid} ${y1} V ${y2}`,
+                                `M ${xMid} ${yT} H 0`
+                            ].join(' ')));
+                        } else {
+                            svg.appendChild(makePath([
+                                `M 0 ${y1} H ${xMid}`,
+                                `M 0 ${y2} H ${xMid}`,
+                                `M ${xMid} ${y1} V ${y2}`,
+                                `M ${xMid} ${yT} H ${colW}`
+                            ].join(' ')));
+                        }
+                    }
                 }
 
                 col.innerHTML = '';
