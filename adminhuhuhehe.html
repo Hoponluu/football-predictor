@@ -764,6 +764,157 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Bracket Simulation Styles */
+        .sim-bracket-wrapper {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 16px 0;
+            position: relative;
+        }
+        .sim-round {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 160px;
+        }
+        .sim-round-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 4px 12px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+        .sim-round-matches {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+        .sim-match-card {
+            background: var(--white);
+            border: 1px solid var(--stroke);
+            border-radius: 8px;
+            padding: 6px 10px;
+            border-top: 3px solid #3B82F6;
+            transition: box-shadow 0.15s;
+            font-size: 12px;
+        }
+        .sim-match-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .sim-match-card.type-a { border-top-color: #3B82F6; }
+        .sim-match-card.type-b { border-top-color: #10B981; }
+        .sim-match-card.type-c { border-top-color: #F59E0B; }
+        .sim-match-card.round-r16 { border-top-color: #10B981; }
+        .sim-match-card.round-qf { border-top-color: #F59E0B; }
+        .sim-match-card.round-sf { border-top-color: #8B5CF6; }
+        .sim-match-card.round-final { border-top-color: #EAB308; }
+        .sim-match-card.round-3rd { border-top-color: #6B7280; }
+        .sim-match-num {
+            font-size: 10px;
+            color: var(--text-light);
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        .sim-match-teams {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .sim-team-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sim-team-flag {
+            font-size: 14px;
+            width: 20px;
+            text-align: center;
+        }
+        .sim-team-name {
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--text-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100px;
+        }
+        .sim-team-name.tbd {
+            color: var(--text-light);
+            font-style: italic;
+        }
+        .sim-team-seed {
+            font-size: 9px;
+            color: var(--text-light);
+            background: var(--bg-gray);
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        .sim-vs-divider {
+            height: 1px;
+            background: var(--stroke);
+            margin: 2px 0;
+        }
+        .sim-match-date {
+            font-size: 9px;
+            color: var(--text-light);
+            margin-top: 3px;
+        }
+        .sim-third-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .sim-third-table th {
+            background: var(--bg-gray);
+            padding: 8px 10px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 2px solid var(--stroke);
+        }
+        .sim-third-table th:nth-child(2) { text-align: left; }
+        .sim-third-table td {
+            padding: 6px 10px;
+            text-align: center;
+            border-bottom: 1px solid var(--stroke);
+        }
+        .sim-third-table td:nth-child(2) { text-align: left; }
+        .sim-third-table tr.qualify {
+            background: rgba(74, 222, 128, 0.08);
+        }
+        .sim-third-table tr.qualify td:first-child {
+            color: #059669;
+            font-weight: 700;
+        }
+        .sim-legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            font-size: 11px;
+            color: var(--text-light);
+        }
+        .sim-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .sim-legend-color {
+            width: 12px;
+            height: 4px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -837,6 +988,14 @@
                     <a class="nav-item" onclick="switchAdminPage('favorites')">
                         <span class="nav-item-icon">⭐</span>
                         <span>Đội yêu thích</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Công cụ</div>
+                    <a class="nav-item" onclick="switchAdminPage('bracket-sim')">
+                        <span class="nav-item-icon">🏆</span>
+                        <span>Mô phỏng nhánh đấu</span>
                     </a>
                 </div>
             </nav>
@@ -1258,6 +1417,56 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Bracket Simulation Page -->
+            <div id="bracket-sim" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Mô phỏng nhánh đấu</h1>
+                    <p class="page-subtitle">Tạo và xem trước sơ đồ vòng loại trực tiếp dựa trên xếp hạng vòng bảng hiện tại</p>
+                </div>
+
+                <div id="simLockBanner" class="card" style="border-left: 4px solid var(--orange); display:none;">
+                    <div style="display:flex;align-items:center;gap:12px;padding:16px;">
+                        <span style="font-size:24px;">🔒</span>
+                        <div>
+                            <strong>Chưa thể chốt dữ liệu</strong>
+                            <p style="color:var(--text-light);font-size:13px;margin-top:4px;">Vòng bảng chưa kết thúc. Bạn có thể xem mô phỏng nhưng không thể tạo trận đấu thật cho đến khi tất cả trận vòng bảng hoàn tất.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                        <h2 class="card-title">📊 Trạng thái vòng bảng</h2>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-primary" onclick="generateBracketSimulation()" id="simGenerateBtn">
+                                🔄 Tạo mô phỏng
+                            </button>
+                            <button class="btn btn-success" onclick="finalizeSimulation()" id="simFinalizeBtn" style="display:none;">
+                                ✅ Chốt → Tạo trận thật
+                            </button>
+                        </div>
+                    </div>
+                    <div id="simGroupStatus" style="padding:16px;">
+                        <p style="color:var(--text-light);">Bấm "Tạo mô phỏng" để xem sơ đồ nhánh đấu dựa trên kết quả hiện tại.</p>
+                    </div>
+                </div>
+
+                <div id="simThirdPlaceCard" class="card" style="display:none;">
+                    <div class="card-header">
+                        <h2 class="card-title">🔄 Xếp hạng đội hạng 3</h2>
+                    </div>
+                    <div id="simThirdPlaceTable" style="padding:16px;overflow-x:auto;"></div>
+                </div>
+
+                <div id="simBracketCard" class="card" style="display:none;">
+                    <div class="card-header">
+                        <h2 class="card-title">🏆 Sơ đồ nhánh đấu mô phỏng</h2>
+                    </div>
+                    <div id="simBracketContainer" style="padding:16px;overflow-x:auto;"></div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -4590,6 +4799,530 @@
                 await loadPredictions();
             } catch (err) {
                 setStatus('Lỗi import: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================
+        // BRACKET SIMULATION TOOL
+        // ============================================
+
+        var annexCData = null;
+        var simulatedBracket = null;
+
+        const SIM_R32_FIXED = {
+            73: { type: 'A', home: '2A', away: '2B' },
+            75: { type: 'B', home: '1F', away: '2C' },
+            76: { type: 'B', home: '1C', away: '2F' },
+            78: { type: 'A', home: '2E', away: '2I' },
+            83: { type: 'A', home: '2K', away: '2L' },
+            84: { type: 'B', home: '1H', away: '2J' },
+            86: { type: 'B', home: '1J', away: '2H' },
+            88: { type: 'A', home: '2D', away: '2G' }
+        };
+
+        const SIM_R32_VARIABLE = {
+            74: { home: '1E', annexIdx: 0 },
+            77: { home: '1I', annexIdx: 1 },
+            79: { home: '1A', annexIdx: 2 },
+            80: { home: '1L', annexIdx: 3 },
+            81: { home: '1D', annexIdx: 4 },
+            82: { home: '1G', annexIdx: 5 },
+            85: { home: '1B', annexIdx: 6 },
+            87: { home: '1K', annexIdx: 7 }
+        };
+
+        const SIM_R16 = {
+            89: { home: 'W74', away: 'W77' },
+            90: { home: 'W73', away: 'W75' },
+            91: { home: 'W76', away: 'W78' },
+            92: { home: 'W79', away: 'W80' },
+            93: { home: 'W83', away: 'W84' },
+            94: { home: 'W81', away: 'W82' },
+            95: { home: 'W86', away: 'W88' },
+            96: { home: 'W85', away: 'W87' }
+        };
+
+        const SIM_QF = {
+            97:  { home: 'W89',  away: 'W90'  },
+            98:  { home: 'W93',  away: 'W94'  },
+            99:  { home: 'W91',  away: 'W92'  },
+            100: { home: 'W95',  away: 'W96'  }
+        };
+
+        const SIM_SF = {
+            101: { home: 'W97',  away: 'W98'  },
+            102: { home: 'W99',  away: 'W100' }
+        };
+
+        const SIM_FINAL = { 104: { home: 'W101', away: 'W102' } };
+        const SIM_3RD   = { 103: { home: 'L101', away: 'L102' } };
+
+        const SIM_MATCH_DATES = {
+            73:'2026-06-29T02:00+07',74:'2026-06-30T03:30+07',75:'2026-06-30T08:00+07',
+            76:'2026-06-30T00:00+07',77:'2026-07-01T04:00+07',78:'2026-07-01T00:00+07',
+            79:'2026-07-01T08:00+07',80:'2026-07-01T23:00+07',81:'2026-07-02T07:00+07',
+            82:'2026-07-02T03:00+07',83:'2026-07-03T06:00+07',84:'2026-07-03T02:00+07',
+            85:'2026-07-03T10:00+07',86:'2026-07-04T05:00+07',87:'2026-07-04T08:30+07',
+            88:'2026-07-04T01:00+07',
+            89:'2026-07-05T03:00+07',90:'2026-07-05T07:00+07',
+            91:'2026-07-06T03:00+07',92:'2026-07-07T03:00+07',
+            93:'2026-07-07T07:00+07',94:'2026-07-08T03:00+07',
+            95:'2026-07-08T07:00+07',96:'2026-07-08T10:00+07',
+            97:'2026-07-10T03:00+07',98:'2026-07-11T02:00+07',
+            99:'2026-07-12T04:00+07',100:'2026-07-13T08:00+07',
+            101:'2026-07-15T02:00+07',102:'2026-07-16T02:00+07',
+            103:'2026-07-19T04:00+07',104:'2026-07-20T02:00+07'
+        };
+
+        async function loadAnnexCData() {
+            if (annexCData) return annexCData;
+            try {
+                const resp = await fetch('annex-c-data.json');
+                annexCData = await resp.json();
+                return annexCData;
+            } catch (e) {
+                console.error('Failed to load Annex C data:', e);
+                return null;
+            }
+        }
+
+        function simCalcGroupStandings(groupMatches) {
+            const teams = {};
+            groupMatches.forEach(m => {
+                const home = m.home_team;
+                const away = m.away_team;
+                if (!home || !away) return;
+                if (!teams[home]) teams[home] = { name: home, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+                if (!teams[away]) teams[away] = { name: away, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+                if (m.status !== 'finished' || m.home_score === null || m.home_score === undefined) return;
+                const hs = m.home_score, as = m.away_score;
+                teams[home].mp++; teams[away].mp++;
+                teams[home].gf += hs; teams[home].ga += as;
+                teams[away].gf += as; teams[away].ga += hs;
+                if (hs > as) { teams[home].w++; teams[away].l++; }
+                else if (hs < as) { teams[away].w++; teams[home].l++; }
+                else { teams[home].d++; teams[away].d++; }
+            });
+            return Object.values(teams)
+                .map(t => ({ ...t, pts: t.w * 3 + t.d, gd: t.gf - t.ga }))
+                .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.name.localeCompare(b.name));
+        }
+
+        async function generateBracketSimulation() {
+            const btn = document.getElementById('simGenerateBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang tạo...';
+
+            try {
+                const annex = await loadAnnexCData();
+                if (!annex) throw new Error('Không thể tải dữ liệu Annex C');
+
+                await loadMatches();
+
+                const groups = {};
+                const groupLetters = 'ABCDEFGHIJKL'.split('');
+                allMatches.forEach(m => {
+                    const g = m.match_group;
+                    if (groupLetters.includes(g)) {
+                        if (!groups[g]) groups[g] = [];
+                        groups[g].push(m);
+                    }
+                });
+
+                const standings = {};
+                let totalGroupMatches = 0;
+                let finishedGroupMatches = 0;
+                let groupsComplete = 0;
+
+                groupLetters.forEach(g => {
+                    const gMatches = groups[g] || [];
+                    standings[g] = simCalcGroupStandings(gMatches);
+                    const total = gMatches.length;
+                    const finished = gMatches.filter(m => m.status === 'finished').length;
+                    totalGroupMatches += total;
+                    finishedGroupMatches += finished;
+                    if (total > 0 && finished === total) groupsComplete++;
+                });
+
+                const allGroupsDone = groupsComplete === 12;
+
+                // Build status HTML
+                let statusHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;">`;
+                groupLetters.forEach(g => {
+                    const gMatches = groups[g] || [];
+                    const finished = gMatches.filter(m => m.status === 'finished').length;
+                    const total = gMatches.length;
+                    const pct = total > 0 ? Math.round(finished / total * 100) : 0;
+                    const color = pct === 100 ? '#059669' : pct > 0 ? '#F59E0B' : '#9CA3AF';
+                    statusHTML += `<div style="text-align:center;padding:8px;background:var(--bg-gray);border-radius:8px;">
+                        <div style="font-weight:700;font-size:14px;">Bảng ${g}</div>
+                        <div style="font-size:12px;color:${color};font-weight:600;">${finished}/${total}</div>
+                    </div>`;
+                });
+                statusHTML += `</div>`;
+                statusHTML += `<div style="font-size:13px;color:var(--text-light);">Tổng: ${finishedGroupMatches}/${totalGroupMatches} trận hoàn tất | ${groupsComplete}/12 bảng xong</div>`;
+                document.getElementById('simGroupStatus').innerHTML = statusHTML;
+
+                // Lock banner
+                const lockBanner = document.getElementById('simLockBanner');
+                const finalizeBtn = document.getElementById('simFinalizeBtn');
+                if (!allGroupsDone) {
+                    lockBanner.style.display = 'block';
+                    finalizeBtn.style.display = 'none';
+                } else {
+                    lockBanner.style.display = 'none';
+                    finalizeBtn.style.display = 'inline-flex';
+                }
+
+                // Get 1st, 2nd, 3rd per group
+                const rank1 = {}, rank2 = {}, rank3 = {};
+                groupLetters.forEach(g => {
+                    const s = standings[g];
+                    rank1[g] = s[0] || { name: `1${g}?`, pts: 0, gd: 0, gf: 0 };
+                    rank2[g] = s[1] || { name: `2${g}?`, pts: 0, gd: 0, gf: 0 };
+                    rank3[g] = s[2] ? { ...s[2], group: g } : { name: `3${g}?`, group: g, pts: 0, gd: 0, gf: 0, mp: 0, w: 0, d: 0, l: 0 };
+                });
+
+                // Sort 3rd place teams
+                const allThirds = groupLetters.map(g => rank3[g]);
+                allThirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+                const qualifying3rds = allThirds.slice(0, 8);
+                const qualifyingGroups = qualifying3rds.map(t => t.group).sort().join('');
+
+                // Render 3rd place table
+                renderSimThirdPlace(allThirds, qualifying3rds);
+
+                // Annex C lookup
+                const annexMapping = annex[qualifyingGroups];
+                if (!annexMapping) {
+                    document.getElementById('simBracketCard').style.display = 'block';
+                    document.getElementById('simBracketContainer').innerHTML = `
+                        <div style="padding:20px;text-align:center;color:var(--red);">
+                            <strong>Lỗi:</strong> Không tìm thấy tổ hợp "${qualifyingGroups}" trong bảng Annex C (495 tổ hợp).<br>
+                            Điều này có thể xảy ra nếu chưa đủ dữ liệu vòng bảng.
+                        </div>`;
+                    return;
+                }
+
+                // Build team resolver
+                const resolveTeam = (code) => {
+                    const m = code.match(/^(\d)([A-L])$/);
+                    if (!m) return { name: code, seed: code };
+                    const rankNum = parseInt(m[1]);
+                    const group = m[2];
+                    if (rankNum === 1) return { name: rank1[group]?.name || `1${group}?`, seed: `1${group}` };
+                    if (rankNum === 2) return { name: rank2[group]?.name || `2${group}?`, seed: `2${group}` };
+                    if (rankNum === 3) {
+                        const t3 = qualifying3rds.find(t => t.group === group);
+                        return { name: t3?.name || `3${group}?`, seed: `3${group}` };
+                    }
+                    return { name: code, seed: code };
+                };
+
+                // Build R32 matches
+                const simMatches = {};
+
+                // Fixed R32
+                Object.entries(SIM_R32_FIXED).forEach(([num, def]) => {
+                    const home = resolveTeam(def.home);
+                    const away = resolveTeam(def.away);
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: home.name, away_team: away.name,
+                        home_seed: home.seed, away_seed: away.seed,
+                        type: def.type, round: 'R32',
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // Variable R32 (Annex C)
+                Object.entries(SIM_R32_VARIABLE).forEach(([num, def]) => {
+                    const home = resolveTeam(def.home);
+                    const thirdGroup = annexMapping[def.annexIdx];
+                    const away = resolveTeam(`3${thirdGroup}`);
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: home.name, away_team: away.name,
+                        home_seed: home.seed, away_seed: away.seed,
+                        type: 'C', round: 'R32',
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // R16
+                Object.entries(SIM_R16).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'R16', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // QF
+                Object.entries(SIM_QF).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'QF', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // SF
+                Object.entries(SIM_SF).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'SF', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // Final + 3rd
+                Object.entries(SIM_FINAL).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'FINAL', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+                Object.entries(SIM_3RD).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: '3RD', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                simulatedBracket = {
+                    matches: simMatches,
+                    qualifyingGroups,
+                    annexMapping,
+                    standings,
+                    rank1, rank2, rank3,
+                    qualifying3rds,
+                    allGroupsDone
+                };
+
+                renderSimBracket(simMatches);
+
+            } catch (err) {
+                console.error('Simulation error:', err);
+                alert('Lỗi tạo mô phỏng: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Tạo mô phỏng';
+            }
+        }
+
+        function renderSimThirdPlace(allThirds, qualifying3rds) {
+            const card = document.getElementById('simThirdPlaceCard');
+            const container = document.getElementById('simThirdPlaceTable');
+            card.style.display = 'block';
+
+            const qualGroups = new Set(qualifying3rds.map(t => t.group));
+
+            const rows = allThirds.map((t, i) => {
+                const flag = countries[t.name]?.flag || '';
+                const isQual = qualGroups.has(t.group);
+                return `<tr class="${isQual ? 'qualify' : ''}">
+                    <td style="font-weight:600;">${i + 1}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:14px;">${flag}</span>
+                            <span style="font-weight:600;">${t.name}</span>
+                            <span style="font-size:10px;color:var(--text-light);background:var(--bg-gray);padding:1px 5px;border-radius:4px;">Bảng ${t.group}</span>
+                        </div>
+                    </td>
+                    <td>${t.mp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+                    <td>${t.gf}:${t.ga}</td>
+                    <td style="font-weight:600;color:${t.gd > 0 ? '#059669' : t.gd < 0 ? '#DC2626' : '#6B7280'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+                    <td style="font-weight:700;">${t.pts}</td>
+                </tr>`;
+            }).join('');
+
+            container.innerHTML = `
+                <table class="sim-third-table">
+                    <thead><tr>
+                        <th>#</th><th>Đội</th><th>T</th><th>Th</th><th>H</th><th>B</th><th>BT</th><th>HS</th><th>Đ</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="sim-legend" style="margin-top:8px;">
+                    <div class="sim-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#059669;display:inline-block;"></span> Top 8 đi tiếp vòng 32</div>
+                    <div class="sim-legend-item"><strong>Tổ hợp Annex C:</strong> ${qualifying3rds.map(t => t.group).sort().join('')}</div>
+                </div>`;
+        }
+
+        function renderSimBracket(simMatches) {
+            const card = document.getElementById('simBracketCard');
+            const container = document.getElementById('simBracketContainer');
+            card.style.display = 'block';
+
+            const bracketOrder = {
+                R32: [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87],
+                R16: [89, 90, 93, 94, 91, 92, 95, 96],
+                QF: [97, 98, 99, 100],
+                SF: [101, 102],
+                FINAL: [104],
+                '3RD': [103]
+            };
+
+            const roundNames = {
+                R32: 'Vòng 32', R16: 'Vòng 16', QF: 'Tứ kết',
+                SF: 'Bán kết', FINAL: 'Chung kết', '3RD': 'Hạng 3'
+            };
+
+            const roundColors = {
+                R32: '#3B82F6', R16: '#10B981', QF: '#F59E0B',
+                SF: '#8B5CF6', FINAL: '#EAB308', '3RD': '#6B7280'
+            };
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }) +
+                    ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+            };
+
+            const renderTeamRow = (name, seed, isTbd) => {
+                const teamData = countries[name];
+                const flag = teamData ? teamData.flag : '❓';
+                const displayName = teamData ? name : (isTbd ? name : name);
+                return `<div class="sim-team-row">
+                    <span class="sim-team-flag">${teamData ? flag : (isTbd ? '❓' : flag)}</span>
+                    <span class="sim-team-name ${isTbd ? 'tbd' : ''}">${displayName}</span>
+                    <span class="sim-team-seed">${seed}</span>
+                </div>`;
+            };
+
+            const renderMatchCard = (m, roundKey) => {
+                const typeClass = m.type ? `type-${m.type.toLowerCase()}` : `round-${roundKey.toLowerCase()}`;
+                return `<div class="sim-match-card ${typeClass}">
+                    <div class="sim-match-num">M${m.match_number}${m.type ? ` • Loại ${m.type}` : ''}</div>
+                    <div class="sim-match-teams">
+                        ${renderTeamRow(m.home_team, m.home_seed, m.tbd)}
+                        <div class="sim-vs-divider"></div>
+                        ${renderTeamRow(m.away_team, m.away_seed, m.tbd)}
+                    </div>
+                    <div class="sim-match-date">${formatDate(m.date)}</div>
+                </div>`;
+            };
+
+            // Build rounds HTML
+            const roundsToRender = ['R32', 'R16', 'QF', 'SF'];
+            let html = '<div class="sim-bracket-wrapper">';
+
+            roundsToRender.forEach(roundKey => {
+                const matchNums = bracketOrder[roundKey];
+                html += `<div class="sim-round">
+                    <div class="sim-round-title" style="background:${roundColors[roundKey]}15;color:${roundColors[roundKey]};">${roundNames[roundKey]}</div>
+                    <div class="sim-round-matches">
+                        ${matchNums.map(n => simMatches[n] ? renderMatchCard(simMatches[n], roundKey) : '').join('')}
+                    </div>
+                </div>`;
+            });
+
+            // Final round (Final + 3rd)
+            html += `<div class="sim-round">
+                <div class="sim-round-title" style="background:${roundColors.FINAL}15;color:${roundColors.FINAL};">CK + H3</div>
+                <div class="sim-round-matches">
+                    ${simMatches[104] ? renderMatchCard(simMatches[104], 'FINAL') : ''}
+                    ${simMatches[103] ? renderMatchCard(simMatches[103], '3RD') : ''}
+                </div>
+            </div>`;
+
+            html += '</div>';
+
+            // Legend
+            html += `<div class="sim-legend">
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#3B82F6;"></span> Loại A (Nhì vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#10B981;"></span> Loại B (Nhất vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#F59E0B;"></span> Loại C (Nhất vs Hạng 3)</div>
+            </div>`;
+
+            container.innerHTML = html;
+        }
+
+        async function finalizeSimulation() {
+            if (!simulatedBracket) {
+                alert('Vui lòng tạo mô phỏng trước!');
+                return;
+            }
+
+            if (!simulatedBracket.allGroupsDone) {
+                alert('Không thể chốt: Vòng bảng chưa kết thúc!');
+                return;
+            }
+
+            // Check if R32 matches already exist
+            const existingR32 = allMatches.filter(m => m.match_group === 'R32');
+            if (existingR32.length > 0) {
+                if (!confirm(`⚠️ Đã có ${existingR32.length} trận vòng 32 trong hệ thống.\n\nBạn muốn XÓA các trận cũ và tạo lại toàn bộ từ mô phỏng?\n\n(Các dự đoán cho trận cũ cũng sẽ bị xóa!)`)) {
+                    return;
+                }
+                // Delete existing knockout matches
+                const existingKO = allMatches.filter(m =>
+                    ['R32','R16','QF','SF','3RD','FINAL'].includes(m.match_group)
+                );
+                for (const m of existingKO) {
+                    await supabase.from('predictions').delete().eq('match_id', m.id);
+                    await supabase.from('matches').delete().eq('id', m.id);
+                }
+            } else {
+                if (!confirm(`Chốt mô phỏng → tạo 32 trận loại trực tiếp thật trong hệ thống?\n\n(R32: 16 trận, R16: 8, QF: 4, SF: 2, 3RD: 1, Final: 1)`)) {
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('simFinalizeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang tạo...';
+
+            try {
+                const matchRows = [];
+                const allNums = Object.keys(simulatedBracket.matches).map(Number).sort((a, b) => a - b);
+
+                for (const num of allNums) {
+                    const m = simulatedBracket.matches[num];
+                    const roundMap = { R32: 'R32', R16: 'R16', QF: 'QF', SF: 'SF', FINAL: 'FINAL', '3RD': '3RD' };
+                    const matchGroup = roundMap[m.round] || m.round;
+
+                    matchRows.push({
+                        match_number: m.match_number,
+                        match_group: matchGroup,
+                        home_team: m.home_team,
+                        away_team: m.away_team,
+                        match_date: m.date,
+                        status: 'not-open'
+                    });
+                }
+
+                const { data, error } = await supabase
+                    .from('matches')
+                    .insert(matchRows)
+                    .select();
+
+                if (error) throw error;
+
+                alert(`✅ Đã tạo ${data.length} trận loại trực tiếp thành công!`);
+                await loadMatches();
+                renderMatchesTable();
+                renderDashboard();
+            } catch (err) {
+                console.error('Finalize error:', err);
+                alert('Lỗi chốt dữ liệu: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Chốt → Tạo trận thật';
             }
         }
 
