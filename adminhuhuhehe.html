@@ -5704,17 +5704,22 @@
 
                 Object.entries(SIM_R32_FIXED).forEach(([num, def]) => {
                     bracket[num] = makeBracketEntry(num, 'R32', def.type, resolveTeam(def.home), resolveTeam(def.away));
+                    bracket[num].homeGroupPos = def.home;
+                    bracket[num].awayGroupPos = def.away;
                 });
 
                 const annexMapping = annex ? annex[qualifyingGroups] : null;
                 Object.entries(SIM_R32_VARIABLE).forEach(([num, def]) => {
                     const homeName = resolveTeam(def.home);
                     let awayName = '3???';
+                    let awayPos = '3rd-' + qualifyingGroups;
                     if (annexMapping) {
                         const thirdGroup = annexMapping[def.annexIdx];
                         awayName = resolveTeam(`3${thirdGroup}`);
                     }
                     bracket[num] = makeBracketEntry(num, 'R32', 'C', homeName, awayName);
+                    bracket[num].homeGroupPos = def.home;
+                    bracket[num].awayGroupPos = awayPos;
                 });
 
                 Object.entries(SIM_R16).forEach(([num, def]) => {
