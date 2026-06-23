@@ -901,17 +901,17 @@ function renderThirdPlace(thirdPlace) {
     const comboHTML = combo ? '<span class="qualifying-combo">Tổ hợp: ' + escHtml(combo) + '</span>' : '';
 
     return '<div class="section">' +
-        '<div class="section-title"><span class="section-title-icon">&#128260;</span> Xep hang doi hang 3</div>' +
+        '<div class="section-title"><span class="section-title-icon">&#128260;</span> Xếp hạng đội hạng 3</div>' +
         '<div class="third-place-wrapper">' +
         '<div class="third-place-header">' +
-        '<span class="third-place-header-title">So sanh cac doi hang 3</span>' +
+        '<span class="third-place-header-title">So sánh các đội hạng 3</span>' +
         comboHTML +
-        '<span class="third-place-header-sub">Top 8 di tiep</span>' +
+        '<span class="third-place-header-sub">Top 8 đi tiếp</span>' +
         '</div>' +
         '<div style="overflow-x:auto;">' +
         '<table class="third-table">' +
         '<thead><tr>' +
-        '<th>#</th><th>Doi</th><th>T</th><th>Th</th><th>H</th><th>B</th><th>BT</th><th>BB</th><th>+/-</th><th>D</th>' +
+        '<th>#</th><th>Đội</th><th>T</th><th>Th</th><th>H</th><th>B</th><th>BT</th><th>BB</th><th>+/-</th><th>Đ</th>' +
         '</tr></thead>' +
         '<tbody>' + rowsHTML + '</tbody>' +
         '</table></div></div></div>';
@@ -963,19 +963,19 @@ function renderBracket(bracket) {
 
     const centerHTML = '<div class="bracket-center">' +
         '<span class="trophy-icon">&#127942;</span>' +
-        '<span class="round-label">Chung ket</span>' +
+        '<span class="round-label">Chung kết</span>' +
         '<div style="position:relative;height:' + totalH + 'px;width:185px;">' +
         (finalMatch ? renderBracketCard(finalMatch, finalTop, 'center') : '') +
         (thirdMatch ?
             '<div style="position:absolute;top:' + (thirdTop - 18) + 'px;width:100%;text-align:center;">' +
-            '<span class="third-place-label">Tranh hang 3</span></div>' +
+            '<span class="third-place-label">Tranh hạng 3</span></div>' +
             renderBracketCard(thirdMatch, thirdTop + 12, 'center') : '') +
         '</div></div>';
 
     return '<div class="section">' +
-        '<div class="section-title"><span class="section-title-icon">&#127942;</span> So do knockout</div>' +
+        '<div class="section-title"><span class="section-title-icon">&#127942;</span> Sơ đồ knockout</div>' +
         '<div class="bracket-section">' +
-        '<div class="bracket-scroll-hint">&larr; Vuot ngang de xem toan bo &rarr;</div>' +
+        '<div class="bracket-scroll-hint">&larr; Vuốt ngang để xem toàn bộ &rarr;</div>' +
         '<div class="bracket-container">' +
 
         // LEFT SIDE
@@ -984,9 +984,9 @@ function renderBracket(bracket) {
         '<div class="connector-col">' + connL_R32_R16 + '</div>' +
         renderRoundCol('V.16', leftR16.html, totalH) +
         '<div class="connector-col">' + connL_R16_QF + '</div>' +
-        renderRoundCol('Tu ket', leftQF.html, totalH) +
+        renderRoundCol('Tứ kết', leftQF.html, totalH) +
         '<div class="connector-col">' + connL_QF_SF + '</div>' +
-        renderRoundCol('Ban ket', leftSF.html, totalH) +
+        renderRoundCol('Bán kết', leftSF.html, totalH) +
         '<div class="connector-col">' + connL_SF_F + '</div>' +
         '</div>' +
 
@@ -999,9 +999,9 @@ function renderBracket(bracket) {
         '<div class="connector-col">' + connR_R32_R16 + '</div>' +
         renderRoundCol('V.16', rightR16.html, totalH) +
         '<div class="connector-col">' + connR_R16_QF + '</div>' +
-        renderRoundCol('Tu ket', rightQF.html, totalH) +
+        renderRoundCol('Tứ kết', rightQF.html, totalH) +
         '<div class="connector-col">' + connR_QF_SF + '</div>' +
-        renderRoundCol('Ban ket', rightSF.html, totalH) +
+        renderRoundCol('Bán kết', rightSF.html, totalH) +
         '<div class="connector-col">' + connR_SF_F + '</div>' +
         '</div>' +
 
