@@ -5638,13 +5638,9 @@
             status.textContent = '';
 
             try {
+                const annex = await loadAnnexCData();
                 const { data: matches, error: mErr } = await supabase.from('matches').select('*');
                 if (mErr) throw mErr;
-
-                const R32_TYPES = {
-                    73:'A',74:'C',75:'B',76:'B',77:'C',78:'A',79:'C',80:'C',
-                    81:'C',82:'C',83:'A',84:'B',85:'C',86:'B',87:'C',88:'A'
-                };
 
                 // Group standings
                 const groupLetters = 'ABCDEFGHIJKL'.split('');
@@ -5674,30 +5670,97 @@
                     .sort((a, b) => (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf));
 
                 allThirds.forEach((t, i) => { t.rank = i + 1; t.qualifying = i < 8; });
-                const qualifyingGroups = allThirds.filter(t => t.qualifying).map(t => t.group).sort().join('');
+                const qualifying3rds = allThirds.filter(t => t.qualifying);
+                const qualifyingGroups = qualifying3rds.map(t => t.group).sort().join('');
 
-                // Knockout bracket
-                const knockoutRounds = ['R32','R16','QF','SF','3RD','FINAL'];
-                const koMatches = matches.filter(m => knockoutRounds.includes(m.match_group));
+                // Resolve team name from group standings
+                const resolveTeam = (code) => {
+                    const m = code.match(/^(\d)([A-L])$/);
+                    if (!m) return code;
+                    const rankNum = parseInt(m[1]);
+                    const group = m[2];
+                    const s = groups[group]?.standings || [];
+                    if (rankNum === 1 && s[0]) return s[0].name;
+                    if (rankNum === 2 && s[1]) return s[1].name;
+                    if (rankNum === 3) {
+                        const t3 = qualifying3rds.find(t => t.group === group);
+                        return t3?.name || `3${group}?`;
+                    }
+                    return `${rankNum}${group}?`;
+                };
+
+                const makeBracketEntry = (num, round, type, homeName, awayName) => ({
+                    num: parseInt(num), round, type,
+                    home: homeName, homeFlag: countries[homeName]?.flag || '',
+                    away: awayName, awayFlag: countries[awayName]?.flag || '',
+                    date: SIM_MATCH_DATES[num] || null,
+                    venue: SIM_MATCH_VENUES[num] || '',
+                    homeScore: null, awayScore: null,
+                    homePenalty: null, awayPenalty: null
+                });
+
+                // Build simulated bracket (R32 with resolved team names)
                 const bracket = {};
-                koMatches.forEach(m => {
+
+                Object.entries(SIM_R32_FIXED).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'R32', def.type, resolveTeam(def.home), resolveTeam(def.away));
+                });
+
+                const annexMapping = annex ? annex[qualifyingGroups] : null;
+                Object.entries(SIM_R32_VARIABLE).forEach(([num, def]) => {
+                    const homeName = resolveTeam(def.home);
+                    let awayName = '3???';
+                    if (annexMapping) {
+                        const thirdGroup = annexMapping[def.annexIdx];
+                        awayName = resolveTeam(`3${thirdGroup}`);
+                    }
+                    bracket[num] = makeBracketEntry(num, 'R32', 'C', homeName, awayName);
+                });
+
+                Object.entries(SIM_R16).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'R16', null, def.home, def.away);
+                });
+                Object.entries(SIM_QF).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'QF', null, def.home, def.away);
+                });
+                Object.entries(SIM_SF).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'SF', null, def.home, def.away);
+                });
+                Object.entries(SIM_FINAL).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'FINAL', null, def.home, def.away);
+                });
+                Object.entries(SIM_3RD).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, '3RD', null, def.home, def.away);
+                });
+
+                // Overlay actual knockout results from database
+                const knockoutRounds = ['R32','R16','QF','SF','3RD','FINAL'];
+                matches.filter(m => knockoutRounds.includes(m.match_group)).forEach(m => {
                     const num = m.match_number;
-                    bracket[num] = {
-                        num, round: m.match_group,
-                        type: R32_TYPES[num] || null,
-                        home: m.home_team, homeFlag: countries[m.home_team]?.flag || '',
-                        away: m.away_team, awayFlag: countries[m.away_team]?.flag || '',
-                        date: m.match_date,
-                        venue: SIM_MATCH_VENUES[num] || '',
-                        homeScore: m.home_score, awayScore: m.away_score,
-                        homePen: m.home_penalty, awayPen: m.away_penalty,
-                        status: m.status
-                    };
+                    if (!bracket[num]) return;
+                    if (m.home_team) {
+                        bracket[num].home = m.home_team;
+                        bracket[num].homeFlag = countries[m.home_team]?.flag || '';
+                    }
+                    if (m.away_team) {
+                        bracket[num].away = m.away_team;
+                        bracket[num].awayFlag = countries[m.away_team]?.flag || '';
+                    }
+                    if (m.home_score !== null && m.home_score !== undefined) {
+                        bracket[num].homeScore = m.home_score;
+                        bracket[num].awayScore = m.away_score;
+                    }
+                    if (m.home_penalty !== null && m.home_penalty !== undefined) {
+                        bracket[num].homePenalty = m.home_penalty;
+                        bracket[num].awayPenalty = m.away_penalty;
+                    }
+                    if (m.match_date) bracket[num].date = m.match_date;
+                    bracket[num].status = m.status;
                 });
 
                 const payload = {
                     groups,
-                    thirdPlace: { teams: allThirds, qualifyingGroups },
+                    thirdPlace: { teams: allThirds, qualifyingCombination: qualifyingGroups },
                     bracket,
                     publishedAt: new Date().toISOString()
                 };
@@ -5709,7 +5772,7 @@
 
                 const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
                 status.innerHTML = `<span style="color:#059669;">✅ Published lúc ${timeStr}</span>`;
-                alert(`✅ Publish thành công!\n\nStandings: ${Object.keys(groups).length} bảng\nHạng 3: ${allThirds.length} đội\nKnockout: ${Object.keys(bracket).length} trận`);
+                alert(`✅ Publish thành công!\n\nStandings: ${Object.keys(groups).length} bảng\nHạng 3: ${allThirds.length} đội\nKnockout: ${Object.keys(bracket).length} trận\nAnnex C: ${annexMapping ? qualifyingGroups : 'N/A'}`);
             } catch (err) {
                 console.error('Publish error:', err);
                 status.innerHTML = `<span style="color:#EF4444;">❌ Lỗi: ${err.message}</span>`;
