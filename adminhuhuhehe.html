@@ -5712,10 +5712,11 @@
                 Object.entries(SIM_R32_VARIABLE).forEach(([num, def]) => {
                     const homeName = resolveTeam(def.home);
                     let awayName = '3???';
-                    let awayPos = '3rd-' + qualifyingGroups;
+                    let awayPos = '3?';
                     if (annexMapping) {
                         const thirdGroup = annexMapping[def.annexIdx];
                         awayName = resolveTeam(`3${thirdGroup}`);
+                        awayPos = '3' + thirdGroup;
                     }
                     bracket[num] = makeBracketEntry(num, 'R32', 'C', homeName, awayName);
                     bracket[num].homeGroupPos = def.home;
