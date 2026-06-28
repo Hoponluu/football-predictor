@@ -631,17 +631,6 @@
             color: var(--green-text);
         }
 
-        /* Venue footer */
-        .card-venue {
-            padding: 2px 7px 3px;
-            font-size: 8px;
-            color: var(--text-tertiary);
-            background: rgba(0, 0, 0, 0.15);
-            border-top: 1px solid rgba(42, 58, 92, 0.4);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
 
         /* Connector columns */
         .connector-col {
@@ -1174,8 +1163,6 @@ function renderBracketCard(match, top, side) {
     const homeSeed = match.homeGroupPos ? '<span class="card-team-seed">' + escHtml(match.homeGroupPos) + '</span>' : '';
     const awaySeed = match.awayGroupPos ? '<span class="card-team-seed">' + escHtml(match.awayGroupPos) + '</span>' : '';
 
-    const venue = match.venue || '';
-
     const posStyle = side === 'center'
         ? 'position:absolute;top:' + top + 'px;left:50%;transform:translateX(-50%);'
         : 'position:absolute;top:' + top + 'px;left:0;';
@@ -1205,8 +1192,6 @@ function renderBracketCard(match, top, side) {
         awayScoreHTML +
         '</div>' +
         '</div>' +
-        // Venue footer
-        (venue ? '<div class="card-venue">📍 ' + escHtml(venue) + '</div>' : '') +
         '</div>';
 }
 
