@@ -43,9 +43,6 @@
     align-items: stretch;
 }
 
-.bracket-side.right {
-    flex-direction: row-reverse;
-}
 
 .bracket-center {
     display: flex;
