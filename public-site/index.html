@@ -478,7 +478,7 @@
 
         .bracket-match-card {
             position: absolute;
-            width: 165px;
+            width: 172px;
             background: var(--surface);
             border: 1px solid var(--stroke);
             border-radius: var(--radius-sm);
@@ -488,7 +488,7 @@
 
         .bracket-match-card:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
         }
 
         /* Border side indicators */
@@ -505,60 +505,77 @@
             border-right: 3px solid var(--card-accent, var(--gold));
         }
 
+        /* Card header: match num + type + date */
         .card-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 4px 8px;
-            background: rgba(0, 0, 0, 0.2);
-            font-size: 10px;
-            color: var(--text-tertiary);
+            padding: 3px 7px;
+            background: rgba(0, 0, 0, 0.25);
+            border-bottom: 1px solid rgba(42, 58, 92, 0.6);
         }
 
         .card-match-num {
+            font-size: 9px;
             font-weight: 700;
             color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-type-badge {
+            font-size: 8px;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: var(--card-accent, var(--blue));
+            color: #fff;
+            opacity: 0.9;
+            letter-spacing: 0.3px;
         }
 
         .card-datetime {
-            font-size: 9px;
-        }
-
-        .card-venue {
-            padding: 0 8px 3px;
-            font-size: 9px;
+            font-size: 8px;
             color: var(--text-tertiary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
+        /* Team rows */
         .card-teams {
-            padding: 4px 8px 6px;
+            display: flex;
+            flex-direction: column;
         }
 
         .card-team-row {
             display: flex;
             align-items: center;
             gap: 5px;
-            padding: 2px 0;
+            padding: 4px 7px;
         }
 
         .card-team-row + .card-team-row {
-            border-top: 1px solid rgba(42, 58, 92, 0.3);
-            padding-top: 3px;
+            border-top: 1px solid rgba(42, 58, 92, 0.5);
         }
 
         .card-team-flag {
             font-size: 13px;
+            width: 17px;
+            text-align: center;
             flex-shrink: 0;
+        }
+
+        .card-team-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
         }
 
         .card-team-name {
             font-size: 11px;
             font-weight: 600;
             color: var(--text-primary);
-            flex: 1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -567,31 +584,53 @@
         .card-team-name.tbd {
             color: var(--text-tertiary);
             font-style: italic;
+            font-weight: 400;
         }
 
+        .card-team-seed {
+            font-size: 8px;
+            color: var(--text-tertiary);
+            font-weight: 500;
+            line-height: 1;
+        }
+
+        /* Score block — always present, empty when no score yet */
         .card-team-score {
-            font-size: 13px;
-            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+
+        .card-score-val {
+            font-size: 15px;
+            font-weight: 800;
             color: var(--text-primary);
-            min-width: 16px;
-            text-align: right;
+            line-height: 1;
+        }
+
+        .card-score-pen {
+            font-size: 8px;
+            color: var(--yellow-text);
+            font-weight: 600;
+            line-height: 1;
         }
 
         .card-team-row.loser {
-            opacity: 0.4;
+            opacity: 0.35;
         }
 
         .card-team-row.winner .card-team-name {
             color: var(--green-text);
         }
 
-        .card-penalty {
-            text-align: center;
-            font-size: 9px;
-            color: var(--yellow-text);
-            font-weight: 600;
-            padding-bottom: 3px;
+        .card-team-row.winner .card-score-val {
+            color: var(--green-text);
         }
+
 
         /* Connector columns */
         .connector-col {
@@ -611,7 +650,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 185px;
+            min-width: 192px;
         }
 
         .bracket-center .round-label {
@@ -623,7 +662,7 @@
 
         .bracket-center .bracket-match-card {
             position: relative;
-            width: 175px;
+            width: 182px;
         }
 
         .bracket-center .card-3rd .round-label {
@@ -712,11 +751,11 @@
 // ============================================
 // CONSTANTS
 // ============================================
-const CARD_H = 82;
+const CARD_H = 86;
 const GAP = 6;
-const SLOT_H = CARD_H + GAP; // 88
+const SLOT_H = CARD_H + GAP; // 92
 const HALF_DIVIDER = 24;
-const CARD_W = 165;
+const CARD_W = 172;
 
 const BRACKET_LEFT_R32  = [74, 77, 73, 75, 83, 84, 81, 82];
 const BRACKET_LEFT_R16  = [89, 90, 93, 94];
@@ -1081,6 +1120,8 @@ function renderBracketCard(match, top, side) {
     const homeFlag = match.homeFlag || '';
     const awayFlag = match.awayFlag || '';
     const hasScore = match.homeScore !== null && match.homeScore !== undefined;
+    const homeTBD = !match.home;
+    const awayTBD = !match.away;
 
     let homeClass = '';
     let awayClass = '';
@@ -1091,48 +1132,66 @@ function renderBracketCard(match, top, side) {
         else if (as > hs) { awayClass = 'winner'; homeClass = 'loser'; }
     }
 
-    const homeTBD = !match.home;
-    const awayTBD = !match.away;
-
-    // Format date
-    let dateStr = '';
-    let timeStr = '';
+    // Format date/time
+    let dateTimeStr = '';
     if (match.date) {
         try {
             const d = new Date(match.date);
-            dateStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
-            timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+            dateTimeStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
+                + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
         } catch (e) { /* ignore */ }
     }
 
-    const venue = match.venue || '';
-    const penaltyHTML = (hasScore && match.homePenalty != null)
-        ? '<div class="card-penalty">Pen: ' + match.homePenalty + ' - ' + match.awayPenalty + '</div>'
+    // Type badge (only for R32)
+    const typeBadge = match.type
+        ? '<span class="card-type-badge">' + escHtml(match.type) + '</span>'
         : '';
+
+    // Score block — always render to reserve right-edge space
+    const homeScoreHTML = '<div class="card-team-score">' +
+        (hasScore ? '<span class="card-score-val">' + match.homeScore + '</span>' +
+            (match.homePenalty != null ? '<span class="card-score-pen">(' + match.homePenalty + ')</span>' : '')
+        : '') +
+        '</div>';
+    const awayScoreHTML = '<div class="card-team-score">' +
+        (hasScore ? '<span class="card-score-val">' + match.awayScore + '</span>' +
+            (match.awayPenalty != null ? '<span class="card-score-pen">(' + match.awayPenalty + ')</span>' : '')
+        : '') +
+        '</div>';
+
+    // Seed label (homeGroupPos / awayGroupPos) — only present on R32
+    const homeSeed = match.homeGroupPos ? '<span class="card-team-seed">' + escHtml(match.homeGroupPos) + '</span>' : '';
+    const awaySeed = match.awayGroupPos ? '<span class="card-team-seed">' + escHtml(match.awayGroupPos) + '</span>' : '';
 
     const posStyle = side === 'center'
         ? 'position:absolute;top:' + top + 'px;left:50%;transform:translateX(-50%);'
         : 'position:absolute;top:' + top + 'px;left:0;';
 
     return '<div class="bracket-match-card" style="' + posStyle + '--card-accent:' + accentColor + ';">' +
+        // Header
         '<div class="card-header">' +
-        '<span class="card-match-num">M' + match.num + '</span>' +
-        '<span class="card-datetime">' + dateStr + ' ' + timeStr + '</span>' +
+        '<span class="card-match-num">M' + match.num + typeBadge + '</span>' +
+        '<span class="card-datetime">' + escHtml(dateTimeStr) + '</span>' +
         '</div>' +
-        (venue ? '<div class="card-venue">' + escHtml(venue) + '</div>' : '') +
+        // Teams
         '<div class="card-teams">' +
         '<div class="card-team-row ' + homeClass + '">' +
         '<span class="card-team-flag">' + homeFlag + '</span>' +
+        '<div class="card-team-info">' +
         '<span class="card-team-name' + (homeTBD ? ' tbd' : '') + '">' + escHtml(homeTeam) + '</span>' +
-        (hasScore ? '<span class="card-team-score">' + match.homeScore + '</span>' : '') +
+        homeSeed +
+        '</div>' +
+        homeScoreHTML +
         '</div>' +
         '<div class="card-team-row ' + awayClass + '">' +
         '<span class="card-team-flag">' + awayFlag + '</span>' +
+        '<div class="card-team-info">' +
         '<span class="card-team-name' + (awayTBD ? ' tbd' : '') + '">' + escHtml(awayTeam) + '</span>' +
-        (hasScore ? '<span class="card-team-score">' + match.awayScore + '</span>' : '') +
+        awaySeed +
+        '</div>' +
+        awayScoreHTML +
         '</div>' +
         '</div>' +
-        penaltyHTML +
         '</div>';
 }
 
