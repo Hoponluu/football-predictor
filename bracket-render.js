@@ -10,12 +10,22 @@ const TZ_VIETNAM = 'Asia/Ho_Chi_Minh';
 
 // Round border colors for knockout mini-cards
 const ROUND_COLORS = {
-    R32: '#3B82F6',   // Blue
-    R16: '#10B981',   // Green
-    QF:  '#F59E0B',   // Orange
-    SF:  '#8B5CF6',   // Purple
-    '3RD': '#6B7280', // Gray
-    FINAL: '#F59E0B'  // Gold
+    R32: '#3B82F6',
+    R16: '#6366F1',
+    QF:  '#EC4899',
+    SF:  '#8B5CF6',
+    '3RD': '#6B7280',
+    FINAL: '#EAB308'
+};
+
+// R32 type colors (A=blue, B=green, C=orange)
+const R32_TYPE_COLORS = { A: '#3B82F6', B: '#10B981', C: '#F59E0B' };
+
+// Match number → R32 type mapping
+const R32_TYPES = {
+    73:'A', 74:'C', 75:'B', 76:'B', 77:'C', 78:'A',
+    79:'C', 80:'C', 81:'C', 82:'C', 83:'A', 84:'B',
+    85:'C', 86:'B', 87:'C', 88:'A'
 };
 
 // ============================================
@@ -495,7 +505,7 @@ function renderBracketRound(roundMatches, roundKey, title, dataRound) {
 }
 
 // ============================================
-// BRACKET MINI CARD — handles both real teams and TBD
+// BRACKET MINI CARD — admin-style, no venue
 // ============================================
 function renderBracketMiniCard(match, roundKey) {
     const homeTeam = match.home || match.home_team || 'TBD';
@@ -511,30 +521,33 @@ function renderBracketMiniCard(match, roundKey) {
     const scores = getMatchScores(match);
     const matchNum = match.match_number;
 
+    let homeIsWinner = false, awayIsWinner = false;
     let homeIsLoser = false, awayIsLoser = false;
     if (isFinished && scores.homeScore !== null) {
         const hs = scores.homePenalty != null ? scores.homePenalty : scores.homeScore;
         const as = scores.awayPenalty != null ? scores.awayPenalty : scores.awayScore;
-        homeIsLoser = hs < as;
-        awayIsLoser = as < hs;
+        homeIsWinner = hs > as; awayIsLoser = hs > as;
+        awayIsWinner = as > hs; homeIsLoser = as > hs;
     }
 
-    const dateStr = match.date ? match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', timeZone: TZ_VIETNAM }) : '';
+    const dateStr = match.date ? match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: TZ_VIETNAM }) : '';
     const timeStr = match.date ? match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: TZ_VIETNAM }) : '';
 
-    const borderColor = ROUND_COLORS[roundKey] || '#46FF6F';
-    const isFinal = roundKey === 'FINAL';
-    const isThird = roundKey === '3RD';
+    // Determine border color: R32 uses type color, others use round color
+    const r32Type = roundKey === 'R32' ? (R32_TYPES[matchNum] || null) : null;
+    const borderColor = r32Type ? R32_TYPE_COLORS[r32Type] : (ROUND_COLORS[roundKey] || '#3B82F6');
 
     const classes = ['bracket-mini-card'];
     if (notOpen) classes.push('not-open');
     if (isTBD) classes.push('tbd');
-    if (isFinal) classes.push('final-match');
-    if (isThird) classes.push('third-match');
+    if (roundKey === 'FINAL') classes.push('final-match');
+    if (roundKey === '3RD') classes.push('third-match');
     if (hasPrediction && !isFinished) classes.push('predicted');
 
-    // Match number label
-    const matchNumHTML = matchNum ? `<span class="bracket-mini-matchnum">M${matchNum}</span>` : '';
+    // Type badge for R32
+    const typeBadgeHTML = r32Type
+        ? `<span class="bracket-mini-type-badge" style="background:${borderColor}">${r32Type}</span>`
+        : '';
 
     // Points badge
     let badgeHTML = '';
@@ -545,39 +558,35 @@ function renderBracketMiniCard(match, roundKey) {
         badgeHTML = `<div class="bracket-mini-predicted">✓</div>`;
     }
 
-    // Team display — handle TBD
     const homeFlag = homeData ? homeData.flag : '❓';
     const awayFlag = awayData ? awayData.flag : '❓';
-    const homeBg = homeData ? homeData.color : '#E5E7EB';
-    const awayBg = awayData ? awayData.color : '#E5E7EB';
-    const homeCode = homeData
-        ? (typeof getCountryCode === 'function' ? getCountryCode(homeTeam) : homeTeam.substring(0,3).toUpperCase())
-        : homeTeam.substring(0, 6);
-    const awayCode = awayData
-        ? (typeof getCountryCode === 'function' ? getCountryCode(awayTeam) : awayTeam.substring(0,3).toUpperCase())
-        : awayTeam.substring(0, 6);
+
+    const renderTeamRow = (team, flag, isWinner, isLoser, score, penalty) => {
+        const nameClass = ['bracket-mini-name', !countries[team] ? 'tbd-name' : ''].filter(Boolean).join(' ');
+        const rowClass = ['bracket-mini-team', isWinner ? 'winner' : '', isLoser ? 'loser' : ''].filter(Boolean).join(' ');
+        const scoreHTML = isFinished && score !== null
+            ? `<span class="bracket-mini-score-val">${score}</span>${penalty != null ? `<span class="bracket-mini-score-pen">(${penalty})</span>` : ''}`
+            : '';
+        return `<div class="${rowClass}">
+            <span class="bracket-mini-flag">${flag}</span>
+            <span class="${nameClass}">${team}</span>
+            <div class="bracket-mini-score-block">${scoreHTML}</div>
+        </div>`;
+    };
 
     return `
-        <div class="${classes.join(' ')}" data-match-id="${match.id}" style="border-top-color: ${borderColor}">
-            <div class="bracket-mini-datetime">
-                ${matchNumHTML}
-                <span>${dateStr}</span>
-                <span>${timeStr}</span>
+        <div class="${classes.join(' ')}" data-match-id="${match.id}" style="border-left-color:${borderColor}">
+            <div class="bracket-mini-header">
+                <span class="bracket-mini-matchnum">
+                    ${matchNum ? `M${matchNum}` : ''}${typeBadgeHTML}
+                </span>
+                <span class="bracket-mini-datetime">${dateStr} ${timeStr}</span>
             </div>
             <div class="bracket-mini-teams">
-                <div class="bracket-mini-team ${homeIsLoser ? 'loser' : ''}">
-                    <span class="bracket-mini-flag" style="background: ${homeBg}">${homeFlag}</span>
-                    <span class="bracket-mini-code">${homeCode}</span>
-                    ${isFinished && scores.homeScore !== null ? `<span class="bracket-mini-score">${scores.homeScore}</span>` : ''}
-                </div>
-                <div class="bracket-mini-team ${awayIsLoser ? 'loser' : ''}">
-                    <span class="bracket-mini-flag" style="background: ${awayBg}">${awayFlag}</span>
-                    <span class="bracket-mini-code">${awayCode}</span>
-                    ${isFinished && scores.awayScore !== null ? `<span class="bracket-mini-score">${scores.awayScore}</span>` : ''}
-                </div>
+                ${renderTeamRow(homeTeam, homeFlag, homeIsWinner, homeIsLoser, scores.homeScore, scores.homePenalty)}
+                ${renderTeamRow(awayTeam, awayFlag, awayIsWinner, awayIsLoser, scores.awayScore, scores.awayPenalty)}
             </div>
             ${badgeHTML}
-            ${isFinished && scores.homePenalty != null ? '<div class="bracket-mini-penalty">PEN</div>' : ''}
         </div>
     `;
 }
