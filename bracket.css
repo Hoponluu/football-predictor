@@ -36,6 +36,24 @@
     align-items: stretch;
 }
 
+/* Two-sided bracket layout */
+.bracket-side {
+    display: flex;
+    gap: 36px;
+    align-items: stretch;
+}
+
+.bracket-side.right {
+    flex-direction: row-reverse;
+}
+
+.bracket-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 .bracket-empty {
     text-align: center;
     padding: 60px 20px;
@@ -99,8 +117,13 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
+/* Right-side cards: accent border on right instead of left */
+.bracket-mini-card.right-side {
+    border-left: 1px solid var(--stroke);
+    border-right: 3px solid var(--primary);
+}
+
 .bracket-mini-card.not-open {
-    opacity: 0.5;
     cursor: default;
 }
 
@@ -288,6 +311,10 @@
         padding: 8px;
     }
 
+    .bracket-side {
+        gap: 20px;
+    }
+
     .bracket-round {
         min-width: 140px;
     }
@@ -311,6 +338,10 @@
     }
 
     .bracket-wrapper {
+        gap: 14px;
+    }
+
+    .bracket-side {
         gap: 14px;
     }
 

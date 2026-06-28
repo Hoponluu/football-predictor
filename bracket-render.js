@@ -37,19 +37,21 @@ const R32_TYPES = {
 // Source: FIFA.com knockout stage match schedule
 // ============================================
 const FIFA_BRACKET = {
-    // R32 bracket order (top to bottom on the bracket)
-    // TOP HALF:  (M74,M77)→M89, (M73,M75)→M90, (M83,M84)→M93, (M81,M82)→M94
-    // BOT HALF:  (M76,M78)→M91, (M79,M80)→M92, (M86,M88)→M95, (M85,M87)→M96
+    // LEFT HALF (top to bottom): connects right → Final
+    R32_L: [74, 77, 73, 75, 83, 84, 81, 82],
+    R16_L: [89, 90, 93, 94],
+    QF_L:  [97, 98],
+    SF_L:  [101],
+    // RIGHT HALF (top to bottom): connects left → Final
+    R32_R: [76, 78, 79, 80, 86, 88, 85, 87],
+    R16_R: [91, 92, 95, 96],
+    QF_R:  [99, 100],
+    SF_R:  [102],
+    // Full arrays kept for backward compatibility
     R32: [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87],
-    // R16 bracket order
-    // TOP HALF:  (M89,M90)→M97, (M93,M94)→M98
-    // BOT HALF:  (M91,M92)→M99, (M95,M96)→M100
     R16: [89, 90, 93, 94, 91, 92, 95, 96],
-    // QF bracket order
-    // (M97,M98)→M101, (M99,M100)→M102
-    QF: [97, 98, 99, 100],
-    // SF bracket order
-    SF: [101, 102],
+    QF:  [97, 98, 99, 100],
+    SF:  [101, 102],
     FINAL: [104],
     '3RD': [103]
 };
@@ -337,7 +339,6 @@ function renderGroupStandings() {
     if (standingsPageIndex >= totalPages) standingsPageIndex = 0;
 
     renderStandingsCarouselPage(container);
-    renderThirdPlaceComparison();
 }
 
 function renderStandingsCarouselPage(container) {
@@ -421,7 +422,7 @@ function renderScheduleGroupStageOnly() {
 }
 
 // ============================================
-// KNOCKOUT BRACKET — sorted by FIFA bracket position (match_number)
+// KNOCKOUT BRACKET — two-sided layout (left half | final | right half)
 // ============================================
 function renderKnockoutBracket() {
     const container = document.getElementById('scheduleKnockout');
@@ -443,62 +444,66 @@ function renderKnockoutBracket() {
         return;
     }
 
-    // Sort each round by FIFA bracket position (not date!)
-    const rounds = {
-        R32: sortByBracketPosition(
-            knockoutMatches.filter(m => (m.group || m.match_group) === 'R32'),
-            FIFA_BRACKET.R32
-        ),
-        R16: sortByBracketPosition(
-            knockoutMatches.filter(m => (m.group || m.match_group) === 'R16'),
-            FIFA_BRACKET.R16
-        ),
-        QF: sortByBracketPosition(
-            knockoutMatches.filter(m => (m.group || m.match_group) === 'QF'),
-            FIFA_BRACKET.QF
-        ),
-        SF: sortByBracketPosition(
-            knockoutMatches.filter(m => (m.group || m.match_group) === 'SF'),
-            FIFA_BRACKET.SF
-        ),
-        '3RD': knockoutMatches.filter(m => (m.group || m.match_group) === '3RD'),
-        FINAL: knockoutMatches.filter(m => (m.group || m.match_group) === 'FINAL')
-    };
+    // Helper: pick matches by number list and sort by that list
+    const byNums = (pool, roundGroup, nums) => sortByBracketPosition(
+        pool.filter(m => (m.group || m.match_group) === roundGroup && nums.includes(m.match_number)),
+        nums
+    );
+
+    const r32 = knockoutMatches.filter(m => (m.group || m.match_group) === 'R32');
+    const r16 = knockoutMatches.filter(m => (m.group || m.match_group) === 'R16');
+    const qf  = knockoutMatches.filter(m => (m.group || m.match_group) === 'QF');
+    const sf  = knockoutMatches.filter(m => (m.group || m.match_group) === 'SF');
+    const final3rd   = knockoutMatches.filter(m => (m.group || m.match_group) === '3RD');
+    const finalMatch = knockoutMatches.filter(m => (m.group || m.match_group) === 'FINAL');
 
     container.innerHTML = `
         <div class="tournament-bracket">
             <div class="bracket-hint">← Vuốt ngang để xem toàn bộ →</div>
-
             <div class="bracket-wrapper">
-                ${renderBracketRound(rounds.R32, 'R32', 'Vòng 32', 'r32')}
-                ${renderBracketRound(rounds.R16, 'R16', 'Vòng 16', 'r16')}
-                ${renderBracketRound(rounds.QF, 'QF', 'Tứ kết', 'qf')}
-                ${renderBracketRound(rounds.SF, 'SF', 'Bán kết', 'sf')}
-                <div class="bracket-round final-round" data-round="final">
-                    <div class="round-title" style="border-color: ${ROUND_COLORS.FINAL}">Chung kết</div>
-                    <div class="round-matches">
-                        ${rounds.FINAL.map(m => renderBracketMiniCard(m, 'FINAL')).join('')}
-                        ${rounds['3RD'].map(m => renderBracketMiniCard(m, '3RD')).join('')}
+
+                <!-- LEFT HALF: R32→R16→QF→SF flows right toward center -->
+                <div class="bracket-side left">
+                    ${renderBracketRound(byNums(r32, 'R32', FIFA_BRACKET.R32_L), 'R32', 'Vòng 32', 'r32-l', 'left')}
+                    ${renderBracketRound(byNums(r16, 'R16', FIFA_BRACKET.R16_L), 'R16', 'Vòng 16', 'r16-l', 'left')}
+                    ${renderBracketRound(byNums(qf,  'QF',  FIFA_BRACKET.QF_L),  'QF',  'Tứ kết',  'qf-l',  'left')}
+                    ${renderBracketRound(byNums(sf,  'SF',  FIFA_BRACKET.SF_L),  'SF',  'Bán kết', 'sf-l',  'left')}
+                </div>
+
+                <!-- CENTER: Final + 3rd place -->
+                <div class="bracket-center">
+                    <div class="bracket-round final-round" data-round="final">
+                        <div class="round-title" style="border-color: ${ROUND_COLORS.FINAL}">Chung kết</div>
+                        <div class="round-matches">
+                            ${finalMatch.map(m => renderBracketMiniCard(m, 'FINAL', 'center')).join('')}
+                            ${final3rd.map(m => renderBracketMiniCard(m, '3RD', 'center')).join('')}
+                        </div>
                     </div>
                 </div>
+
+                <!-- RIGHT HALF: DOM order SF→QF→R16→R32, flex-direction:row-reverse shows SF closest to center -->
+                <div class="bracket-side right">
+                    ${renderBracketRound(byNums(sf,  'SF',  FIFA_BRACKET.SF_R),  'SF',  'Bán kết', 'sf-r',  'right')}
+                    ${renderBracketRound(byNums(qf,  'QF',  FIFA_BRACKET.QF_R),  'QF',  'Tứ kết',  'qf-r',  'right')}
+                    ${renderBracketRound(byNums(r16, 'R16', FIFA_BRACKET.R16_R), 'R16', 'Vòng 16', 'r16-r', 'right')}
+                    ${renderBracketRound(byNums(r32, 'R32', FIFA_BRACKET.R32_R), 'R32', 'Vòng 32', 'r32-r', 'right')}
+                </div>
+
             </div>
         </div>
     `;
 
     attachBracketMatchHandlers();
-
-    // Draw connector lines after DOM is ready
     requestAnimationFrame(() => drawBracketConnectors());
 }
 
-function renderBracketRound(roundMatches, roundKey, title, dataRound) {
+function renderBracketRound(roundMatches, roundKey, title, dataRound, side) {
     if (roundMatches.length === 0) return '';
-
     return `
         <div class="bracket-round" data-round="${dataRound}">
             <div class="round-title" style="border-color: ${ROUND_COLORS[roundKey]}">${title}</div>
             <div class="round-matches">
-                ${roundMatches.map(m => renderBracketMiniCard(m, roundKey)).join('')}
+                ${roundMatches.map(m => renderBracketMiniCard(m, roundKey, side || 'left')).join('')}
             </div>
         </div>
     `;
@@ -507,7 +512,7 @@ function renderBracketRound(roundMatches, roundKey, title, dataRound) {
 // ============================================
 // BRACKET MINI CARD — admin-style, no venue
 // ============================================
-function renderBracketMiniCard(match, roundKey) {
+function renderBracketMiniCard(match, roundKey, side) {
     const homeTeam = match.home || match.home_team || 'TBD';
     const awayTeam = match.away || match.away_team || 'TBD';
 
@@ -537,12 +542,14 @@ function renderBracketMiniCard(match, roundKey) {
     const r32Type = roundKey === 'R32' ? (R32_TYPES[matchNum] || null) : null;
     const borderColor = r32Type ? R32_TYPE_COLORS[r32Type] : (ROUND_COLORS[roundKey] || '#3B82F6');
 
+    const isRight = side === 'right';
     const classes = ['bracket-mini-card'];
     if (notOpen) classes.push('not-open');
     if (isTBD) classes.push('tbd');
     if (roundKey === 'FINAL') classes.push('final-match');
     if (roundKey === '3RD') classes.push('third-match');
     if (hasPrediction && !isFinished) classes.push('predicted');
+    if (isRight) classes.push('right-side');
 
     // Type badge for R32
     const typeBadgeHTML = r32Type
@@ -574,8 +581,12 @@ function renderBracketMiniCard(match, roundKey) {
         </div>`;
     };
 
+    const borderStyle = isRight
+        ? `border-right-color:${borderColor}`
+        : `border-left-color:${borderColor}`;
+
     return `
-        <div class="${classes.join(' ')}" data-match-id="${match.id}" style="border-left-color:${borderColor}">
+        <div class="${classes.join(' ')}" data-match-id="${match.id}" style="${borderStyle}">
             <div class="bracket-mini-header">
                 <span class="bracket-mini-matchnum">
                     ${matchNum ? `M${matchNum}` : ''}${typeBadgeHTML}
@@ -612,7 +623,8 @@ function attachBracketMatchHandlers() {
 
 // ============================================
 // BRACKET CONNECTOR LINES (SVG overlay)
-// Pairs consecutive cards [0,1]→next[0], [2,3]→next[1]
+// Left side: cards exit right edge → enter next round left edge
+// Right side: cards exit left edge → enter next round right edge (reversed)
 // ============================================
 function drawBracketConnectors() {
     const wrapper = document.querySelector('.bracket-wrapper');
@@ -621,71 +633,90 @@ function drawBracketConnectors() {
     const existing = wrapper.querySelector('.bracket-connectors');
     if (existing) existing.remove();
 
-    wrapper.style.position = 'relative';
-
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.classList.add('bracket-connectors');
     svg.setAttribute('width', wrapper.scrollWidth);
     svg.setAttribute('height', wrapper.scrollHeight);
-    svg.style.position = 'absolute';
-    svg.style.top = '0';
-    svg.style.left = '0';
-    svg.style.pointerEvents = 'none';
-    svg.style.zIndex = '0';
 
-    const roundFlow = ['r32', 'r16', 'qf', 'sf'];
+    function addPath(d, color) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(path);
+    }
 
-    for (let ri = 0; ri < roundFlow.length; ri++) {
-        const currentRound = wrapper.querySelector(`.bracket-round[data-round="${roundFlow[ri]}"]`);
-        if (!currentRound) continue;
+    // Connect rounds in one flow direction.
+    // flow: array of data-round values in bracket order (nearest-to-far from center)
+    // isRight: true = cards exit left edge, enter target's right edge
+    function connectFlow(flow, isRight) {
+        for (let ri = 0; ri < flow.length; ri++) {
+            const currentRound = wrapper.querySelector(`.bracket-round[data-round="${flow[ri]}"]`);
+            if (!currentRound) continue;
 
-        let nextRound;
-        if (ri < roundFlow.length - 1) {
-            nextRound = wrapper.querySelector(`.bracket-round[data-round="${roundFlow[ri + 1]}"]`);
-        } else {
-            nextRound = wrapper.querySelector(`.bracket-round[data-round="final"]`);
-        }
-        if (!nextRound) continue;
+            const isLast = ri === flow.length - 1;
+            const nextDataRound = isLast ? 'final' : flow[ri + 1];
+            const nextRound = wrapper.querySelector(`.bracket-round[data-round="${nextDataRound}"]`);
+            if (!nextRound) continue;
 
-        const currentCards = [...currentRound.querySelectorAll('.bracket-mini-card')];
-        const nextCards = [...nextRound.querySelectorAll('.bracket-mini-card:not(.third-match)')];
+            const currentCards = [...currentRound.querySelectorAll('.bracket-mini-card')];
+            const nextCards   = [...nextRound.querySelectorAll('.bracket-mini-card:not(.third-match)')];
 
-        for (let i = 0; i < currentCards.length - 1; i += 2) {
-            const card1 = currentCards[i];
-            const card2 = currentCards[i + 1];
-            const target = nextCards[Math.floor(i / 2)];
-            if (!target) continue;
+            const roundKey = flow[ri].replace(/-[lr]$/, '').toUpperCase();
+            const lineColor = hexToRgba(ROUND_COLORS[roundKey] || '#CBD5E1', 0.35);
 
-            const pos1 = getOffsetRelativeTo(card1, wrapper);
-            const pos2 = getOffsetRelativeTo(card2, wrapper);
-            const posT = getOffsetRelativeTo(target, wrapper);
+            // Single-card SF → Final: draw a bezier curve
+            if (isLast && currentCards.length === 1) {
+                const card = currentCards[0];
+                const target = nextCards[0];
+                if (!target) continue;
 
-            const y1 = pos1.top + pos1.height / 2;
-            const y2 = pos2.top + pos2.height / 2;
-            const x1 = pos1.left + pos1.width;
-            const xT = posT.left;
-            const yT = posT.top + posT.height / 2;
-            const xMid = (x1 + xT) / 2;
+                const pos  = getOffsetRelativeTo(card, wrapper);
+                const posT = getOffsetRelativeTo(target, wrapper);
+                const y1 = pos.top + pos.height / 2;
+                const yT = posT.top + posT.height / 2;
+                const x1 = isRight ? pos.left : pos.left + pos.width;
+                const xT = isRight ? posT.left + posT.width : posT.left;
+                const xMid = (x1 + xT) / 2;
 
-            const roundKey = roundFlow[ri].toUpperCase();
-            const color = ROUND_COLORS[roundKey] || '#CBD5E1';
-            const lineColor = hexToRgba(color, 0.35);
+                addPath(`M ${x1} ${y1} C ${xMid} ${y1} ${xMid} ${yT} ${xT} ${yT}`, lineColor);
+                continue;
+            }
 
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', [
-                `M ${x1} ${y1} H ${xMid}`,
-                `M ${x1} ${y2} H ${xMid}`,
-                `M ${xMid} ${y1} V ${y2}`,
-                `M ${xMid} ${yT} H ${xT}`
-            ].join(' '));
-            path.setAttribute('fill', 'none');
-            path.setAttribute('stroke', lineColor);
-            path.setAttribute('stroke-width', '2');
-            path.setAttribute('stroke-linecap', 'round');
+            // Pair-and-connect: [0,1]→target[0], [2,3]→target[1], …
+            for (let i = 0; i < currentCards.length - 1; i += 2) {
+                const card1  = currentCards[i];
+                const card2  = currentCards[i + 1];
+                const target = nextCards[Math.floor(i / 2)];
+                if (!target) continue;
 
-            svg.appendChild(path);
+                const pos1 = getOffsetRelativeTo(card1, wrapper);
+                const pos2 = getOffsetRelativeTo(card2, wrapper);
+                const posT = getOffsetRelativeTo(target, wrapper);
+
+                const y1 = pos1.top + pos1.height / 2;
+                const y2 = pos2.top + pos2.height / 2;
+                const yT = posT.top + posT.height / 2;
+                // Left side: exit right edge → enter left edge (x1 < xT)
+                // Right side: exit left edge → enter right edge (x1 > xT)
+                const x1 = isRight ? pos1.left : pos1.left + pos1.width;
+                const xT = isRight ? posT.left + posT.width : posT.left;
+                const xMid = (x1 + xT) / 2;
+
+                addPath([
+                    `M ${x1} ${y1} H ${xMid}`,
+                    `M ${x1} ${y2} H ${xMid}`,
+                    `M ${xMid} ${y1} V ${y2}`,
+                    `M ${xMid} ${yT} H ${xT}`
+                ].join(' '), lineColor);
+            }
         }
     }
+
+    connectFlow(['r32-l', 'r16-l', 'qf-l', 'sf-l'], false);
+    connectFlow(['r32-r', 'r16-r', 'qf-r', 'sf-r'], true);
 
     wrapper.appendChild(svg);
 }
