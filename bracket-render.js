@@ -551,18 +551,11 @@ function renderBracketMiniCard(match, roundKey, side) {
     if (hasPrediction && !isFinished) classes.push('predicted');
     if (isRight) classes.push('right-side');
 
-    // Type badge for R32
-    const typeBadgeHTML = r32Type
-        ? `<span class="bracket-mini-type-badge" style="background:${borderColor}">${r32Type}</span>`
-        : '';
-
-    // Points badge
+    // Points badge only (no type text badge, no predicted checkmark)
     let badgeHTML = '';
     if (isFinished && hasPrediction && match.points) {
         const total = (match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0);
         badgeHTML = `<div class="bracket-mini-points">+${total}</div>`;
-    } else if (hasPrediction && !isFinished) {
-        badgeHTML = `<div class="bracket-mini-predicted">✓</div>`;
     }
 
     const homeFlag = homeData ? homeData.flag : '❓';
@@ -589,7 +582,7 @@ function renderBracketMiniCard(match, roundKey, side) {
         <div class="${classes.join(' ')}" data-match-id="${match.id}" style="${borderStyle}">
             <div class="bracket-mini-header">
                 <span class="bracket-mini-matchnum">
-                    ${matchNum ? `M${matchNum}` : ''}${typeBadgeHTML}
+                    ${matchNum ? `M${matchNum}` : ''}
                 </span>
                 <span class="bracket-mini-datetime">${dateStr} ${timeStr}</span>
             </div>

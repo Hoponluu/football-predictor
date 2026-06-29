@@ -184,7 +184,7 @@
 
 .bracket-mini-datetime {
     font-size: 8px;
-    color: var(--text-tertiary);
+    color: var(--text-secondary);
     white-space: nowrap;
 }
 
