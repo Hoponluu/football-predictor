@@ -17,16 +17,18 @@ let currentGroup = null;
 
 async function loginUser(email, password) {
   try {
-    // For demo: Simple email/password check against players table
-    const { data: player, error } = await supabase
+    const { data: players, error } = await supabase
       .from('players')
       .select('*')
       .eq('email', email)
-      .eq('password', password) // ⚠️ In production, use proper auth!
-      .single();
-    
+      .eq('password', password)
+      .limit(1);
+
     if (error) throw error;
-    
+
+    const player = players?.[0];
+    if (!player) throw new Error('Email hoặc mật khẩu không đúng');
+
     currentUser = player;
     localStorage.setItem('currentUserId', player.id);
     
@@ -275,49 +277,63 @@ async function getPlayerPredictions(playerId) {
 
 async function getLeaderboard(groupId) {
   try {
-    // Get all players in group with their total points
-    const { data: players, error } = await supabase
-      .from('players')
-      .select(`
-        id,
-        name,
-        predictions (
-          total_points,
-          points_rank,
-          points_exact_score,
-          points_minute
-        )
-      `)
+    // Get players in this group
+    const { data: memberships, error } = await supabase
+      .from('player_groups')
+      .select('player_id, players (id, name, favorite_team, favorite_points)')
       .eq('group_id', groupId);
-    
+
     if (error) throw error;
-    
-    // Calculate stats for each player
-    const leaderboard = players.map(player => {
-      const predictions = player.predictions || [];
-      const totalPoints = predictions.reduce((sum, p) => sum + (p.total_points || 0), 0);
-      const top1Count = predictions.filter(p => p.points_rank === 4).length;
-      const exactScoreCount = predictions.filter(p => p.points_exact_score > 0).length;
-      const exactMinuteCount = predictions.filter(p => p.points_minute > 0).length;
-      
+
+    const playerMap = {};
+    for (const m of (memberships || [])) {
+      if (m.players) playerMap[m.player_id] = m.players;
+    }
+    const playerIds = Object.keys(playerMap);
+
+    // Get per-group scores
+    const { data: groupScores, error: gsError } = await supabase
+      .from('prediction_group_scores')
+      .select('prediction_id, points_rank, points_minute, total_points, predictions (player_id, points_exact_score)')
+      .eq('group_id', groupId);
+
+    if (gsError) throw gsError;
+
+    // Aggregate per player from per-group scores
+    const playerTotals = {};
+    for (const gs of (groupScores || [])) {
+      const pid = gs.predictions?.player_id;
+      if (!pid || !playerMap[pid]) continue;
+      if (!playerTotals[pid]) playerTotals[pid] = { total: 0, top1: 0, exactScore: 0, exactMinute: 0 };
+      playerTotals[pid].total += gs.total_points || 0;
+      if (gs.points_rank === (window.scoringRules?.points_rank_1 || 5)) playerTotals[pid].top1++;
+      if (gs.predictions.points_exact_score > 0) playerTotals[pid].exactScore++;
+      if (gs.points_minute > 0) playerTotals[pid].exactMinute++;
+    }
+
+    const leaderboard = playerIds.map(pid => {
+      const player = playerMap[pid];
+      const totals = playerTotals[pid] || { total: 0, top1: 0, exactScore: 0, exactMinute: 0 };
+      const favPoints = player.favorite_points || 0;
+
       return {
         id: player.id,
         name: player.name,
-        points: totalPoints,
-        top1: top1Count,
-        exactScore: exactScoreCount,
-        exactMinute: exactMinuteCount
+        points: totals.total + favPoints,
+        predictionPoints: totals.total,
+        favPoints,
+        favoriteTeam: player.favorite_team,
+        top1: totals.top1,
+        exactScore: totals.exactScore,
+        exactMinute: totals.exactMinute
       };
     });
-    
-    // Sort by points descending
+
     leaderboard.sort((a, b) => b.points - a.points);
-    
-    // Add rank
     leaderboard.forEach((player, index) => {
       player.rank = index + 1;
     });
-    
+
     return leaderboard;
   } catch (error) {
     console.error('Get leaderboard error:', error);
@@ -329,27 +345,26 @@ async function getLeaderboard(groupId) {
 // FAVORITE TEAM FUNCTIONS
 // ============================================
 
-async function getFavoriteTeamSettings(groupId) {
+async function getFavoriteTeamSettings() {
   try {
-    // Read enabled/locked/points from groups table
-    const { data: group, error: groupError } = await supabase
-      .from('groups')
-      .select('favorite_team_enabled, favorite_team_locked, points_round16, points_quarter, points_semi, points_final, points_champion')
-      .eq('id', groupId)
-      .single();
-
-    if (groupError) throw groupError;
-
-    // Read deadline from scoring_rules (where admin saves it)
-    const { data: rules } = await supabase
+    const { data: rules, error } = await supabase
       .from('scoring_rules')
-      .select('favorite_team_deadline')
+      .select('favorite_team_enabled, favorite_team_locked, favorite_team_deadline, fav_r32, fav_r16, fav_quarter, fav_semi, fav_finals, fav_champion')
       .limit(1)
       .maybeSingle();
 
+    if (error) throw error;
+
     return {
-      ...group,
-      favorite_team_deadline: rules?.favorite_team_deadline || null
+      favorite_team_enabled: rules?.favorite_team_enabled ?? true,
+      favorite_team_locked: rules?.favorite_team_locked ?? false,
+      favorite_team_deadline: rules?.favorite_team_deadline || null,
+      points_r32: rules?.fav_r32 || 5,
+      points_r16: rules?.fav_r16 || 10,
+      points_quarter: rules?.fav_quarter || 10,
+      points_semi: rules?.fav_semi || 10,
+      points_finals: rules?.fav_finals || 10,
+      points_champion: rules?.fav_champion || 20
     };
   } catch (error) {
     console.error('Get favorite team settings error:', error);
@@ -402,14 +417,16 @@ async function updateFavoriteTeamSettings(groupId, settings) {
 
 async function getPlayers(groupId) {
   try {
-    const { data: players, error } = await supabase
-      .from('players')
-      .select('*')
+    const { data: memberships, error } = await supabase
+      .from('player_groups')
+      .select(`
+        players (*)
+      `)
       .eq('group_id', groupId);
-    
+
     if (error) throw error;
-    
-    return players || [];
+
+    return (memberships || []).map(m => m.players).filter(Boolean);
   } catch (error) {
     console.error('Get players error:', error);
     return [];
@@ -421,20 +438,100 @@ async function createPlayer(groupId, name, email, password, isAdmin = false) {
     const { data: player, error } = await supabase
       .from('players')
       .insert({
-        group_id: groupId,
         name,
         email,
-        password, // ⚠️ In production, hash this!
+        password,
         is_admin: isAdmin
       })
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
+    if (groupId) {
+      const { error: linkError } = await supabase
+        .from('player_groups')
+        .insert({ player_id: player.id, group_id: groupId });
+
+      if (linkError) throw linkError;
+    }
+
     return { success: true, player };
   } catch (error) {
     console.error('Create player error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================
+// PLAYER-GROUP MEMBERSHIP FUNCTIONS
+// ============================================
+
+async function getPlayerGroups(playerId) {
+  try {
+    const { data, error } = await supabase
+      .from('player_groups')
+      .select(`
+        group_id,
+        joined_at,
+        groups (
+          id, name, code
+        )
+      `)
+      .eq('player_id', playerId);
+
+    if (error) throw error;
+
+    return (data || []).map(pg => pg.groups).filter(Boolean);
+  } catch (error) {
+    console.error('Get player groups error:', error);
+    return [];
+  }
+}
+
+async function isPlayerInGroup(playerId, groupId) {
+  try {
+    const { data, error } = await supabase
+      .from('player_groups')
+      .select('id')
+      .eq('player_id', playerId)
+      .eq('group_id', groupId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return !!data;
+  } catch (error) {
+    console.error('Check membership error:', error);
+    return false;
+  }
+}
+
+async function addPlayerToGroup(playerId, groupId) {
+  try {
+    const { error } = await supabase
+      .from('player_groups')
+      .insert({ player_id: playerId, group_id: groupId });
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Add player to group error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+async function removePlayerFromGroup(playerId, groupId) {
+  try {
+    const { error } = await supabase
+      .from('player_groups')
+      .delete()
+      .eq('player_id', playerId)
+      .eq('group_id', groupId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Remove player from group error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -494,6 +591,10 @@ window.selectFavoriteTeam = selectFavoriteTeam;
 window.updateFavoriteTeamSettings = updateFavoriteTeamSettings;
 window.getPlayers = getPlayers;
 window.createPlayer = createPlayer;
+window.getPlayerGroups = getPlayerGroups;
+window.isPlayerInGroup = isPlayerInGroup;
+window.addPlayerToGroup = addPlayerToGroup;
+window.removePlayerFromGroup = removePlayerFromGroup;
 window.subscribeToMatches = subscribeToMatches;
 window.subscribeToPredictions = subscribeToPredictions;
 

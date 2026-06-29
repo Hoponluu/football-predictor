@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dự Đoán Tỉ Số World Cup 2026</title>
+    <link rel="icon" type="image/png" href="Favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- External CSS Files -->
@@ -14,19 +15,77 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Navigation -->
+    <!-- Banner + Nav overlay -->
+    <div class="banner-wrapper">
+        <img src="BannerWC.png" alt="FIFA World Cup 2026" class="banner-img">
         <nav class="nav-tabs">
-            <button class="nav-tab active" onclick="switchPage('homepage')" style="padding: 8px 12px;">🏠</button>
-            <button class="nav-tab" onclick="switchPage('schedule')">📅 Lịch thi đấu</button>
-            <button class="nav-tab" onclick="switchPage('leaderboard')">🏆 Bảng xếp hạng</button>
-            <div class="nav-user-section" id="navUserSection" style="display: none;">
-                <button class="nav-user-btn" onclick="openProfilePage()" id="navUserBtn">User</button>
-                <button class="nav-logout-btn" onclick="handleLogout()">Đăng xuất</button>
-            </div>
-            <button class="nav-login" id="navLoginBtn" onclick="openLoginModal()">Đăng nhập</button>
-        </nav>
+            <!-- Mobile hamburger -->
+            <button class="nav-hamburger" id="navHamburger" onclick="toggleMobileMenu()">
+                <span></span><span></span><span></span>
+            </button>
 
+            <!-- Desktop nav links -->
+            <div class="nav-links">
+                <button class="nav-tab active" onclick="switchPage('homepage')" data-page="homepage" style="padding: 8px 12px;">🏠</button>
+                <button class="nav-tab" onclick="switchPage('schedule')" data-page="schedule">📅 Lịch thi đấu</button>
+                <button class="nav-tab" onclick="switchPage('leaderboard')" data-page="leaderboard">🏆 Bảng xếp hạng</button>
+                <button class="nav-tab" onclick="switchPage('rules')" data-page="rules">📖 Luật chơi</button>
+            </div>
+
+            <!-- Right side: user + notif + theme -->
+            <div class="nav-right">
+                <div class="nav-user-section" id="navUserSection" style="display: none;">
+                    <div class="group-switcher" id="groupSwitcher" style="display: none;">
+                        <select class="group-switcher-select" id="groupSwitcherSelect" onchange="handleGroupSwitch(this.value)">
+                        </select>
+                    </div>
+                    <button class="nav-user-btn" onclick="openProfilePage()" id="navUserBtn">User</button>
+                    <button class="nav-logout-btn" onclick="handleLogout()">Đăng xuất</button>
+                </div>
+                <button class="nav-login" id="navLoginBtn" onclick="openLoginModal()">Đăng nhập</button>
+                <button class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Thông báo" style="display:none;">
+                    <span class="notif-bell-icon">🔔</span>
+                    <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+                </button>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Chuyển giao diện" aria-label="Toggle dark mode">
+                    <span class="theme-icon" id="themeIcon">🌙</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Mobile menu drawer -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <span style="font-weight:700; font-size:16px;">Menu</span>
+            <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+        </div>
+        <button class="mobile-menu-item active" onclick="mobileNavTo('homepage')" data-page="homepage">🏠 Trang chủ</button>
+        <button class="mobile-menu-item" onclick="mobileNavTo('schedule')" data-page="schedule">📅 Lịch thi đấu</button>
+        <button class="mobile-menu-item" onclick="mobileNavTo('leaderboard')" data-page="leaderboard">🏆 Bảng xếp hạng</button>
+        <button class="mobile-menu-item" onclick="mobileNavTo('rules')" data-page="rules">📖 Luật chơi</button>
+    </div>
+
+    <!-- Notification Panel -->
+    <div class="notif-panel" id="notifPanel">
+        <div class="notif-panel-header">
+            <h3 class="notif-panel-title">Thông báo</h3>
+            <button class="notif-mark-all" id="notifMarkAll" onclick="markAllNotifSeen()">Đánh dấu đã đọc</button>
+        </div>
+        <div class="notif-panel-list" id="notifList">
+            <div class="notif-empty">Không có thông báo</div>
+        </div>
+    </div>
+
+
+    <!-- Side banners + Content wrapper -->
+    <div class="page-layout">
+        <aside class="side-banner side-banner-left">
+            <img src="Banner-left.png" alt="" class="side-banner-img">
+        </aside>
+
+        <div class="container">
         <!-- Homepage -->
         <div id="homepage" class="page-content active">
             <!-- Trận đấu sắp diễn ra -->
@@ -35,7 +94,7 @@
                     <h2 class="section-title">🏟️ TRẬN ĐẤU SẮP DIỄN RA</h2>
                     <button class="view-all-btn" onclick="switchPage('schedule')">XEM TẤT CẢ</button>
                 </div>
-                <div class="matches-scroll" id="upcomingMatches">
+                <div class="matches-grid" id="upcomingMatches">
                     <!-- Sẽ được tạo bằng JavaScript -->
                 </div>
             </section>
@@ -71,7 +130,7 @@
             <section class="section">
                 <div class="section-header">
                     <h2 class="section-title">📊 LỊCH SỬ</h2>
-                    <button class="view-all-btn" onclick="scrollToPersonalStats()">XEM TẤT CẢ</button>
+                    <button class="view-all-btn" onclick="switchPage('schedule'); setTimeout(() => document.getElementById('scheduleHistoryMatches')?.scrollIntoView({ behavior: 'smooth' }), 100)">XEM TẤT CẢ</button>
                 </div>
                 <div class="matches-scroll" id="historyMatches">
                     <!-- Sẽ được tạo bằng JavaScript -->
@@ -107,10 +166,20 @@
                 </div>
             </div>
 
-            <!-- Theo bảng thi đấu -->
+            <!-- Bảng xếp hạng theo bảng đấu -->
             <section class="section">
                 <div class="section-header">
-                    <h2 class="section-title">📋 THEO BẢNG THI ĐẤU</h2>
+                    <h2 class="section-title">📊 CÁC BẢNG ĐẤU</h2>
+                </div>
+                <div class="standings-carousel" id="scheduleGroupStandings">
+                    <!-- Standings table rendered here by JS -->
+                </div>
+            </section>
+
+            <!-- Lịch thi đấu theo bảng -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📋 LỊCH CÁC TRẬN THEO BẢNG ĐẤU</h2>
                 </div>
                 <div class="groups-scroll">
                     <div id="scheduleGroupStage" class="groups-container">
@@ -125,7 +194,7 @@
                     <h2 class="section-title">🏆 LỊCH SỬ (KNOCK-OUT STAGE)</h2>
                 </div>
                 <div id="scheduleKnockout">
-                    <p style="text-align: center; color: var(--text-light); padding: 40px;">
+                    <p style="text-align: center; color: var(--text-secondary); padding: 40px;">
                         Bracket knockout sẽ được hiển thị khi có trận loại trực tiếp
                     </p>
                 </div>
@@ -194,7 +263,10 @@
 
                 <!-- Performance Chart -->
                 <div style="margin-top: 24px;">
-                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">📈 PHONG ĐỘ CỦA BẠN</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 16px; font-weight: 600; margin: 0;">📈 PHONG ĐỘ CỦA BẠN</h3>
+                        <button id="chartToggleBtn" onclick="toggleChartMode()" style="background: var(--bg-gray); border: 1px solid var(--stroke); border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; font-family: inherit; color: var(--text-light); transition: all 0.2s;">👥 Tất cả</button>
+                    </div>
                     <div id="performanceChart" style="position: relative; background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--stroke); overflow: visible;">
                         <canvas id="chartCanvas" style="width: 100%; height: 300px;"></canvas>
                         <div id="chartTooltip" style="position:absolute;display:none;background:rgba(17,24,39,0.92);color:white;padding:10px 14px;border-radius:8px;font-size:12px;pointer-events:none;z-index:100;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.2);line-height:1.7;"></div>
@@ -210,14 +282,210 @@
                 </div>
             </section>
         </div>
-    </div>
 
-    <!-- Profile Page -->
-    <div id="profile" class="page-content">
-        <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">👤 TRANG CÁ NHÂN</h2>
-            </div>
+        <!-- Rules Page -->
+        <div id="rules" class="page-content">
+
+            <!-- Block 1: Luật tính điểm -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">📖 LUẬT TÍNH ĐIỂM</h2>
+                </div>
+
+                <!-- Prize highlight -->
+                <div class="rules-prize-banner">
+                    <span style="font-size: 28px;">🍽️</span>
+                    <div>
+                        <strong>GIẢI THƯỞNG CHUNG CUỘC</strong>
+                        <p>Người đứng <strong>đầu bảng xếp hạng</strong> khi giải đấu kết thúc sẽ được <strong>nguyên nhóm mời đi ăn!</strong></p>
+                    </div>
+                </div>
+
+                <!-- Điểm xếp hạng -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">🏅 Điểm xếp hạng (mỗi trận)</h3>
+                    <p class="rules-card-desc">Sau mỗi trận, tất cả dự đoán được xếp hạng theo độ chính xác. Tiêu chí so sánh theo thứ tự ưu tiên:</p>
+                    <ol class="rules-criteria-list">
+                        <li>Đoán <strong>đúng tỉ số</strong> chính xác</li>
+                        <li>Đoán đúng <strong>hiệu số bàn thắng</strong> (VD: đoán 2-1, thực tế 3-2 → hiệu số đều là +1)</li>
+                        <li><strong>Tổng chênh lệch</strong> bàn thắng ít nhất</li>
+                        <li>Dự đoán <strong>phút ghi bàn cuối</strong> gần nhất</li>
+                    </ol>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Hạng</th><th>Điểm</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>🥇 Top 1</td><td><strong>4 điểm</strong></td></tr>
+                            <tr><td>🥈 Top 2</td><td><strong>3 điểm</strong></td></tr>
+                            <tr><td>🥉 Top 3</td><td><strong>2 điểm</strong></td></tr>
+                            <tr><td>Còn lại</td><td><strong>1 điểm</strong></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Điểm bonus -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">🎯 Điểm bonus</h3>
+                    <p class="rules-card-desc">Ngoài điểm xếp hạng, bạn có thể nhận thêm bonus nếu dự đoán chính xác:</p>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Loại bonus</th><th>Điểm</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>🎯 Đúng tỉ số chính xác</td><td><strong>+5 điểm</strong></td></tr>
+                            <tr><td>💡 Đoán phút ghi bàn cuối gần nhất</td><td><strong>+3 điểm</strong></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Ví dụ minh họa -->
+                <div class="rules-card rules-example">
+                    <h3 class="rules-card-title">📝 Ví dụ minh họa</h3>
+                    <div class="rules-example-scenario">
+                        <strong>Trận: Brasil 2-1 Argentina</strong> (bàn cuối phút 78')
+                    </div>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Người chơi</th><th>Dự đoán</th><th>Phút</th><th>Hạng</th><th>Bonus</th><th>Tổng</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>An</td><td><strong>2-1</strong></td><td>80'</td>
+                                <td>🥇 4đ</td><td>🎯+5 💡+3</td><td class="rules-total"><strong>12 điểm</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Bình</td><td>2-1</td><td>45'</td>
+                                <td>🥈 3đ</td><td>🎯+5</td><td class="rules-total"><strong>8 điểm</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Chi</td><td>3-2</td><td>75'</td>
+                                <td>🥉 2đ</td><td>-</td><td class="rules-total"><strong>2 điểm</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Dũng</td><td>1-0</td><td>60'</td>
+                                <td>4th 1đ</td><td>-</td><td class="rules-total"><strong>1 điểm</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="rules-example-note">
+                        <strong>Giải thích:</strong> An & Bình cùng đoán đúng 2-1. An đoán phút 80' (cách 78' chỉ 2 phút) gần hơn Bình 45' (cách 33 phút) nên An xếp trên. Chi đoán 3-2 (hiệu số +1 đúng) nên xếp trên Dũng (hiệu số +1 nhưng tổng chênh lệch lớn hơn). Bonus phút chỉ trao cho An vì 80' gần 78' nhất (|80-78|=2). Chi dù đoán 75' (|75-78|=3) vẫn xa hơn An.
+                    </p>
+                </div>
+
+                <!-- Điểm đội yêu thích -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">⭐ Điểm đội yêu thích</h3>
+                    <p class="rules-card-desc">Mỗi người chơi chọn <strong>1 đội yêu thích</strong> trước khi vòng knockout bắt đầu. Đội đi càng sâu trong giải, bạn càng nhận nhiều điểm bonus <strong>(cộng dồn)</strong>:</p>
+                    <table class="rules-table">
+                        <thead>
+                            <tr><th>Vòng đội đạt được</th><th>Điểm cộng thêm</th><th>Tổng cộng dồn</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Vòng 32 đội (R32)</td><td>+5</td><td>5 điểm</td></tr>
+                            <tr><td>Vòng 16 đội (R16)</td><td>+10</td><td>15 điểm</td></tr>
+                            <tr><td>Tứ kết (QF)</td><td>+10</td><td>25 điểm</td></tr>
+                            <tr><td>Bán kết (SF)</td><td>+10</td><td>35 điểm</td></tr>
+                            <tr><td>Chung kết</td><td>+10</td><td>45 điểm</td></tr>
+                            <tr><td>🏆 Vô địch</td><td>+20</td><td><strong>65 điểm</strong></td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="rules-example-scenario" style="margin-top: 16px;">
+                        <strong>Ví dụ:</strong> Bạn chọn Argentina. Argentina vào đến Bán kết rồi bị loại → Bạn nhận 5 + 10 + 10 + 10 = <strong>35 điểm bonus</strong>.
+                    </div>
+                </div>
+
+                <!-- Bảng xếp hạng -->
+                <div class="rules-card">
+                    <h3 class="rules-card-title">🏆 Bảng xếp hạng chung cuộc</h3>
+                    <p class="rules-card-desc">Tổng điểm = <strong>Điểm dự đoán tất cả các trận</strong> + <strong>Điểm đội yêu thích</strong></p>
+                    <p class="rules-card-desc">Nếu hai người cùng điểm, so sánh theo: Số lần đoán đúng tỉ số → Số lần đứng Top 1 → Số lần đoán đúng phút.</p>
+                </div>
+            </section>
+
+            <!-- Block 2: Hướng dẫn dự đoán -->
+            <section class="section" style="margin-top: 24px;">
+                <div class="section-header">
+                    <h2 class="section-title">🎮 HƯỚNG DẪN DỰ ĐOÁN</h2>
+                </div>
+
+                <div class="rules-steps">
+                    <div class="rules-step rules-step-horizontal">
+                        <div class="rules-step-number">1</div>
+                        <div class="rules-step-content">
+                            <h4>Đăng nhập vào hệ thống</h4>
+                            <p>Nhập email, mật khẩu và mã nhóm do quản trị viên cung cấp. Bấm <strong>"Đăng nhập"</strong>.</p>
+                        </div>
+                        <div class="rules-step-image">
+                            <img src="Tuto-image-00.png" alt="Đăng nhập">
+                        </div>
+                    </div>
+
+                    <div class="rules-step rules-step-horizontal">
+                        <div class="rules-step-number">2</div>
+                        <div class="rules-step-content">
+                            <h4>Xem các trận sắp diễn ra</h4>
+                            <p>Tại <strong>Trang chủ</strong>, bạn sẽ thấy các trận đấu sắp diễn ra. Trận nào có nút <strong>"Dự đoán"</strong> nghĩa là đang mở (trước giờ kick-off 24h).</p>
+                        </div>
+                        <div class="rules-step-image">
+                            <img src="Tuto-image-01.png" alt="Trận sắp diễn ra">
+                        </div>
+                    </div>
+
+                    <div class="rules-step rules-step-horizontal">
+                        <div class="rules-step-number">3</div>
+                        <div class="rules-step-content">
+                            <h4>Nhập dự đoán</h4>
+                            <p>Bấm vào thẻ trận đấu → Nhập <strong>tỉ số</strong> (VD: 2-1) và <strong>phút ghi bàn cuối cùng</strong> (VD: 78). Bấm <strong>"Xác nhận"</strong>.</p>
+                        </div>
+                        <div class="rules-step-image">
+                            <img src="Tuto-image-02.png" alt="Nhập dự đoán">
+                        </div>
+                    </div>
+
+                    <div class="rules-step rules-step-horizontal">
+                        <div class="rules-step-number">4</div>
+                        <div class="rules-step-content">
+                            <h4>Sửa dự đoán (nếu cần)</h4>
+                            <p>Bạn có thể sửa dự đoán bất kỳ lúc nào <strong>trước khi trận đấu bắt đầu</strong>. Sau khi kick-off, dự đoán sẽ bị khóa tự động.</p>
+                        </div>
+                        <div class="rules-step-image">
+                            <img src="Tuto-image-03.png" alt="Sửa dự đoán">
+                        </div>
+                    </div>
+
+                    <div class="rules-step rules-step-horizontal">
+                        <div class="rules-step-number">5</div>
+                        <div class="rules-step-content">
+                            <h4>Chọn đội yêu thích</h4>
+                            <p>Trước vòng knockout, bấm vào mục <strong>"⭐ Đội yêu thích"</strong> ở trang cá nhân để chọn 1 đội. Lưu ý: sau khi admin khóa, bạn không thể đổi đội.</p>
+                        </div>
+                        <div class="rules-step-image">
+                            <img src="Tuto-image-04.png" alt="Chọn đội yêu thích">
+                        </div>
+                    </div>
+
+                    <div class="rules-step rules-step-horizontal">
+                        <div class="rules-step-number">6</div>
+                        <div class="rules-step-content">
+                            <h4>Theo dõi bảng xếp hạng</h4>
+                            <p>Vào tab <strong>"🏆 Bảng xếp hạng"</strong> để xem thứ hạng của bạn so với mọi người trong nhóm. Điểm được cập nhật sau mỗi trận.</p>
+                        </div>
+                        <div class="rules-step-image">
+                            <img src="Tuto-image-05.png" alt="Bảng xếp hạng">
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="profile" class="page-content">
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">👤 TRANG CÁ NHÂN</h2>
+                </div>
             
             <!-- Personal Stats -->
             <div class="stats-row" id="profileStatsCards">
@@ -240,7 +508,13 @@
                 </div>
             </div>
         </section>
+        </div>
     </div>
+
+        <aside class="side-banner side-banner-right">
+            <img src="Banner-right.png" alt="" class="side-banner-img">
+        </aside>
+    </div><!-- end page-layout -->
 
     <!-- Modal -->
     <div class="modal-overlay" id="predictionModal">
@@ -347,7 +621,7 @@
                         <div class="score-main" id="resultsHomeScore">2</div>
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 16px;">
-                        <div style="font-size: 18px; color: var(--text-light); font-weight: 500;">vs</div>
+                        <div style="font-size: 18px; color: var(--text-secondary); font-weight: 500;">vs</div>
                         <div class="score-detail" id="resultsMinute">82'</div>
                     </div>
                     <div class="results-final-score">
@@ -376,7 +650,7 @@
                 <button class="modal-close" onclick="closeFavoriteTeamModal()">×</button>
             </div>
 
-            <div style="padding: 16px; background: var(--yellow-bg); border-radius: 8px; margin-bottom: 20px;">
+            <div style="padding: 16px; background: var(--highlight-bg); border-radius: 8px; margin-bottom: 20px;">
                 <div style="font-size: 13px; color: #78350F; line-height: 1.5;">
                     <strong>Cách hoạt động:</strong><br>
                     Chọn 1 đội. Đội đó đi càng sâu → Điểm bonus càng cao!<br>
@@ -399,12 +673,12 @@
                 <!-- Will be populated by JavaScript -->
             </div>
 
-            <div id="favoriteTeamSelected" style="display: none; padding: 16px; background: var(--bg-gray); border-radius: 8px; margin-bottom: 20px;">
+            <div id="favoriteTeamSelected" style="display: none; padding: 16px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 20px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="font-size: 40px;" id="selectedTeamFlag"></div>
                     <div style="flex: 1;">
-                        <div style="font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px;" id="selectedTeamName"></div>
-                        <div style="font-size: 12px; color: var(--text-light);" id="selectedTeamPoints"></div>
+                        <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;" id="selectedTeamName"></div>
+                        <div style="font-size: 12px; color: var(--text-secondary);" id="selectedTeamPoints"></div>
                     </div>
                 </div>
             </div>
@@ -452,22 +726,23 @@
         var currentUser = null;
         var currentGroup = null;
         
+        const PLAYER_API_URL = '/api/player';
+
         // AUTHENTICATION FUNCTIONS
-        async function loginUser(email, password) {
+        async function loginUser(email, password, groupCode) {
           try {
-            const { data: player, error } = await supabase
-              .from('players')
-              .select('*')
-              .eq('email', email)
-              .eq('password', password)
-              .single();
-            
-            if (error) throw error;
-            
-            currentUser = player;
-            localStorage.setItem('currentUserId', player.id);
-            
-            return { success: true, player };
+            const resp = await fetch(PLAYER_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'login', email, password, groupCode })
+            });
+            const result = await resp.json();
+            if (!resp.ok || !result.player) throw new Error(result.error || 'Email hoặc mật khẩu không đúng');
+
+            currentUser = result.player;
+            localStorage.setItem('currentUserId', result.player.id);
+
+            return { success: true, player: result.player };
           } catch (error) {
             console.error('Login error:', error);
             return { success: false, error: error.message };
@@ -537,70 +812,7 @@
           }
         }
         
-        async function createMatch(groupId, matchData) {
-          try {
-            const { data: match, error } = await supabase
-              .from('matches')
-              .insert({
-                group_id: groupId,
-                match_group: matchData.group,
-                home_team: matchData.home,
-                away_team: matchData.away,
-                match_date: matchData.date,
-                status: matchData.status || 'not-open'
-              })
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, match };
-          } catch (error) {
-            console.error('Create match error:', error);
-            return { success: false, error: error.message };
-          }
-        }
-        
-        async function updateMatchStatus(matchId, status) {
-          try {
-            const { data: match, error } = await supabase
-              .from('matches')
-              .update({ status })
-              .eq('id', matchId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, match };
-          } catch (error) {
-            console.error('Update match status error:', error);
-            return { success: false, error: error.message };
-          }
-        }
-        
-        async function enterMatchResult(matchId, homeScore, awayScore, minute) {
-          try {
-            const { data: match, error } = await supabase
-              .from('matches')
-              .update({
-                status: 'finished',
-                home_score: homeScore,
-                away_score: awayScore,
-                minute: minute
-              })
-              .eq('id', matchId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, match };
-          } catch (error) {
-            console.error('Enter match result error:', error);
-            return { success: false, error: error.message };
-          }
-        }
+        // createMatch, updateMatchStatus, enterMatchResult — admin only, removed from client
         
         // PREDICTION FUNCTIONS
         async function getPrediction(matchId, playerId) {
@@ -623,24 +835,17 @@
         
         async function savePrediction(matchId, playerId, homeScore, awayScore, minute) {
           try {
-            const { data: prediction, error } = await supabase
-              .from('predictions')
-              .upsert({
-                match_id: matchId,
-                player_id: playerId,
-                home_score: homeScore,
-                away_score: awayScore,
-                minute: minute,
-                updated_at: new Date().toISOString()
-              }, {
-                onConflict: 'match_id,player_id'
+            const resp = await fetch(PLAYER_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'save_prediction',
+                playerId, matchId, homeScore, awayScore, minute
               })
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, prediction };
+            });
+            const result = await resp.json();
+            if (!resp.ok || result.error) throw new Error(result.error || 'Lỗi lưu dự đoán');
+            return { success: true, prediction: result.prediction };
           } catch (error) {
             console.error('Save prediction error:', error);
             return { success: false, error: error.message };
@@ -653,13 +858,27 @@
               .from('predictions')
               .select(`
                 *,
-                matches (*)
+                matches (*),
+                prediction_group_scores (
+                  group_id,
+                  points_rank,
+                  points_minute,
+                  total_points
+                )
               `)
               .eq('player_id', playerId);
-            
+
             if (error) throw error;
-            
-            return predictions || [];
+
+            return (predictions || []).map(p => {
+              const gs = (p.prediction_group_scores || []).find(s => s.group_id === groupId);
+              return {
+                ...p,
+                points_rank: gs ? gs.points_rank : 0,
+                points_minute: gs ? gs.points_minute : 0,
+                total_points: gs ? gs.total_points : 0
+              };
+            });
           } catch (error) {
             console.error('Get player predictions error:', error);
             return [];
@@ -669,26 +888,48 @@
         // Get all predictions for a match (all players in group)
         async function getMatchPredictions(matchId) {
           try {
+            // Get player IDs in the current group
+            const { data: memberships, error: memError } = await supabase
+              .from('player_groups')
+              .select('player_id')
+              .eq('group_id', groupId);
+
+            if (memError) throw memError;
+
+            const playerIds = (memberships || []).map(m => m.player_id);
+            if (playerIds.length === 0) return [];
+
             const { data: predictions, error } = await supabase
               .from('predictions')
               .select(`
                 *,
-                players!inner (
+                players (
                   id,
-                  name,
-                  group_id
+                  name
+                ),
+                prediction_group_scores (
+                  group_id,
+                  points_rank,
+                  points_minute,
+                  total_points
                 )
               `)
               .eq('match_id', matchId)
-              .eq('players.group_id', groupId);
-            
+              .in('player_id', playerIds);
+
             if (error) throw error;
-            
-            return (predictions || []).map(p => ({
-              ...p,
-              player_name: p.players.name,
-              player_id: p.players.id
-            }));
+
+            return (predictions || []).map(p => {
+              const gs = (p.prediction_group_scores || []).find(s => s.group_id === groupId);
+              return {
+                ...p,
+                player_name: p.players.name,
+                player_id: p.players.id,
+                points_rank: gs ? gs.points_rank : (p.points_rank || 0),
+                points_minute: gs ? gs.points_minute : (p.points_minute || 0),
+                total_points: gs ? gs.total_points : (p.total_points || 0)
+              };
+            });
           } catch (error) {
             console.error('Get match predictions error:', error);
             return [];
@@ -696,53 +937,71 @@
         }
         
         // LEADERBOARD FUNCTIONS
-        async function getLeaderboard(groupId) {
+        async function getLeaderboard(grpId) {
           try {
-            const { data: players, error } = await supabase
-              .from('players')
-              .select(`
-                id,
-                name,
-                favorite_team,
-                favorite_points,
-                predictions (
-                  total_points,
-                  points_rank,
-                  points_exact_score,
-                  points_minute
-                )
-              `)
-              .eq('group_id', groupId);
+            const { data: memberships, error } = await supabase
+              .from('player_groups')
+              .select('player_id, players (id, name, favorite_team, favorite_points)')
+              .eq('group_id', grpId);
 
             if (error) throw error;
 
-            const leaderboard = players.map(player => {
-              const predictions = player.predictions || [];
-              const predictionPoints = predictions.reduce((sum, p) => sum + (p.total_points || 0), 0);
+            const playerMap = {};
+            for (const m of (memberships || [])) {
+              if (m.players) playerMap[m.player_id] = m.players;
+            }
+            const playerIds = Object.keys(playerMap);
+
+            const [{ data: groupScores, error: gsError }, { data: rulesRow }] = await Promise.all([
+              supabase
+                .from('prediction_group_scores')
+                .select('prediction_id, points_rank, points_minute, total_points, predictions (player_id, points_exact_score)')
+                .eq('group_id', grpId),
+              supabase
+                .from('scoring_rules')
+                .select('points_rank_1')
+                .limit(1)
+                .maybeSingle()
+            ]);
+
+            if (gsError) throw gsError;
+
+            const rank1Points = rulesRow?.points_rank_1 ?? 4;
+
+            const playerTotals = {};
+            for (const gs of (groupScores || [])) {
+              const pid = gs.predictions?.player_id;
+              if (!pid || !playerMap[pid]) continue;
+              if (!playerTotals[pid]) playerTotals[pid] = { total: 0, top1: 0, exactScore: 0, exactMinute: 0 };
+              playerTotals[pid].total += gs.total_points || 0;
+              if (gs.points_rank >= rank1Points) playerTotals[pid].top1++;
+              if (gs.predictions.points_exact_score > 0) playerTotals[pid].exactScore++;
+              if (gs.points_minute > 0) playerTotals[pid].exactMinute++;
+            }
+
+            const leaderboard = playerIds.map(pid => {
+              const player = playerMap[pid];
+              const totals = playerTotals[pid] || { total: 0, top1: 0, exactScore: 0, exactMinute: 0 };
               const favPoints = player.favorite_points || 0;
-              const totalPoints = predictionPoints + favPoints;
-              const top1Count = predictions.filter(p => p.points_rank === 4).length;
-              const exactScoreCount = predictions.filter(p => p.points_exact_score > 0).length;
-              const exactMinuteCount = predictions.filter(p => p.points_minute > 0).length;
 
               return {
                 id: player.id,
                 name: player.name,
-                points: totalPoints,
-                predictionPoints: predictionPoints,
-                favPoints: favPoints,
+                points: totals.total + favPoints,
+                predictionPoints: totals.total,
+                favPoints,
                 favoriteTeam: player.favorite_team,
-                top1: top1Count,
-                exactScore: exactScoreCount,
-                exactMinute: exactMinuteCount
+                top1: totals.top1,
+                exactScore: totals.exactScore,
+                exactMinute: totals.exactMinute
               };
             });
-            
+
             leaderboard.sort((a, b) => b.points - a.points);
             leaderboard.forEach((player, index) => {
               player.rank = index + 1;
             });
-            
+
             return leaderboard;
           } catch (error) {
             console.error('Get leaderboard error:', error);
@@ -751,27 +1010,26 @@
         }
         
         // FAVORITE TEAM FUNCTIONS
-        async function getFavoriteTeamSettings(groupId) {
+        async function getFavoriteTeamSettings() {
           try {
-            // Read enabled/locked from groups table
-            const { data: group, error: groupError } = await supabase
-              .from('groups')
-              .select('favorite_team_enabled, favorite_team_locked, points_round16, points_quarter, points_semi, points_final, points_champion')
-              .eq('id', groupId)
-              .single();
-
-            if (groupError) throw groupError;
-
-            // Read deadline from scoring_rules (where admin saves it)
-            const { data: rules } = await supabase
+            const { data: rules, error } = await supabase
               .from('scoring_rules')
-              .select('favorite_team_deadline')
+              .select('favorite_team_enabled, favorite_team_locked, favorite_team_deadline, fav_r32, fav_r16, fav_quarter, fav_semi, fav_finals, fav_champion')
               .limit(1)
               .maybeSingle();
 
+            if (error) throw error;
+
             return {
-              ...group,
-              favorite_team_deadline: rules?.favorite_team_deadline || null
+              favorite_team_enabled: rules?.favorite_team_enabled ?? true,
+              favorite_team_locked: rules?.favorite_team_locked ?? false,
+              favorite_team_deadline: rules?.favorite_team_deadline || null,
+              points_r32: rules?.fav_r32 || 5,
+              points_r16: rules?.fav_r16 || 10,
+              points_quarter: rules?.fav_quarter || 10,
+              points_semi: rules?.fav_semi || 10,
+              points_finals: rules?.fav_finals || 10,
+              points_champion: rules?.fav_champion || 20
             };
           } catch (error) {
             console.error('Get favorite team settings error:', error);
@@ -781,87 +1039,245 @@
         
         async function selectFavoriteTeam(playerId, teamName) {
           try {
-            const { data: player, error } = await supabase
-              .from('players')
-              .update({
-                favorite_team: teamName,
-                favorite_team_status: 'active'
-              })
-              .eq('id', playerId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, player };
+            const resp = await fetch(PLAYER_API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'select_favorite_team', playerId, teamName })
+            });
+            const result = await resp.json();
+            if (!resp.ok || result.error) throw new Error(result.error || 'Lỗi chọn đội yêu thích');
+            return { success: true, player: result.player };
           } catch (error) {
             console.error('Select favorite team error:', error);
             return { success: false, error: error.message };
           }
         }
         
-        async function updateFavoriteTeamSettings(groupId, settings) {
-          try {
-            const { data: group, error } = await supabase
-              .from('groups')
-              .update(settings)
-              .eq('id', groupId)
-              .select()
-              .single();
-            
-            if (error) throw error;
-            
-            return { success: true, group };
-          } catch (error) {
-            console.error('Update favorite team settings error:', error);
-            return { success: false, error: error.message };
-          }
-        }
+        // updateFavoriteTeamSettings — admin only, removed from client
         
         // PLAYER FUNCTIONS
-        async function getPlayers(groupId) {
+        async function getPlayers(grpId) {
           try {
-            const { data: players, error } = await supabase
-              .from('players')
-              .select('*')
-              .eq('group_id', groupId);
-            
+            const { data: memberships, error } = await supabase
+              .from('player_groups')
+              .select('players (*)')
+              .eq('group_id', grpId);
+
             if (error) throw error;
-            
-            return players || [];
+
+            return (memberships || []).map(m => m.players).filter(Boolean);
           } catch (error) {
             console.error('Get players error:', error);
             return [];
           }
         }
+
+        // createPlayer — admin only, removed from client
         
-        async function createPlayer(groupId, name, email, password, isAdmin = false) {
+        // PLAYER-GROUP MEMBERSHIP FUNCTIONS
+        async function getPlayerGroups(playerId) {
           try {
-            const { data: player, error } = await supabase
-              .from('players')
-              .insert({
-                group_id: groupId,
-                name,
-                email,
-                password,
-                is_admin: isAdmin
-              })
-              .select()
-              .single();
-            
+            const { data, error } = await supabase
+              .from('player_groups')
+              .select('group_id, groups (id, name, code)')
+              .eq('player_id', playerId);
+
             if (error) throw error;
-            
-            return { success: true, player };
+            return (data || []).map(pg => pg.groups).filter(Boolean);
           } catch (error) {
-            console.error('Create player error:', error);
-            return { success: false, error: error.message };
+            console.error('Get player groups error:', error);
+            return [];
           }
         }
-        
+
+        async function isPlayerInGroup(playerId, grpId) {
+          try {
+            const { data, error } = await supabase
+              .from('player_groups')
+              .select('id')
+              .eq('player_id', playerId)
+              .eq('group_id', grpId)
+              .maybeSingle();
+
+            if (error) throw error;
+            return !!data;
+          } catch (error) {
+            console.error('Check membership error:', error);
+            return false;
+          }
+        }
+
         console.log('✅ Supabase client initialized');
         console.log('📊 Database:', SUPABASE_CONFIG.url);
+        // ============================================
+        // NOTIFICATIONS
+        // ============================================
+        var notifData = [];
+        var notifUnread = 0;
+        var notifPanelOpen = false;
+
+        async function loadNotifications() {
+            if (!currentPlayer) return;
+            try {
+                const resp = await fetch(PLAYER_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_notifications', playerId: currentPlayer.id, limit: 50 })
+                });
+                const result = await resp.json();
+                notifData = result.notifications || [];
+                notifUnread = notifData.filter(n => !n.seen).length;
+                updateNotifBadge();
+                if (notifPanelOpen) renderNotifList();
+            } catch (e) {
+                console.error('Load notifications error:', e);
+            }
+        }
+
+        function updateNotifBadge() {
+            const bell = document.getElementById('notifBell');
+            const badge = document.getElementById('notifBadge');
+
+            if (currentPlayer) {
+                bell.style.display = 'flex';
+            } else {
+                bell.style.display = 'none';
+            }
+
+            if (notifUnread > 0) {
+                badge.textContent = notifUnread > 99 ? '99+' : notifUnread;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function getNotifIcon(type) {
+            const icons = {
+                match_open: '⚽',
+                prediction_closed: '🔒',
+                match_result: '📊',
+                congrats: '🎉',
+                reminder: '⏰',
+                leaderboard: '🏆',
+                favorite_team: '⭐'
+            };
+            return icons[type] || '🔔';
+        }
+
+        function timeAgo(dateStr) {
+            const diff = Date.now() - new Date(dateStr).getTime();
+            const mins = Math.floor(diff / 60000);
+            if (mins < 1) return 'Vừa xong';
+            if (mins < 60) return `${mins} phút trước`;
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return `${hours} giờ trước`;
+            const days = Math.floor(hours / 24);
+            return `${days} ngày trước`;
+        }
+
+        function renderNotifList() {
+            const list = document.getElementById('notifList');
+            if (notifData.length === 0) {
+                list.innerHTML = '<div class="notif-empty">Không có thông báo</div>';
+                return;
+            }
+
+            list.innerHTML = notifData.map(n => `
+                <div class="notif-item ${n.seen ? '' : 'unread'}" onclick="handleNotifClick('${n.id}', '${n.action || ''}', '${n.match_id || ''}')">
+                    <span class="notif-icon">${getNotifIcon(n.type)}</span>
+                    <div class="notif-content">
+                        <div class="notif-title">${n.title}</div>
+                        <div class="notif-body">${n.body || ''}</div>
+                        <div class="notif-time">${timeAgo(n.created_at)}</div>
+                    </div>
+                    <span class="notif-dot ${n.seen ? 'read' : ''}"></span>
+                </div>
+            `).join('');
+        }
+
+        function positionNotifPanel(panel) {
+            const nav = document.querySelector('.nav-tabs');
+            const rect = nav.getBoundingClientRect();
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                panel.style.top = (rect.bottom + 10) + 'px';
+            } else {
+                panel.style.top = (rect.bottom + 12) + 'px';
+            }
+        }
+
+        function toggleNotifPanel() {
+            const panel = document.getElementById('notifPanel');
+            notifPanelOpen = !notifPanelOpen;
+            if (notifPanelOpen) {
+                positionNotifPanel(panel);
+                panel.classList.add('open');
+                renderNotifList();
+            } else {
+                panel.classList.remove('open');
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('notifPanel');
+            const bell = document.getElementById('notifBell');
+            if (notifPanelOpen && !panel.contains(e.target) && !bell.contains(e.target)) {
+                notifPanelOpen = false;
+                panel.classList.remove('open');
+            }
+        });
+
+        async function handleNotifClick(notifId, action, matchId) {
+            // Mark as seen
+            if (currentPlayer) {
+                fetch(PLAYER_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'mark_seen', playerId: currentPlayer.id, notificationIds: [notifId] })
+                });
+            }
+
+            const notif = notifData.find(n => n.id === notifId);
+            if (notif) notif.seen = true;
+            notifUnread = notifData.filter(n => !n.seen).length;
+            updateNotifBadge();
+            renderNotifList();
+
+            // Navigate
+            notifPanelOpen = false;
+            document.getElementById('notifPanel').classList.remove('open');
+
+            if (action === 'leaderboard') {
+                switchPage('leaderboard');
+            } else if (matchId && (action === 'open_match' || action === 'view_match' || action === 'predict')) {
+                switchPage('schedule');
+                setTimeout(() => {
+                    const card = document.querySelector(`[data-match-id="${matchId}"]`);
+                    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 200);
+            }
+        }
+
+        async function markAllNotifSeen() {
+            if (!currentPlayer) return;
+            try {
+                await fetch(PLAYER_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'mark_seen', playerId: currentPlayer.id })
+                });
+                notifData.forEach(n => n.seen = true);
+                notifUnread = 0;
+                updateNotifBadge();
+                renderNotifList();
+            } catch (e) {
+                console.error('Mark all seen error:', e);
+            }
+        }
+
         console.log('✅ All functions ready!');
-        
+
         // ============================================
         // APP LOGIC STARTS HERE
         // ============================================
@@ -877,7 +1293,7 @@
             // WC 2026 Hosts
             'Canada': { flag: '🇨🇦', color: '#FEE2E2' },
             'Mexico': { flag: '🇲🇽', color: '#D1FAE5' },
-            'United States': { flag: '🇺🇸', color: '#DBEAFE' },
+            'USA': { flag: '🇺🇸', color: '#DBEAFE' },
             
             // Europe - Qualified
             'Austria': { flag: '🇦🇹', color: '#FEE2E2' },
@@ -968,7 +1384,7 @@
         // FIFA-style country abbreviations
         const countryAbbr = {
             'TBU': 'TBU',
-            'Canada': 'CAN', 'Mexico': 'MEX', 'United States': 'USA',
+            'Canada': 'CAN', 'Mexico': 'MEX', 'USA': 'USA',
             'Austria': 'AUT', 'Belgium': 'BEL', 'Croatia': 'CRO', 'England': 'ENG',
             'France': 'FRA', 'Germany': 'GER', 'Netherlands': 'NED', 'Norway': 'NOR',
             'Portugal': 'POR', 'Scotland': 'SCO', 'Spain': 'ESP', 'Switzerland': 'SUI',
@@ -1017,14 +1433,47 @@
         console.log('🚀 App initializing...');
 
         // ============================================
+        // AUTO MATCH STATUS TRANSITIONS
+        // ============================================
+
+        async function autoUpdateMatchStatuses() {
+            try {
+                const resp = await fetch(PLAYER_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'auto_update_statuses' })
+                });
+                const result = await resp.json();
+                const total = (result.opened || 0) + (result.closed || 0);
+                if (total > 0) {
+                    console.log(`⚡ Auto-updated ${total} match statuses (${result.opened || 0} opened, ${result.closed || 0} closed)`);
+                }
+            } catch (error) {
+                console.error('Auto-update statuses error:', error);
+            }
+        }
+
+        // Check every 60 seconds
+        setInterval(async () => {
+            await autoUpdateMatchStatuses();
+            await loadMatchesGlobal();
+            if (currentPlayer) {
+                await loadMyPredictions();
+                await loadNotifications();
+            }
+            renderAllPages();
+        }, 60000);
+
+        // ============================================
         // INIT APP - OPTIMIZED LOGIC
         // ============================================
-        
+
         async function initApp() {
             console.log('📊 Loading app...');
-            
+
             try {
-                // STEP 1: Load GLOBAL data (matches - same for all groups)
+                // STEP 1: Auto-update match statuses then load
+                await autoUpdateMatchStatuses();
                 console.log('📥 Loading matches (global)...');
                 await loadMatchesGlobal();
                 console.log('✅ Matches loaded');
@@ -1035,20 +1484,42 @@
                     
                     if (currentPlayer) {
                         console.log('✅ User logged in:', currentPlayer.name);
-                        
-                        // Get group ID from user profile
-                        groupId = currentPlayer.group_id;
+
+                        // Load user's groups
+                        const playerGroupsList = await getPlayerGroups(currentPlayer.id);
+
+                        // Restore groupId from localStorage, or use first group
+                        const savedGroupId = localStorage.getItem('currentGroupId');
+                        if (savedGroupId && playerGroupsList.some(g => g.id === savedGroupId)) {
+                            groupId = savedGroupId;
+                        } else if (playerGroupsList.length > 0) {
+                            groupId = playerGroupsList[0].id;
+                            localStorage.setItem('currentGroupId', groupId);
+                        } else {
+                            groupId = currentPlayer.group_id;
+                        }
+
+                        // Load the current group object
+                        const { data: grpData } = await supabase
+                            .from('groups')
+                            .select('*')
+                            .eq('id', groupId)
+                            .single();
+                        if (grpData) currentGroup = grpData;
+
                         console.log('✅ Group ID:', groupId);
-                        
+
                         updateUIForLoggedInUser();
-                        
+                        renderGroupSwitcher(playerGroupsList);
+
                         // Load GROUP-SPECIFIC data
                         await Promise.all([
                             loadMyPredictions(),
                             loadLeaderboard(),
-                            loadFavoriteTeamSettings()
+                            loadFavoriteTeamSettings(),
+                            loadNotifications()
                         ]);
-                        
+
                         console.log('✅ Personal & group data loaded');
                     } else {
                         console.log('ℹ️ Guest mode - matches visible, login to compete');
@@ -1158,8 +1629,8 @@
             console.log('📥 Loading favorite team settings...');
             
             try {
-                const settings = await getFavoriteTeamSettings(groupId);
-                
+                const settings = await getFavoriteTeamSettings();
+
                 favoriteTeamSettings = {
                     isEnabled: settings.favorite_team_enabled,
                     isLocked: settings.favorite_team_locked,
@@ -1167,10 +1638,11 @@
                     selectedTeam: currentPlayer?.favorite_team || null,
                     teamStatus: currentPlayer?.favorite_team_status || null,
                     points: {
-                        round16: settings.points_round16,
+                        r32: settings.points_r32,
+                        round16: settings.points_r16,
                         quarter: settings.points_quarter,
                         semi: settings.points_semi,
-                        final: settings.points_final,
+                        final: settings.points_finals,
                         champion: settings.points_champion
                     }
                 };
@@ -1212,19 +1684,65 @@
 
         async function handleLogout() {
             if (!confirm('Bạn có chắc muốn đăng xuất?')) return;
-            
+
             await logoutUser();
             currentPlayer = null;
             groupId = null;
+            currentGroup = null;
             matches = [];
             myPredictions = {};
             leaderboardData = [];
+            localStorage.removeItem('currentGroupId');
             
             updateUIForGuestUser();
             switchPage('homepage');
             renderAllPages();
             
             console.log('✅ Logged out');
+        }
+
+        // Group Switcher
+        function renderGroupSwitcher(groups) {
+            const switcher = document.getElementById('groupSwitcher');
+            const select = document.getElementById('groupSwitcherSelect');
+            if (!switcher || !select) return;
+
+            if (groups.length <= 1) {
+                switcher.style.display = 'none';
+                return;
+            }
+
+            let options = '';
+            groups.forEach(g => {
+                const selected = g.id === groupId ? 'selected' : '';
+                options += `<option value="${g.id}" ${selected}>${g.name}</option>`;
+            });
+            select.innerHTML = options;
+            switcher.style.display = 'block';
+        }
+
+        async function handleGroupSwitch(newGroupId) {
+            if (newGroupId === groupId) return;
+
+            groupId = newGroupId;
+            localStorage.setItem('currentGroupId', newGroupId);
+
+            // Load new group object
+            const { data: grpData } = await supabase
+                .from('groups')
+                .select('*')
+                .eq('id', newGroupId)
+                .single();
+            if (grpData) currentGroup = grpData;
+
+            // Reload group-specific data
+            await Promise.all([
+                loadLeaderboard(),
+                loadFavoriteTeamSettings()
+            ]);
+
+            renderAllPages();
+            console.log('✅ Switched to group:', currentGroup?.name);
         }
 
         // Open Profile Page
@@ -1272,7 +1790,7 @@
                             <div style="font-size: 48px;">${teamData.flag}</div>
                             <div style="flex: 1;">
                                 <div style="font-size: 20px; font-weight: 600; color: var(--text);">${currentPlayer.favorite_team}</div>
-                                <div style="font-size: 14px; color: var(--text-light); margin-top: 4px;">Đội yêu thích của bạn</div>
+                                <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">Đội yêu thích của bạn</div>
                             </div>
                             <button class="btn btn-secondary" onclick="openFavoriteTeamModal()">Đổi đội</button>
                         </div>
@@ -1281,7 +1799,7 @@
                     favTeamContainer.innerHTML = `
                         <div style="text-align: center; padding: 32px; background: var(--bg-secondary); border-radius: 12px;">
                             <div style="font-size: 48px; margin-bottom: 16px;">⭐</div>
-                            <p style="color: var(--text-light); margin-bottom: 16px;">Bạn chưa chọn đội yêu thích</p>
+                            <p style="color: var(--text-secondary); margin-bottom: 16px;">Bạn chưa chọn đội yêu thích</p>
                             <button class="btn btn-primary" onclick="openFavoriteTeamModal()">Chọn ngay</button>
                         </div>
                     `;
@@ -1297,17 +1815,17 @@
                         <div style="padding: 16px; background: var(--bg-secondary); border-radius: 12px; margin-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="font-weight: 600; color: var(--text);">${match.home} vs ${match.away}</span>
-                                <span style="color: var(--text-light); font-size: 13px;">${match.date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+                                <span style="color: var(--text-secondary); font-size: 13px;">${match.date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
                             </div>
                             <div style="display: flex; gap: 16px; align-items: center;">
                                 <span style="font-size: 18px; font-weight: 600; color: var(--text);">${match.userPrediction.homeScore} - ${match.userPrediction.awayScore}</span>
-                                <span style="color: var(--text-light);">${match.userPrediction.minute}'</span>
+                                <span style="color: var(--text-secondary);">${match.userPrediction.minute}'</span>
                                 ${match.points ? `<span style="color: #10B981; margin-left: auto; font-weight: 600;">+${(match.points.rank || 0) + (match.points.exactScore || 0) + (match.points.minute || 0)} điểm</span>` : ''}
                             </div>
                         </div>
                     `).join('');
                 } else {
-                    historyContainer.innerHTML = '<p style="text-align: center; padding: 32px; color: var(--text-light);">Bạn chưa có dự đoán nào</p>';
+                    historyContainer.innerHTML = '<p style="text-align: center; padding: 32px; color: var(--text-secondary);">Bạn chưa có dự đoán nào</p>';
                 }
             }
         }
@@ -1417,7 +1935,7 @@
                     `;
                 } else {
                     result.innerHTML = `
-                        <div style="color: var(--text-light);">Không dự đoán</div>
+                        <div style="color: var(--text-secondary);">Không dự đoán</div>
                         <div class="points-text"><span class="point-badge">+0</span></div>
                     `;
                 }
@@ -1427,7 +1945,14 @@
                 const now = new Date();
                 const matchStarted = now > match.date;
 
-                if (match.status === 'not-open') {
+                if (match.status === 'closed') {
+                    status.className = 'match-status not-open';
+                    if (match.userPrediction) {
+                        status.innerHTML = `🔒 ${match.userPrediction.homeScore}-${match.userPrediction.awayScore} | ${match.userPrediction.minute}'`;
+                    } else {
+                        status.textContent = '🔒 Đã đóng dự đoán';
+                    }
+                } else if (match.status === 'not-open') {
                     status.className = 'match-status not-open';
                     status.textContent = 'Chưa mở dự đoán';
                 } else if (match.status === 'open' && !match.userPrediction) {
@@ -1454,6 +1979,8 @@
                 };
             } else if (match.status === 'finished' && match.actualScore) {
                 card.onclick = () => openResultsModal(match);
+            } else if (match.status === 'closed') {
+                card.onclick = () => openResultsModal(match);
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
             }
@@ -1465,7 +1992,6 @@
             const card = document.createElement('div');
             card.className = 'mini-match-card';
             
-            // Add not-open class if match not open
             if (match.status === 'not-open') {
                 card.classList.add('not-open');
             }
@@ -1561,6 +2087,8 @@
                     openLoginModal();
                 };
             } else if (match.status === 'finished' && match.actualScore) {
+                card.onclick = () => openResultsModal(match);
+            } else if (match.status === 'closed') {
                 card.onclick = () => openResultsModal(match);
             } else if (match.status === 'open' || (match.userPrediction && match.status !== 'finished')) {
                 card.onclick = () => openModal(match);
@@ -1671,17 +2199,27 @@
                 container.appendChild(favoriteCard);
             }
             
-            const upcoming = matches.filter(m => m.status !== 'finished');
+            const upcoming = matches.filter(m => m.status === 'open' || m.status === 'closed');
+            upcoming.sort((a, b) => {
+                if (a.status === 'closed' && b.status !== 'closed') return -1;
+                if (a.status !== 'closed' && b.status === 'closed') return 1;
+                return a.date - b.date;
+            });
             upcoming.forEach(match => {
                 container.appendChild(renderMatchCard(match));
             });
+
+            if (upcoming.length === 0 && !favoriteCard) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Chưa có trận đấu nào đang mở dự đoán</p>';
+            }
         }
 
         function renderScheduleMatches() {
             // Render all schedule page sections
             renderScheduleUpcoming();
             renderScheduleStats();
-            renderScheduleGroupStageOnly();  // From bracket-render.js - Groups A-L only
+            renderGroupStandings();           // From bracket-render.js - Group standings
+            renderScheduleGroupStageOnly();  // From bracket-render.js - Group match schedule
             renderKnockoutBracket();         // From bracket-render.js - Bracket tree
             renderScheduleHistory();         // Finished matches section
         }
@@ -1693,19 +2231,18 @@
             container.innerHTML = '';
             
             // Filter: Open first, then pending (future), ordered by date
+            const statusOrder = { 'closed': 0, 'open': 1, 'not-open': 2 };
             const upcoming = matches
                 .filter(m => m.status !== 'finished')
                 .sort((a, b) => {
-                    // Priority: open > pending
-                    if (a.status === 'open' && b.status !== 'open') return -1;
-                    if (a.status !== 'open' && b.status === 'open') return 1;
-                    // Then by date
+                    const oa = statusOrder[a.status] ?? 9;
+                    const ob = statusOrder[b.status] ?? 9;
+                    if (oa !== ob) return oa - ob;
                     return a.date - b.date;
-                })
-                ; // Show all non-finished
+                });
             
             if (upcoming.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Không có trận sắp diễn ra</p>';
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Không có trận sắp diễn ra</p>';
                 return;
             }
             
@@ -1727,7 +2264,7 @@
                 .sort((a, b) => b.date - a.date);
             
             if (history.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Chưa có trận đấu nào kết thúc</p>';
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Chưa có trận đấu nào kết thúc</p>';
                 return;
             }
             
@@ -1799,7 +2336,9 @@
             
             container.innerHTML = '';
             
-            const history = matches.filter(m => m.status === 'finished').slice(0, 5);
+            const history = matches.filter(m => m.status === 'finished')
+                .sort((a, b) => b.date - a.date)
+                .slice(0, 5);
             history.forEach(match => {
                 container.appendChild(renderMatchCard(match));
             });
@@ -1813,11 +2352,11 @@
             leaderboardData.forEach(player => {
                 const rankClass = player.rank <= 4 ? `rank-${player.rank}` : 'rank-other';
                 const isCurrentUser = currentPlayer && player.id === currentPlayer.id;
-                const rowClass = isCurrentUser ? 'style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-left: 4px solid #F59E0B; font-weight: 600;"' : '';
+                const rowClass = isCurrentUser ? 'class="current-user-row"' : '';
                 
                 const favDisplay = player.favPoints > 0
-                    ? `<span style="color: #059669; font-weight: 600;">+${player.favPoints}</span>`
-                    : '<span style="color: #D1D5DB;">0</span>';
+                    ? `<span style="color: var(--color-success); font-weight: 600;">+${player.favPoints}</span>`
+                    : '<span style="color: var(--text-tertiary);">0</span>';
 
                 html += `
                     <tr ${rowClass}>
@@ -1833,7 +2372,7 @@
             });
 
             if (tbody) tbody.innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</td></tr>';
-            if (preview) preview.innerHTML = html ? `<table class="leaderboard-table"><tbody>${html}</tbody></table>` : '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
+            if (preview) preview.innerHTML = html ? `<table class="leaderboard-table"><thead><tr><th>Hạng</th><th>Người chơi</th><th>Điểm</th><th>⭐</th><th>Top 1</th><th>Đúng tỉ số</th><th>Đúng phút</th></tr></thead><tbody>${html}</tbody></table>` : '<p style="text-align: center; padding: 20px; color: #999;">Chưa có dữ liệu</p>';
         }
 
         function renderPersonalStats() {
@@ -1901,6 +2440,25 @@
             renderRecentMatches();
         }
 
+        let chartShowAll = false;
+
+        function toggleChartMode() {
+            chartShowAll = !chartShowAll;
+            const btn = document.getElementById('chartToggleBtn');
+            if (btn) {
+                btn.textContent = chartShowAll ? '👤 Chỉ top' : '👥 Tất cả';
+                btn.style.background = chartShowAll ? 'var(--primary)' : 'var(--bg-gray)';
+                btn.style.color = chartShowAll ? 'white' : 'var(--text-light)';
+            }
+            renderPerformanceChart();
+        }
+
+        const CHART_COLORS = [
+            '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899',
+            '#14B8A6', '#F97316', '#6366F1', '#84CC16', '#06B6D4',
+            '#D946EF', '#78716C', '#0EA5E9', '#E11D48', '#A3E635'
+        ];
+
         async function renderPerformanceChart() {
             const chartContainer = document.getElementById('performanceChart');
             const canvas = document.getElementById('chartCanvas');
@@ -1909,14 +2467,12 @@
 
             const ctx = canvas.getContext('2d');
 
-            // Responsive canvas sizing
             const containerWidth = chartContainer.clientWidth - 40;
             const W = Math.max(containerWidth, 300);
             const H = 300;
             canvas.width = W;
             canvas.height = H;
 
-            // Get finished matches sorted by date
             const finishedMatches = matches
                 .filter(m => m.status === 'finished' && m.actualScore)
                 .sort((a, b) => a.date - b.date);
@@ -1929,7 +2485,7 @@
                 return;
             }
 
-            // Build user cumulative data per finished match
+            // Build user cumulative data
             const chartData = [];
             let userTotal = 0;
             finishedMatches.forEach((match, i) => {
@@ -1945,68 +2501,94 @@
                     away: match.away,
                     userCumulative: userTotal,
                     userDelta: pts,
-                    top1Cumulative: 0,
-                    top1Delta: 0
+                    others: {}
                 });
             });
 
-            // Determine comparison player: Top 1 or Top 2 if user IS Top 1
-            const isUserTop1 = leaderboardData.length > 0 && leaderboardData[0].id === currentPlayer.id;
-            const comparePlayer = isUserTop1 ? (leaderboardData[1] || null) : (leaderboardData[0] || null);
-            const compareLabel = isUserTop1 ? 'Top 2' : 'Top 1';
+            // Determine which players to show
+            let otherPlayers = [];
+            if (chartShowAll) {
+                otherPlayers = leaderboardData.filter(p => p.id !== currentPlayer.id);
+            } else {
+                const isUserTop1 = leaderboardData.length > 0 && leaderboardData[0].id === currentPlayer.id;
+                const cp = isUserTop1 ? (leaderboardData[1] || null) : (leaderboardData[0] || null);
+                if (cp) otherPlayers = [{ ...cp, _label: isUserTop1 ? 'Top 2' : 'Top 1' }];
+            }
 
-            // Load compare player's real per-match predictions from Supabase
-            let compareTotal = 0;
-            if (comparePlayer) {
+            // Fetch other players' per-group scores
+            if (otherPlayers.length > 0) {
                 try {
-                    const { data: comparePreds } = await supabase
+                    const otherIds = otherPlayers.map(p => p.id);
+                    const { data: allPreds } = await supabase
                         .from('predictions')
-                        .select('match_id, total_points')
-                        .eq('player_id', comparePlayer.id);
+                        .select('player_id, match_id, prediction_group_scores (group_id, total_points)')
+                        .in('player_id', otherIds);
 
-                    if (comparePreds) {
-                        const predMap = {};
-                        comparePreds.forEach(p => { predMap[p.match_id] = p.total_points || 0; });
-
-                        chartData.forEach(d => {
-                            const pts = predMap[d.matchId] || 0;
-                            compareTotal += pts;
-                            d.top1Cumulative = compareTotal;
-                            d.top1Delta = pts;
+                    if (allPreds) {
+                        const predsByPlayer = {};
+                        allPreds.forEach(p => {
+                            if (!predsByPlayer[p.player_id]) predsByPlayer[p.player_id] = {};
+                            const gs = (p.prediction_group_scores || []).find(s => s.group_id === groupId);
+                            predsByPlayer[p.player_id][p.match_id] = gs ? (gs.total_points || 0) : 0;
                         });
+
+                        for (const op of otherPlayers) {
+                            const pMap = predsByPlayer[op.id] || {};
+                            let cumul = 0;
+                            chartData.forEach(d => {
+                                const pts = pMap[d.matchId] || 0;
+                                cumul += pts;
+                                d.others[op.id] = { cumulative: cumul, delta: pts };
+                            });
+                        }
                     }
                 } catch (e) {
-                    console.error('Error loading compare player data:', e);
+                    console.error('Error loading player data:', e);
                 }
             }
 
-            // Append favorite team bonus as the last data point (if either player has fav points)
+            // Append favorite team bonus
             const userFavPoints = currentPlayer.favorite_points || 0;
-            const compareFavPoints = comparePlayer ? (comparePlayer.favPoints || 0) : 0;
-            if (userFavPoints > 0 || compareFavPoints > 0) {
+            let anyFav = userFavPoints > 0;
+            otherPlayers.forEach(op => { if (op.favPoints) anyFav = true; });
+            if (anyFav) {
                 userTotal += userFavPoints;
-                compareTotal += compareFavPoints;
+                const othersEntry = {};
+                for (const op of otherPlayers) {
+                    const prevCumul = chartData.length > 0 ? (chartData[chartData.length - 1].others[op.id]?.cumulative || 0) : 0;
+                    const fav = op.favPoints || 0;
+                    othersEntry[op.id] = { cumulative: prevCumul + fav, delta: fav };
+                }
                 chartData.push({
                     index: chartData.length,
-                    matchId: null,
-                    matchNumber: null,
-                    home: null,
-                    away: null,
+                    matchId: null, matchNumber: null, home: null, away: null,
                     isFavBonus: true,
                     userCumulative: userTotal,
                     userDelta: userFavPoints,
-                    top1Cumulative: compareTotal,
-                    top1Delta: compareFavPoints
+                    others: othersEntry
                 });
             }
 
+            // Assign colors and labels
+            const playerLines = otherPlayers.map((op, i) => ({
+                id: op.id,
+                name: op.name,
+                label: op._label || op.name,
+                color: CHART_COLORS[i % CHART_COLORS.length]
+            }));
+
             // Chart layout
-            const pad = { top: 36, right: 20, bottom: 36, left: 46 };
+            const legendH = chartShowAll && playerLines.length > 1 ? 28 : 0;
+            const pad = { top: 36 + legendH, right: 20, bottom: 36, left: 46 };
             const cW = W - pad.left - pad.right;
             const cH = H - pad.top - pad.bottom;
 
-            // Y-axis nice scale
-            const rawMax = Math.max(...chartData.map(d => d.userCumulative), ...chartData.map(d => d.top1Cumulative), 1);
+            // Y-axis scale
+            let rawMax = Math.max(...chartData.map(d => d.userCumulative), 1);
+            for (const pl of playerLines) {
+                const pMax = Math.max(...chartData.map(d => d.others[pl.id]?.cumulative || 0));
+                if (pMax > rawMax) rawMax = pMax;
+            }
             function niceStep(max) {
                 if (max <= 5) return 1;
                 if (max <= 10) return 2;
@@ -2022,29 +2604,25 @@
             const scaleX = chartData.length > 1 ? cW / (chartData.length - 1) : 0;
             const scaleY = cH / yMax;
 
-            // Helper: get pixel X for data index
             function getX(i) { return pad.left + (chartData.length > 1 ? i * scaleX : cW / 2); }
-            // Helper: get pixel Y for value
             function getY(val) { return pad.top + cH - val * scaleY; }
 
-            // ---- Draw function (called on initial render + each hover) ----
             function drawChart(highlightIdx) {
                 ctx.clearRect(0, 0, W, H);
 
-                // Grid lines
+                // Grid
                 ctx.strokeStyle = '#F3F4F6';
                 ctx.lineWidth = 1;
                 ctx.setLineDash([4, 4]);
                 for (let y = 0; y <= yMax; y += yStep) {
-                    const py = getY(y);
                     ctx.beginPath();
-                    ctx.moveTo(pad.left, py);
-                    ctx.lineTo(pad.left + cW, py);
+                    ctx.moveTo(pad.left, getY(y));
+                    ctx.lineTo(pad.left + cW, getY(y));
                     ctx.stroke();
                 }
                 ctx.setLineDash([]);
 
-                // Y-axis labels
+                // Y labels
                 ctx.fillStyle = '#9CA3AF';
                 ctx.font = '11px Montserrat';
                 ctx.textAlign = 'right';
@@ -2061,7 +2639,7 @@
                 ctx.lineTo(pad.left + cW, pad.top + cH);
                 ctx.stroke();
 
-                // X-axis labels (show every Nth if crowded)
+                // X labels
                 const maxLabels = Math.floor(cW / 36);
                 const labelStep = Math.max(1, Math.ceil(chartData.length / maxLabels));
                 ctx.fillStyle = '#9CA3AF';
@@ -2069,15 +2647,12 @@
                 ctx.textAlign = 'center';
                 chartData.forEach((d, i) => {
                     if (i % labelStep === 0 || i === chartData.length - 1) {
-                        const lbl = d.isFavBonus ? '★' : ('M' + d.matchNumber);
-                        ctx.fillText(lbl, getX(i), pad.top + cH + 16);
+                        ctx.fillText(d.isFavBonus ? '★' : ('M' + d.matchNumber), getX(i), pad.top + cH + 16);
                     }
                 });
 
-                // Helper: draw a data line with gradient fill and dots
-                function drawLine(getData, color, fillAlpha) {
+                function drawLine(getData, color, fillAlpha, thick) {
                     if (chartData.length === 0) return;
-                    // Gradient fill
                     ctx.fillStyle = fillAlpha;
                     ctx.beginPath();
                     chartData.forEach((d, i) => {
@@ -2089,9 +2664,8 @@
                     ctx.closePath();
                     ctx.fill();
 
-                    // Line
                     ctx.strokeStyle = color;
-                    ctx.lineWidth = 2.5;
+                    ctx.lineWidth = thick ? 2.5 : 1.5;
                     ctx.lineJoin = 'round';
                     ctx.lineCap = 'round';
                     ctx.beginPath();
@@ -2101,15 +2675,14 @@
                     });
                     ctx.stroke();
 
-                    // Dots
                     chartData.forEach((d, i) => {
                         const x = getX(i), y = getY(getData(d));
-                        const isHighlight = (i === highlightIdx);
+                        const isHl = (i === highlightIdx);
                         ctx.fillStyle = color;
                         ctx.beginPath();
-                        ctx.arc(x, y, isHighlight ? 6 : 3, 0, Math.PI * 2);
+                        ctx.arc(x, y, isHl ? 5 : (thick ? 3 : 2), 0, Math.PI * 2);
                         ctx.fill();
-                        if (isHighlight) {
+                        if (isHl) {
                             ctx.strokeStyle = 'white';
                             ctx.lineWidth = 2;
                             ctx.stroke();
@@ -2117,14 +2690,15 @@
                     });
                 }
 
-                // Draw compare line first (behind)
-                if (comparePlayer) {
-                    drawLine(d => d.top1Cumulative, '#10B981', 'rgba(16,185,129,0.07)');
+                // Draw other players (behind)
+                for (const pl of playerLines) {
+                    const alpha = chartShowAll ? 'rgba(0,0,0,0.02)' : hexToFillAlpha(pl.color, 0.07);
+                    drawLine(d => d.others[pl.id]?.cumulative || 0, pl.color, alpha, !chartShowAll);
                 }
-                // Draw user line on top
-                drawLine(d => d.userCumulative, '#3B82F6', 'rgba(59,130,246,0.07)');
+                // User line on top
+                drawLine(d => d.userCumulative, '#3B82F6', 'rgba(59,130,246,0.07)', true);
 
-                // Hover vertical line
+                // Hover line
                 if (highlightIdx >= 0) {
                     const hx = getX(highlightIdx);
                     ctx.strokeStyle = 'rgba(107,114,128,0.35)';
@@ -2138,44 +2712,62 @@
                 }
 
                 // Legend
-                ctx.font = '12px Montserrat';
+                ctx.font = '11px Montserrat';
                 ctx.textAlign = 'left';
-                // User
+                let lx = pad.left;
+                const ly = legendH > 0 ? 14 : 14;
+                // User dot
                 ctx.fillStyle = '#3B82F6';
-                ctx.beginPath();
-                ctx.arc(pad.left + 6, 14, 5, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(lx + 6, ly, 4, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#374151';
-                ctx.fillText('Bạn', pad.left + 16, 18);
-                // Compare
-                if (comparePlayer) {
-                    const labelText = compareLabel + ' – ' + comparePlayer.name;
-                    ctx.fillStyle = '#10B981';
-                    ctx.beginPath();
-                    ctx.arc(pad.left + 60, 14, 5, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#374151';
-                    ctx.fillText(labelText, pad.left + 70, 18);
+                ctx.fillText('Bạn', lx + 14, ly + 4);
+                lx += ctx.measureText('Bạn').width + 24;
+
+                if (chartShowAll && playerLines.length > 3) {
+                    // Compact: show first line legend, then wrap
+                    const maxPerRow = Math.floor((cW - 40) / 90);
+                    let row = 0, col = 0;
+                    for (const pl of playerLines) {
+                        const itemX = pad.left + col * 90;
+                        const itemY = 14 + (row + 1) * 16;
+                        ctx.fillStyle = pl.color;
+                        ctx.beginPath(); ctx.arc(itemX + 6, itemY, 4, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = '#374151';
+                        const shortName = pl.name.length > 8 ? pl.name.substring(0, 8) + '..' : pl.name;
+                        ctx.fillText(shortName, itemX + 14, itemY + 4);
+                        col++;
+                        if (col >= maxPerRow) { col = 0; row++; }
+                    }
+                } else {
+                    for (const pl of playerLines) {
+                        ctx.fillStyle = pl.color;
+                        ctx.beginPath(); ctx.arc(lx + 6, ly, 4, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = '#374151';
+                        const displayName = pl.label.length > 12 ? pl.label.substring(0, 12) + '..' : pl.label;
+                        ctx.fillText(displayName, lx + 14, ly + 4);
+                        lx += ctx.measureText(displayName).width + 28;
+                    }
                 }
             }
 
-            // Initial draw
+            function hexToFillAlpha(hex, alpha) {
+                const r = parseInt(hex.slice(1,3), 16);
+                const g = parseInt(hex.slice(3,5), 16);
+                const b = parseInt(hex.slice(5,7), 16);
+                return `rgba(${r},${g},${b},${alpha})`;
+            }
+
             drawChart(-1);
 
-            // ---- Hover / Tooltip ----
             canvas.onmousemove = function(e) {
                 const rect = canvas.getBoundingClientRect();
                 const mouseX = (e.clientX - rect.left) * (W / rect.width);
 
-                // Find nearest data point
                 let nearestIdx = -1;
                 let minDist = Infinity;
                 chartData.forEach((d, i) => {
                     const dist = Math.abs(mouseX - getX(i));
-                    if (dist < minDist && dist < 30) {
-                        minDist = dist;
-                        nearestIdx = i;
-                    }
+                    if (dist < minDist && dist < 30) { minDist = dist; nearestIdx = i; }
                 });
 
                 if (nearestIdx === -1) {
@@ -2190,27 +2782,27 @@
                 let html;
                 if (d.isFavBonus) {
                     html = '<div style="font-weight:600;margin-bottom:2px;">★ Điểm đội yêu thích</div>';
-                    html += '<div style="color:#93C5FD;">Bạn: <b>+' + d.userDelta + '</b> điểm → ' + d.userCumulative + ' tổng</div>';
-                    if (comparePlayer) {
-                        html += '<div style="color:#6EE7B7;">' + compareLabel + ': <b>+' + d.top1Delta + '</b> điểm → ' + d.top1Cumulative + ' tổng</div>';
+                    html += '<div style="color:#93C5FD;">Bạn: <b>+' + d.userDelta + '</b> → ' + d.userCumulative + '</div>';
+                    for (const pl of playerLines) {
+                        const o = d.others[pl.id];
+                        if (o) html += '<div style="color:' + pl.color + ';">' + pl.label + ': <b>+' + o.delta + '</b> → ' + o.cumulative + '</div>';
                     }
                 } else {
                     html = '<div style="font-weight:600;margin-bottom:2px;">⚽ M' + d.matchNumber + ': ' + d.home + ' vs ' + d.away + '</div>';
-                    html += '<div style="color:#93C5FD;">Bạn: <b>+' + d.userDelta + '</b> điểm → ' + d.userCumulative + ' tổng</div>';
-                    if (comparePlayer) {
-                        html += '<div style="color:#6EE7B7;">' + compareLabel + ': <b>+' + d.top1Delta + '</b> điểm → ' + d.top1Cumulative + ' tổng</div>';
+                    html += '<div style="color:#93C5FD;">Bạn: <b>+' + d.userDelta + '</b> → ' + d.userCumulative + '</div>';
+                    for (const pl of playerLines) {
+                        const o = d.others[pl.id];
+                        if (o) html += '<div style="color:' + pl.color + ';">' + pl.label + ': <b>+' + o.delta + '</b> → ' + o.cumulative + '</div>';
                     }
                 }
                 tooltip.innerHTML = html;
                 tooltip.style.display = 'block';
 
-                // Position tooltip near the data point
                 const canvasScale = rect.width / W;
                 const tipX = getX(nearestIdx) * canvasScale + 16;
                 const tipY = getY(d.userCumulative) * canvasScale - 10;
                 const tipW = tooltip.offsetWidth;
 
-                // Flip left if overflows right
                 if (tipX + tipW > chartContainer.clientWidth - 10) {
                     tooltip.style.left = (getX(nearestIdx) * canvasScale - tipW - 10) + 'px';
                 } else {
@@ -2224,12 +2816,10 @@
                 drawChart(-1);
             };
 
-            // Touch support for mobile
             canvas.ontouchmove = function(e) {
                 e.preventDefault();
                 const touch = e.touches[0];
-                const mouseEvent = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
-                canvas.dispatchEvent(mouseEvent);
+                canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY }));
             };
             canvas.ontouchend = function() {
                 tooltip.style.display = 'none';
@@ -2250,7 +2840,7 @@
                 .slice(0, 5);
             
             if (recentFinished.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-light); padding: 20px;">Chưa có lịch sử</p>';
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Chưa có lịch sử</p>';
                 return;
             }
             
@@ -2331,12 +2921,15 @@
                 return;
             }
             
-            // Security: Check if match already started
+            if (match.status === 'closed') {
+                openResultsModal(match);
+                return;
+            }
+
             const now = new Date();
             const matchDate = new Date(match.date);
-            
             if (matchDate <= now && match.status !== 'finished') {
-                alert('⏰ Trận đấu đã bắt đầu! Không thể dự đoán nữa.');
+                openResultsModal(match);
                 return;
             }
             
@@ -2485,98 +3078,98 @@
 
         function openResultsModal(match) {
             const modal = document.getElementById('resultsModal');
-            
+
             if (!countries[match.home] || !countries[match.away]) {
                 console.error(`Team not found in countries database: ${match.home} or ${match.away}`);
                 alert('Lỗi: Không tìm thấy thông tin đội bóng. Vui lòng liên hệ admin.');
                 return;
             }
-            
+
+            const hasResult = match.actualScore && match.actualScore.homeScore !== null && match.actualScore.homeScore !== undefined;
+
             document.getElementById('resultsHomeFlag').innerHTML = countries[match.home].flag;
             document.getElementById('resultsHomeFlag').style.background = countries[match.home].color;
             document.getElementById('resultsAwayFlag').innerHTML = countries[match.away].flag;
             document.getElementById('resultsAwayFlag').style.background = countries[match.away].color;
             document.getElementById('resultsHomeName').textContent = match.home;
             document.getElementById('resultsAwayName').textContent = match.away;
-            
-            // Display scores with penalty support
-            const hasPenalty = match.actualScore.home_penalty !== null && 
-                              match.actualScore.home_penalty !== undefined &&
-                              match.actualScore.away_penalty !== null &&
-                              match.actualScore.away_penalty !== undefined;
-            
-            if (hasPenalty) {
-                document.getElementById('resultsHomeScore').textContent = `${match.actualScore.homeScore}(${match.actualScore.home_penalty})`;
-                document.getElementById('resultsAwayScore').textContent = `${match.actualScore.awayScore}(${match.actualScore.away_penalty})`;
+
+            if (hasResult) {
+                const hasPenalty = match.actualScore.home_penalty !== null &&
+                                  match.actualScore.home_penalty !== undefined &&
+                                  match.actualScore.away_penalty !== null &&
+                                  match.actualScore.away_penalty !== undefined;
+
+                if (hasPenalty) {
+                    document.getElementById('resultsHomeScore').textContent = `${match.actualScore.homeScore}(${match.actualScore.home_penalty})`;
+                    document.getElementById('resultsAwayScore').textContent = `${match.actualScore.awayScore}(${match.actualScore.away_penalty})`;
+                } else {
+                    document.getElementById('resultsHomeScore').textContent = match.actualScore.homeScore;
+                    document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
+                }
+                document.getElementById('resultsMinute').textContent = `${match.actualScore.minute}'`;
             } else {
-                document.getElementById('resultsHomeScore').textContent = match.actualScore.homeScore;
-                document.getElementById('resultsAwayScore').textContent = match.actualScore.awayScore;
+                document.getElementById('resultsHomeScore').textContent = '-';
+                document.getElementById('resultsAwayScore').textContent = '-';
+                document.getElementById('resultsMinute').textContent = 'Đang đá';
             }
-            document.getElementById('resultsMinute').textContent = `${match.actualScore.minute}'`;
-            
-            // Load all predictions for this match from all players in group
+
             const resultsList = document.getElementById('resultsList');
             resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Đang tải dự đoán...</p>';
-            
+
             getMatchPredictions(match.id).then(predictions => {
                 resultsList.innerHTML = '';
-                
+
                 if (predictions.length === 0) {
                     resultsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Chưa có ai dự đoán trận này</p>';
                     return;
                 }
-                
-                // Sort by total points descending
-                predictions.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
-                
-                // Create table structure (compact design like image 2)
-                let tableHTML = `
-                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                        <tbody>
-                `;
-                
+
+                if (hasResult) {
+                    predictions.sort((a, b) => (b.points_rank || 0) - (a.points_rank || 0));
+                } else {
+                    predictions.sort((a, b) => a.player_name.localeCompare(b.player_name));
+                }
+
+                let tableHTML = `<table class="predictions-table"><tbody>`;
+
                 predictions.forEach((pred, index) => {
                     const isCurrentUser = currentPlayer && pred.player_id === currentPlayer.id;
-                    const bgColor = isCurrentUser ? '#FEF3C7' : (index % 2 === 0 ? '#F9FAFB' : 'white');
-                    
-                    const totalPoints = pred.total_points || 0;
-                    const pointsRank = pred.points_rank || 0;
-                    const pointsExact = pred.points_exact_score || 0;
-                    const pointsMinute = pred.points_minute || 0;
-                    
-                    const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
-                    
-                    tableHTML += `
-                        <tr style="background: ${bgColor}; border-bottom: 1px solid #E5E7EB;">
-                            <td style="padding: 12px 8px; text-align: center; font-size: 16px; width: 40px; font-weight: 600;">
-                                ${rankBadge}
-                            </td>
-                            <td style="padding: 12px 12px; font-weight: ${isCurrentUser ? '600' : '500'}; color: ${isCurrentUser ? '#92400E' : '#1F2937'};">
-                                ${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}
-                            </td>
-                            <td style="padding: 12px 8px; text-align: center; font-weight: 600; width: 80px; color: #1F2937; font-size: 16px;">
-                                ${pred.home_score}-${pred.away_score}
-                            </td>
-                            <td style="padding: 12px 8px; text-align: center; color: #6B7280; width: 60px; font-size: 14px;">
-                                ${pred.minute}'
-                            </td>
-                            <td style="padding: 12px 8px; text-align: center; width: 140px;">
-                                ${pointsRank ? `<span style="display: inline-block; background: #DBEAFE; color: #1E40AF; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">🏆 +${pointsRank}</span>` : ''}
-                                ${pointsExact ? `<span style="display: inline-block; background: #D1FAE5; color: #065F46; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">🎯 +${pointsExact}</span>` : ''}
-                                ${pointsMinute ? `<span style="display: inline-block; background: #FEF3C7; color: #92400E; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin: 0 2px; font-weight: 600;">💡 +${pointsMinute}</span>` : ''}
-                            </td>
-                            <td style="padding: 12px 12px; text-align: center; font-weight: 700; color: #10B981; width: 70px; font-size: 16px;">
-                                +${totalPoints}
-                            </td>
-                        </tr>
-                    `;
+
+                    if (hasResult) {
+                        const totalPoints = pred.total_points || 0;
+                        const pointsRank = pred.points_rank || 0;
+                        const pointsExact = pred.points_exact_score || 0;
+                        const pointsMinute = pred.points_minute || 0;
+                        const rankBadge = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `${index + 1}`));
+
+                        tableHTML += `
+                            <tr class="${isCurrentUser ? 'current-user-row' : ''}">
+                                <td class="pred-rank-cell">${rankBadge}</td>
+                                <td class="pred-name-cell ${isCurrentUser ? 'is-current' : ''}">${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}</td>
+                                <td class="pred-score-cell">${pred.home_score}-${pred.away_score}</td>
+                                <td class="pred-minute-cell">${pred.minute}'</td>
+                                <td class="pred-badges-cell">
+                                    ${pointsRank ? `<span class="pred-badge pred-badge-rank">🏆 +${pointsRank}</span>` : ''}
+                                    ${pointsExact ? `<span class="pred-badge pred-badge-exact">🎯 +${pointsExact}</span>` : ''}
+                                    ${pointsMinute ? `<span class="pred-badge pred-badge-minute">💡 +${pointsMinute}</span>` : ''}
+                                </td>
+                                <td class="pred-total-cell">+${totalPoints}</td>
+                            </tr>`;
+                    } else {
+                        tableHTML += `
+                            <tr class="${isCurrentUser ? 'current-user-row' : ''}">
+                                <td class="pred-rank-cell" style="color:var(--text-tertiary);">${index + 1}</td>
+                                <td class="pred-name-cell ${isCurrentUser ? 'is-current' : ''}">${pred.player_name}${isCurrentUser ? ' (Bạn)' : ''}</td>
+                                <td class="pred-score-cell">${pred.home_score}-${pred.away_score}</td>
+                                <td class="pred-minute-cell">${pred.minute}'</td>
+                                <td class="pred-badges-cell"></td>
+                                <td class="pred-total-cell" style="color:var(--text-tertiary);">-</td>
+                            </tr>`;
+                    }
                 });
-                
-                tableHTML += `
-                        </tbody>
-                    </table>
-                `;
-                
+
+                tableHTML += `</tbody></table>`;
                 resultsList.innerHTML = tableHTML;
             }).catch(error => {
                 console.error('Error loading predictions:', error);
@@ -2604,40 +3197,41 @@
 
         async function handleLogin(event) {
             event.preventDefault();
-            
+
             const email = document.getElementById('loginName').value.trim();
             const password = document.getElementById('loginPassword').value;
             const groupCode = document.getElementById('loginGroupCode').value.trim();
-            
+
             console.log('🔐 Attempting login...', { email, groupCode });
-            
+
             try {
-                // Verify group code against database
+                // Verify group code against database (read-only, anon OK)
                 const group = await getGroupByCode(groupCode);
                 if (!group) {
                     alert('Mã nhóm không đúng!');
                     return;
                 }
 
-                // Login
-                const result = await loginUser(email, password);
+                // Login via API (handles group join server-side)
+                const result = await loginUser(email, password, groupCode);
 
                 if (result.success) {
-                    // Verify player belongs to this group
-                    if (result.player.group_id !== group.id) {
-                        alert('Tài khoản không thuộc nhóm này!');
-                        currentUser = null;
-                        localStorage.removeItem('currentUserId');
-                        return;
-                    }
-
                     console.log('✅ Login successful!');
                     currentPlayer = result.player;
                     currentGroup = group;
+                    groupId = group.id;
+                    localStorage.setItem('currentGroupId', group.id);
 
                     closeLoginModal();
 
-                    // Reload app with user data
+                    // Reload full user data from Supabase (read-only)
+                    const { data: fullPlayer } = await supabase
+                        .from('players')
+                        .select('*')
+                        .eq('id', result.player.id)
+                        .single();
+                    if (fullPlayer) currentPlayer = fullPlayer;
+
                     await initApp();
 
                     alert('Đăng nhập thành công!');
@@ -2731,15 +3325,15 @@
                 `;
                 
                 if (tempSelectedTeam === teamName) {
-                    item.style.background = 'var(--yellow-bg)';
-                    item.style.borderColor = '#F59E0B';
+                    item.style.background = 'var(--highlight-bg)';
+                    item.style.borderColor = 'var(--color-warning)';
                 }
-                
+
                 item.innerHTML = `
                     <div style="font-size: 32px;">${teamData.flag}</div>
                     <div style="flex: 1;">
-                        <div style="font-size: 14px; font-weight: 600; color: var(--text-dark);">${teamName}</div>
-                        <div style="font-size: 12px; color: var(--text-light);">Điểm max: ${favoriteTeamSettings.points.champion}</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary);">${teamName}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">Điểm max: ${favoriteTeamSettings.points.champion}</div>
                     </div>
                 `;
                 
@@ -2747,7 +3341,7 @@
                 
                 item.onmouseenter = () => {
                     if (tempSelectedTeam !== teamName) {
-                        item.style.background = 'var(--bg-gray)';
+                        item.style.background = 'var(--bg-secondary)';
                     }
                 };
                 
@@ -2837,30 +3431,46 @@
         });
 
         // ============================================
+        // THEME TOGGLE
+        // ============================================
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            document.getElementById('themeIcon').textContent = isDark ? '🌙' : '☀️';
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        (function initTheme() {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+            const icon = document.getElementById('themeIcon');
+            if (icon) icon.textContent = saved === 'dark' ? '☀️' : '🌙';
+        })();
+
+        // ============================================
         // PAGE NAVIGATION
         // ============================================
-        
+
         function switchPage(pageId) {
             document.querySelectorAll('.page-content').forEach(page => {
                 page.classList.remove('active');
             });
-            
-            document.querySelectorAll('.nav-tab').forEach(tab => {
+
+            document.querySelectorAll('.nav-tab, .mobile-menu-item').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             const targetPage = document.getElementById(pageId);
             if (targetPage) {
                 targetPage.classList.add('active');
             }
-            
-            const tabs = document.querySelectorAll('.nav-tab');
-            tabs.forEach(tab => {
-                if (tab.onclick && tab.onclick.toString().includes(pageId)) {
-                    tab.classList.add('active');
-                }
+
+            document.querySelectorAll('[data-page="' + pageId + '"]').forEach(el => {
+                el.classList.add('active');
             });
-            
+
             // Trigger page-specific renders
             if (pageId === 'schedule') {
                 renderScheduleMatches();
@@ -2868,6 +3478,21 @@
                 renderLeaderboard();
                 renderLeaderboardUserStats();
             }
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('open');
+            document.getElementById('mobileMenuOverlay').classList.toggle('open');
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileMenuOverlay').classList.remove('open');
+        }
+
+        function mobileNavTo(pageId) {
+            closeMobileMenu();
+            switchPage(pageId);
         }
 
         // ============================================

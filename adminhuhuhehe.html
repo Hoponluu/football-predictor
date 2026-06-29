@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Dự Đoán Tỉ Số World Cup 2026</title>
+    <link rel="icon" type="image/png" href="Favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -455,6 +456,18 @@
             border-bottom: 2px solid var(--stroke);
         }
 
+        .sortable-th {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.15s;
+        }
+        .sortable-th:hover {
+            color: var(--primary);
+        }
+        .sortable-th.active {
+            color: var(--primary);
+        }
+
         .table td {
             padding: 16px;
             border-bottom: 1px solid var(--stroke);
@@ -733,9 +746,54 @@
         }
 
         /* Responsive */
+        .mobile-topbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: var(--white);
+            border-bottom: 1px solid var(--stroke);
+            z-index: 99;
+            align-items: center;
+            padding: 0 12px;
+            gap: 12px;
+        }
+        .mobile-topbar-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .mobile-hamburger {
+            background: none;
+            border: 1px solid var(--stroke);
+            border-radius: 6px;
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 99;
+        }
+        .sidebar-overlay.active {
+            display: block;
+        }
         @media (max-width: 768px) {
+            .mobile-topbar {
+                display: flex;
+            }
             .sidebar {
                 transform: translateX(-100%);
+                transition: transform 0.25s ease;
             }
 
             .sidebar.mobile-active {
@@ -745,11 +803,248 @@
             .main-content {
                 margin-left: 0;
                 width: 100%;
+                padding-top: 56px;
             }
 
             .stats-grid {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* Bracket Simulation Styles */
+        .sim-bracket-wrapper {
+            display: flex;
+            gap: 0;
+            overflow-x: auto;
+            padding: 20px 0 28px;
+            position: relative;
+            scrollbar-width: thin;
+        }
+        .sim-bracket-wrapper::-webkit-scrollbar { height: 6px; }
+        .sim-bracket-wrapper::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+        .sim-round {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 185px;
+        }
+        .sim-round-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 4px 14px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .sim-round-matches {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            position: relative;
+        }
+        .sim-match-slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .sim-match-card {
+            background: var(--white);
+            border: 1px solid var(--stroke);
+            border-radius: 6px;
+            padding: 0;
+            border-left: 3px solid #3B82F6;
+            transition: box-shadow 0.15s, transform 0.15s;
+            font-size: 11px;
+            width: 168px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .sim-match-card:hover {
+            box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+            transform: translateY(-1px);
+        }
+        .sim-match-card.type-a { border-left-color: #3B82F6; }
+        .sim-match-card.type-b { border-left-color: #10B981; }
+        .sim-match-card.type-c { border-left-color: #F59E0B; }
+        .sim-match-card.round-r16 { border-left-color: #6366F1; }
+        .sim-match-card.round-qf { border-left-color: #EC4899; }
+        .sim-match-card.round-sf { border-left-color: #8B5CF6; }
+        .sim-match-card.round-final { border-left-color: #EAB308; border-left-width: 4px; }
+        .sim-match-card.round-3rd { border-left-color: #78716C; }
+        .sim-match-card.finished { background: #F0FDF9; }
+        .sim-team-score {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-dark);
+            min-width: 16px;
+            text-align: right;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .sim-team-score.win { color: #059669; }
+        .sim-team-score-pen {
+            font-size: 7px;
+            color: #F59E0B;
+            font-weight: 600;
+            vertical-align: super;
+        }
+        .sim-team-row.winner .sim-team-name { color: #059669; }
+        .sim-team-row.loser { opacity: 0.38; }
+        .sim-match-card.right-side {
+            border-left: 1px solid var(--stroke);
+            border-right: 3px solid #3B82F6;
+        }
+        .sim-match-card.right-side.type-a { border-right-color: #3B82F6; }
+        .sim-match-card.right-side.type-b { border-right-color: #10B981; }
+        .sim-match-card.right-side.type-c { border-right-color: #F59E0B; }
+        .sim-match-card.right-side.round-r16 { border-right-color: #6366F1; }
+        .sim-match-card.right-side.round-qf { border-right-color: #EC4899; }
+        .sim-match-card.right-side.round-sf { border-right-color: #8B5CF6; }
+        .sim-match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 8px;
+            background: var(--bg-gray);
+            border-bottom: 1px solid var(--stroke);
+        }
+        .sim-match-num {
+            font-size: 9px;
+            color: var(--text-light);
+            font-weight: 700;
+        }
+        .sim-match-date {
+            font-size: 8px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        .sim-match-teams {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .sim-team-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+        }
+        .sim-team-row:first-child {
+            border-bottom: 1px solid var(--stroke);
+        }
+        .sim-team-flag {
+            font-size: 14px;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .sim-team-name {
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--text-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0;
+        }
+        .sim-team-name.tbd {
+            color: #94A3B8;
+            font-style: italic;
+            font-weight: 500;
+        }
+        .sim-team-seed {
+            font-size: 8px;
+            color: var(--text-light);
+            background: var(--bg-gray);
+            padding: 1px 4px;
+            border-radius: 3px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .sim-match-venue {
+            font-size: 7px;
+            color: #94A3B8;
+            padding: 2px 8px 3px;
+            background: #F8FAFC;
+            border-top: 1px solid var(--stroke);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sim-connector-col {
+            flex-shrink: 0;
+            width: 28px;
+            position: relative;
+        }
+        .sim-connector-col svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .sim-third-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .sim-third-table th {
+            background: var(--bg-gray);
+            padding: 8px 10px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 2px solid var(--stroke);
+        }
+        .sim-third-table th:nth-child(2) { text-align: left; }
+        .sim-third-table td {
+            padding: 6px 10px;
+            text-align: center;
+            border-bottom: 1px solid var(--stroke);
+        }
+        .sim-third-table td:nth-child(2) { text-align: left; }
+        .sim-third-table tr.qualify {
+            background: rgba(74, 222, 128, 0.08);
+        }
+        .sim-third-table tr.qualify td:first-child {
+            color: #059669;
+            font-weight: 700;
+        }
+        .sim-legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+            font-size: 11px;
+            color: var(--text-light);
+        }
+        .sim-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .sim-legend-color {
+            width: 14px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        .sim-half-label {
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 0;
+            border-top: 1px dashed var(--stroke);
+            margin: 4px 0;
         }
     </style>
 </head>
@@ -781,8 +1076,15 @@
 
     <!-- Admin Layout -->
     <div class="admin-layout" id="adminLayout">
+        <!-- Mobile Top Bar -->
+        <div class="mobile-topbar">
+            <button class="mobile-hamburger" onclick="toggleMobileSidebar()">☰</button>
+            <span class="mobile-topbar-title">⚽ WC 2026 Admin</span>
+        </div>
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="adminSidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo">
                     <span class="sidebar-logo-icon">⚽</span>
@@ -824,6 +1126,14 @@
                     <a class="nav-item" onclick="switchAdminPage('favorites')">
                         <span class="nav-item-icon">⭐</span>
                         <span>Đội yêu thích</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Công cụ</div>
+                    <a class="nav-item" onclick="switchAdminPage('bracket-sim')">
+                        <span class="nav-item-icon">🏆</span>
+                        <span>Mô phỏng nhánh đấu</span>
                     </a>
                 </div>
             </nav>
@@ -897,22 +1207,59 @@
 
                 <div id="dashboardAlerts"></div>
 
-                <!-- OpenFootball Sync Card -->
+                <!-- Football Data Sync Card -->
                 <div class="card" style="border-left: 4px solid var(--primary-green);">
                     <div class="card-header">
                         <h2 class="card-title">Tự động hóa</h2>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-sm btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán cho các trận trong 24h tới">🟢 Mở dự đoán (24h)</button>
-                            <button class="btn btn-sm btn-primary" onclick="syncFromOpenFootball()" title="Cập nhật kết quả từ OpenFootball GitHub">📡 Sync kết quả</button>
+                            <button class="btn btn-sm btn-primary" onclick="syncFromFootballData()" title="Cập nhật kết quả từ worldcup26.ir">📡 Sync kết quả</button>
                             <button class="btn btn-sm btn-warning" id="btnFullSync" onclick="runFullSync()" title="Mở dự đoán + Sync kết quả">🔄 Đồng bộ toàn bộ</button>
                         </div>
                     </div>
                     <div style="padding: 0 20px 16px;">
                         <p style="color: var(--text-light); font-size: 13px; margin-bottom: 12px;">
-                            Nguồn dữ liệu: <a href="https://github.com/openfootball/worldcup.json" target="_blank" style="color: var(--blue);">openfootball/worldcup.json</a> —
+                            Nguồn dữ liệu: <a href="https://worldcup26.ir" target="_blank" style="color: var(--blue);">worldcup26.ir</a> —
                             Dự đoán tự mở trước giờ thi đấu 24h · Kết quả tự cập nhật tỉ số & phút ghi bàn cuối
                         </p>
                         <div id="syncStatus"></div>
+                    </div>
+                </div>
+
+                <!-- Backup Predictions Card -->
+                <div class="card" style="border-left: 4px solid var(--orange);">
+                    <div class="card-header">
+                        <h2 class="card-title">Backup Predictions</h2>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-sm btn-warning" onclick="exportPredictions()">📥 Export JSON</button>
+                            <label class="btn btn-sm btn-primary" style="cursor: pointer; margin: 0;">
+                                📤 Import JSON
+                                <input type="file" accept=".json" onchange="importPredictions(event)" style="display: none;">
+                            </label>
+                        </div>
+                    </div>
+                    <div style="padding: 0 20px 16px;">
+                        <p style="color: var(--text-light); font-size: 13px;">
+                            Export: tải toàn bộ predictions về file JSON · Import: restore predictions từ file backup (ghi đè theo match_id + player_id)
+                        </p>
+                        <div id="backupStatus"></div>
+                    </div>
+                </div>
+
+                <!-- Publish Public Data Card -->
+                <div class="card" style="border-left: 4px solid #8B5CF6;">
+                    <div class="card-header">
+                        <h2 class="card-title">Publish trang công khai</h2>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span id="publishStatus" style="font-size: 12px; color: var(--text-light);"></span>
+                            <button class="btn btn-sm" style="background:#8B5CF6;color:white;" onclick="publishToPublic()" id="btnPublish">📤 Publish</button>
+                        </div>
+                    </div>
+                    <div style="padding: 0 20px 16px;">
+                        <p style="color: var(--text-light); font-size: 13px;">
+                            Xuất bảng xếp hạng, xếp hạng đội hạng 3, và nhánh đấu knockout sang trang public.
+                            Dữ liệu được tính toán từ kết quả hiện tại trong hệ thống.
+                        </p>
                     </div>
                 </div>
 
@@ -952,7 +1299,8 @@
                         <h2 class="card-title">Danh sách trận đấu</h2>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-success" onclick="autoOpenPredictions()" title="Mở dự đoán 24h trước trận">🟢 Mở DĐ</button>
-                            <button class="btn btn-info" onclick="syncFromOpenFootball()" title="Sync kết quả từ OpenFootball" style="background: var(--blue); color: white;">📡 Sync KQ</button>
+                            <button class="btn btn-info" onclick="syncFromFootballData()" title="Sync kết quả từ worldcup26.ir" style="background: var(--blue); color: white;">📡 Sync KQ</button>
+                            <button class="btn btn-success" onclick="calculateUncalculatedMatches()" title="Tính điểm các trận chưa tính">⚡ Tính điểm trận mới</button>
                             <button class="btn btn-warning" onclick="recalculateAllPlayerPoints()" title="Tính lại toàn bộ điểm từ đầu">🔄 Tính lại toàn bộ điểm</button>
                             <button class="btn btn-primary" onclick="openAddMatchModal()">+ Thêm trận đấu</button>
                         </div>
@@ -964,14 +1312,15 @@
                                     <th>M#</th>
                                     <th>Trận đấu</th>
                                     <th>Bảng</th>
-                                    <th>Thời gian (GMT+7)</th>
-                                    <th>Trạng thái</th>
+                                    <th class="sortable-th active" onclick="sortMatches('date')" id="sortDate">Thời gian (GMT+7) ▼</th>
+                                    <th class="sortable-th" onclick="sortMatches('status')" id="sortStatus">Trạng thái ⇅</th>
+                                    <th>Dự đoán</th>
                                     <th>Kết quả</th>
                                     <th></th>
                                 </tr>
                             </thead>
                             <tbody id="matchesTable">
-                                <tr><td colspan="7" class="loading"><div class="loading-spinner"></div><div>Đang tải...</div></td></tr>
+                                <tr><td colspan="8" class="loading"><div class="loading-spinner"></div><div>Đang tải...</div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1164,10 +1513,22 @@
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
-                            <label class="form-label">Deadline chọn đội</label>
+                            <label class="form-label">Tính năng chọn đội yêu thích</label>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+                                <span id="favLockStatus" style="font-weight: 600;">Đang tải...</span>
+                                <button class="btn btn-primary" onclick="toggleFavoriteEnabled()" id="favEnableBtn">✅ Bật tính năng</button>
+                                <button class="btn btn-warning" onclick="toggleFavoriteLock()" id="favLockBtn">🔒 Khóa</button>
+                            </div>
+                            <small style="color: var(--text-light); display: block; margin-top: 8px;">
+                                Bật/tắt tính năng cho tất cả người chơi. Khi khóa, người chơi không thể chọn hoặc đổi đội yêu thích.
+                            </small>
+                        </div>
+                        <hr style="border: none; border-top: 1px solid var(--stroke); margin: 16px 0;">
+                        <div class="form-group">
+                            <label class="form-label">Deadline chọn đội (tùy chọn)</label>
                             <input type="datetime-local" class="form-input" id="favoriteDeadline">
                             <small style="color: var(--text-light); display: block; margin-top: 8px;">
-                                Sau thời điểm này, người chơi không thể đổi đội yêu thích
+                                Sau thời điểm này, người chơi không thể đổi đội yêu thích (tự động)
                             </small>
                         </div>
                         <button class="btn btn-primary" onclick="saveFavoriteDeadline()">💾 Lưu deadline</button>
@@ -1212,6 +1573,73 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Bracket Simulation Page -->
+            <div id="bracket-sim" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Mô phỏng nhánh đấu</h1>
+                    <p class="page-subtitle">Tạo và xem trước sơ đồ vòng loại trực tiếp dựa trên xếp hạng vòng bảng hiện tại</p>
+                </div>
+
+                <div id="simLockBanner" class="card" style="border-left: 4px solid var(--orange); display:none;">
+                    <div style="display:flex;align-items:center;gap:12px;padding:16px;">
+                        <span style="font-size:24px;">🔒</span>
+                        <div>
+                            <strong>Chưa thể chốt dữ liệu</strong>
+                            <p style="color:var(--text-light);font-size:13px;margin-top:4px;">Vòng bảng chưa kết thúc. Bạn có thể xem mô phỏng nhưng không thể tạo trận đấu thật cho đến khi tất cả trận vòng bảng hoàn tất.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                        <h2 class="card-title">📊 Trạng thái vòng bảng</h2>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-primary" onclick="generateBracketSimulation()" id="simGenerateBtn">
+                                🔄 Tạo mô phỏng
+                            </button>
+                            <button class="btn btn-success" onclick="finalizeSimulation()" id="simFinalizeBtn" style="display:none;">
+                                ✅ Chốt → Tạo trận thật
+                            </button>
+                        </div>
+                    </div>
+                    <div id="simGroupStatus" style="padding:16px;">
+                        <p style="color:var(--text-light);">Bấm "Tạo mô phỏng" để xem sơ đồ nhánh đấu dựa trên kết quả hiện tại.</p>
+                    </div>
+                </div>
+
+                <!-- Per-round generation tools -->
+                <div id="simRoundGenCard" class="card" style="display:none;margin-top:0;">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <h2 class="card-title">⚡ Tạo trận vòng sau</h2>
+                            <p style="font-size:12px;color:var(--text-light);margin-top:2px;">Tạo trận thật từ kết quả thực tế — khi vòng trước hoàn tất</p>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn btn-sm" id="genR16Btn" onclick="generateNextRound('R16')" disabled style="opacity:0.45;">🏆 Tạo R16</button>
+                            <button class="btn btn-sm" id="genQFBtn"  onclick="generateNextRound('QF')"  disabled style="opacity:0.45;">⚡ Tạo QF</button>
+                            <button class="btn btn-sm" id="genSFBtn"  onclick="generateNextRound('SF')"  disabled style="opacity:0.45;">🥊 Tạo SF</button>
+                            <button class="btn btn-sm" id="genFinalBtn" onclick="generateNextRound('FINAL')" disabled style="opacity:0.45;">🏅 Tạo Final+3RD</button>
+                        </div>
+                    </div>
+                    <div id="simRoundGenStatus" style="padding:8px 16px;font-size:12px;color:var(--text-light);"></div>
+                </div>
+
+                <div id="simThirdPlaceCard" class="card" style="display:none;">
+                    <div class="card-header">
+                        <h2 class="card-title">🔄 Xếp hạng đội hạng 3</h2>
+                    </div>
+                    <div id="simThirdPlaceTable" style="padding:16px;overflow-x:auto;"></div>
+                </div>
+
+                <div id="simBracketCard" class="card" style="display:none;">
+                    <div class="card-header">
+                        <h2 class="card-title">🏆 Sơ đồ nhánh đấu mô phỏng</h2>
+                    </div>
+                    <div id="simBracketContainer" style="padding:16px;overflow-x:auto;"></div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -1292,6 +1720,7 @@
                     <select class="form-select" id="matchStatus">
                         <option value="not-open">Chưa mở dự đoán</option>
                         <option value="open">Đang mở dự đoán</option>
+                        <option value="closed">Đã đóng dự đoán</option>
                         <option value="finished">Đã kết thúc</option>
                     </select>
                 </div>
@@ -1330,13 +1759,32 @@
                         <label class="form-label">Tỉ số đội nhà</label>
                         <input type="number" class="form-input" id="resultHomeScore" min="0" placeholder="0">
                     </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label">Tỉ số đội khách</label>
                         <input type="number" class="form-input" id="resultAwayScore" min="0" placeholder="0">
                     </div>
                 </div>
-                
+
+                <div id="penaltySection" style="display: none; margin-bottom: 16px;">
+                    <div class="alert warning" style="margin-bottom: 12px;">
+                        <span class="alert-icon">⚽</span>
+                        <div class="alert-content">
+                            <div class="alert-text">Trận hòa trong vòng knockout — nhập kết quả penalty</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Penalty đội nhà</label>
+                            <input type="number" class="form-input" id="resultHomePenalty" min="0" placeholder="VD: 4">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Penalty đội khách</label>
+                            <input type="number" class="form-input" id="resultAwayPenalty" min="0" placeholder="VD: 2">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Phút ghi bàn đầu tiên</label>
                     <input type="number" class="form-input" id="resultMinute" min="1" max="120" placeholder="VD: 75">
@@ -1385,10 +1833,8 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Nhóm</label>
-                    <select class="form-select" id="playerGroup">
-                        <option value="">Chọn nhóm</option>
-                    </select>
+                    <label class="form-label">Nhóm (có thể chọn nhiều)</label>
+                    <div id="playerGroupCheckboxes" style="display: flex; flex-direction: column; gap: 8px; padding: 8px 0;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1539,21 +1985,93 @@
         </div>
     </div>
 
-    <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Admin uses /api/admin proxy — no Supabase CDN needed -->
 
     <script>
-        // Supabase Configuration
-        const SUPABASE_CONFIG = {
-            url: 'https://bzgfmvxgfgpzinnstgdm.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6Z2ZtdnhnZmdwemlubnN0Z2RtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NjUyOTUsImV4cCI6MjA4NjE0MTI5NX0.in-jeMj88CES1pabN7cqNpIQeTeshCeiTgvauqQbcuM'
-        };
+        // ============================================
+        // ADMIN API CLIENT — routes all queries through /api/admin
+        // ============================================
+        const ADMIN_API_URL = '/api/admin';
+        var adminToken = null;
 
-        // Initialize Supabase
-        var supabase = window.supabase.createClient(
-            SUPABASE_CONFIG.url,
-            SUPABASE_CONFIG.anonKey
-        );
+        class AdminFilterBuilder {
+            constructor(table, operation, data, options, token) {
+                this._table = table;
+                this._op = operation;
+                this._data = data;
+                this._options = options;
+                this._token = token;
+                this._filters = [];
+            }
+            eq(col, val) { this._filters.push({ method: 'eq', args: [col, val] }); return this; }
+            neq(col, val) { this._filters.push({ method: 'neq', args: [col, val] }); return this; }
+            gt(col, val) { this._filters.push({ method: 'gt', args: [col, val] }); return this; }
+            gte(col, val) { this._filters.push({ method: 'gte', args: [col, val] }); return this; }
+            lt(col, val) { this._filters.push({ method: 'lt', args: [col, val] }); return this; }
+            lte(col, val) { this._filters.push({ method: 'lte', args: [col, val] }); return this; }
+            in(col, vals) { this._filters.push({ method: 'in', args: [col, vals] }); return this; }
+            is(col, val) { this._filters.push({ method: 'is', args: [col, val] }); return this; }
+            like(col, val) { this._filters.push({ method: 'like', args: [col, val] }); return this; }
+            ilike(col, val) { this._filters.push({ method: 'ilike', args: [col, val] }); return this; }
+            order(col, opts) { this._filters.push({ method: 'order', args: [col, opts] }); return this; }
+            limit(n) { this._filters.push({ method: 'limit', args: [n] }); return this; }
+            single() { this._filters.push({ method: 'single' }); return this; }
+            maybeSingle() { this._filters.push({ method: 'maybeSingle' }); return this; }
+            select(cols) { this._filters.push({ method: 'select', args: [cols || '*'] }); return this; }
+
+            then(resolve, reject) {
+                const body = {
+                    action: 'query',
+                    table: this._table,
+                    operation: this._op,
+                    data: this._data,
+                    options: this._options,
+                    filters: this._filters
+                };
+                fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this._token}`
+                    },
+                    body: JSON.stringify(body)
+                })
+                .then(r => r.json())
+                .then(resolve)
+                .catch(reject);
+            }
+        }
+
+        class AdminTableBuilder {
+            constructor(table, token) {
+                this._table = table;
+                this._token = token;
+            }
+            select(cols) { return new AdminFilterBuilder(this._table, 'select', cols || '*', null, this._token); }
+            insert(data, opts) { return new AdminFilterBuilder(this._table, 'insert', data, opts, this._token); }
+            update(data) { return new AdminFilterBuilder(this._table, 'update', data, null, this._token); }
+            delete() { return new AdminFilterBuilder(this._table, 'delete', null, null, this._token); }
+            upsert(data, opts) { return new AdminFilterBuilder(this._table, 'upsert', data, opts, this._token); }
+        }
+
+        function createAdminClient(token) {
+            return {
+                from(table) { return new AdminTableBuilder(table, token); },
+                rpc(fn, params) {
+                    return fetch(ADMIN_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ action: 'rpc', fn, params })
+                    }).then(r => r.json());
+                }
+            };
+        }
+
+        // Initialize with a dummy — will be replaced after login
+        var supabase = { from() { throw new Error('Not logged in'); } };
 
         // Global Variables
         var currentAdmin = null;
@@ -1563,34 +2081,41 @@
         var allPredictions = [];
         var scoringRules = null;
 
-        console.log('✅ Supabase initialized');
-        console.log('📊 Database:', SUPABASE_CONFIG.url);
+        console.log('🔒 Admin panel — API proxy mode');
 
         // Admin Authentication
         async function handleAdminLogin(event) {
             event.preventDefault();
-            
+
             const email = document.getElementById('adminEmail').value;
             const password = document.getElementById('adminPassword').value;
-            
+
             console.log('🔐 Admin login attempt:', email);
-            
+
             try {
-                // Hardcode admin check for now - In production, use proper auth
-                if (email === 'admin@wc2026.com' && password === 'admin123') {
-                    currentAdmin = { email, name: 'Admin', role: 'admin' };
-                    
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('adminLayout').classList.add('active');
-                    document.getElementById('adminName').textContent = 'Admin';
-                    
-                    console.log('✅ Admin logged in');
-                    
-                    // Load all data
-                    await initAdminPanel();
-                } else {
-                    alert('Email hoặc mật khẩu không đúng!');
+                const resp = await fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'login', email, password })
+                });
+                const result = await resp.json();
+
+                if (!resp.ok || !result.token) {
+                    alert(result.error || 'Email hoặc mật khẩu không đúng!');
+                    return;
                 }
+
+                adminToken = result.token;
+                supabase = createAdminClient(adminToken);
+                currentAdmin = result.admin;
+
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminLayout').classList.add('active');
+                document.getElementById('adminName').textContent = currentAdmin.name || 'Admin';
+
+                console.log('✅ Admin logged in via API');
+
+                await initAdminPanel();
             } catch (error) {
                 console.error('Login error:', error);
                 alert('Lỗi đăng nhập: ' + error.message);
@@ -1600,6 +2125,8 @@
         function handleAdminLogout() {
             if (confirm('Bạn có chắc muốn đăng xuất?')) {
                 currentAdmin = null;
+                adminToken = null;
+                supabase = { from() { throw new Error('Not logged in'); } };
                 document.getElementById('adminLayout').classList.remove('active');
                 document.getElementById('loginScreen').style.display = 'flex';
                 document.getElementById('adminEmail').value = '';
@@ -1625,11 +2152,16 @@
                 renderPlayersTable();
                 renderGroupsTable();
                 renderFavoritesTable();
-                
+                updateFavLockUI();
+
                 // Populate dropdowns
                 populateTeamSelectors();
                 populateGroupSelectors();
-                
+
+                // Auto show/hide penalty when knockout match scores are tied
+                document.getElementById('resultHomeScore').addEventListener('input', updatePenaltyVisibility);
+                document.getElementById('resultAwayScore').addEventListener('input', updatePenaltyVisibility);
+
                 console.log('✅ Admin panel ready!');
             } catch (error) {
                 console.error('Init error:', error);
@@ -1652,15 +2184,22 @@
             awaySelect.innerHTML = options;
         }
 
-        function populateGroupSelectors() {
-            const playerGroupSelect = document.getElementById('playerGroup');
-            
-            let options = '<option value="">Chọn nhóm</option>';
+        function populateGroupSelectors(selectedGroupIds = []) {
+            const container = document.getElementById('playerGroupCheckboxes');
+            if (!container) return;
+
+            let html = '';
             allGroups.forEach(group => {
-                options += `<option value="${group.id}">${group.name} (${group.code})</option>`;
+                const checked = selectedGroupIds.includes(group.id) ? 'checked' : '';
+                html += `
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" class="player-group-cb" value="${group.id}" ${checked}>
+                        <span>${group.name} (${group.code})</span>
+                    </label>
+                `;
             });
-            
-            playerGroupSelect.innerHTML = options;
+
+            container.innerHTML = html || '<span style="color:#999;">Chưa có nhóm nào</span>';
         }
 
         // Database Functions
@@ -1692,17 +2231,23 @@
                     .from('players')
                     .select(`
                         *,
-                        groups (
-                            id,
-                            name,
-                            code
+                        player_groups (
+                            group_id,
+                            groups (
+                                id,
+                                name,
+                                code
+                            )
                         )
                     `);
-                
+
                 if (error) throw error;
-                
-                allPlayers = data || [];
-                
+
+                allPlayers = (data || []).map(p => ({
+                    ...p,
+                    memberGroups: (p.player_groups || []).map(pg => pg.groups).filter(Boolean)
+                }));
+
                 console.log('✅ Loaded', allPlayers.length, 'players');
                 return allPlayers;
             } catch (error) {
@@ -1761,19 +2306,21 @@
                 if (error || !data) {
                     console.warn('⚠️ Scoring rules table not found or empty, using defaults');
                     scoringRules = {
-                        points_rank_1: 5,
-                        points_rank_2: 4,
-                        points_rank_3: 3,
-                        points_rank_other: 2,
+                        points_rank_1: 4,
+                        points_rank_2: 3,
+                        points_rank_3: 2,
+                        points_rank_other: 1,
                         points_exact_score: 5,
                         points_exact_minute: 3,
                         fav_group_stage: 0,
                         fav_r32: 5,
                         fav_r16: 10,
-                        fav_quarter: 20,
-                        fav_semi: 30,
-                        fav_finals: 40,
-                        fav_champion: 100,
+                        fav_quarter: 10,
+                        fav_semi: 10,
+                        fav_finals: 10,
+                        fav_champion: 20,
+                        favorite_team_enabled: true,
+                        favorite_team_locked: false,
                         favorite_team_deadline: null,
                         qualified_teams: [],
                         eliminated_teams: {}
@@ -1783,19 +2330,19 @@
                 }
                 
                 // Populate rules form
-                document.getElementById('ruleTop1').value = scoringRules.points_rank_1 || 5;
-                document.getElementById('ruleTop2').value = scoringRules.points_rank_2 || 4;
-                document.getElementById('ruleTop3').value = scoringRules.points_rank_3 || 3;
-                document.getElementById('ruleOther').value = scoringRules.points_rank_other || 2;
+                document.getElementById('ruleTop1').value = scoringRules.points_rank_1 || 4;
+                document.getElementById('ruleTop2').value = scoringRules.points_rank_2 || 3;
+                document.getElementById('ruleTop3').value = scoringRules.points_rank_3 || 2;
+                document.getElementById('ruleOther').value = scoringRules.points_rank_other || 1;
                 document.getElementById('ruleExactScore').value = scoringRules.points_exact_score || 5;
                 document.getElementById('ruleExactMinute').value = scoringRules.points_exact_minute || 3;
                 document.getElementById('favGroupStage').value = scoringRules.fav_group_stage || 0;
                 document.getElementById('favR32').value = scoringRules.fav_r32 || 5;
                 document.getElementById('favR16').value = scoringRules.fav_r16 || 10;
-                document.getElementById('favQuarter').value = scoringRules.fav_quarter || 20;
-                document.getElementById('favSemi').value = scoringRules.fav_semi || 30;
-                document.getElementById('favFinals').value = scoringRules.fav_finals || 40;
-                document.getElementById('favChampion').value = scoringRules.fav_champion || 100;
+                document.getElementById('favQuarter').value = scoringRules.fav_quarter || 10;
+                document.getElementById('favSemi').value = scoringRules.fav_semi || 10;
+                document.getElementById('favFinals').value = scoringRules.fav_finals || 10;
+                document.getElementById('favChampion').value = scoringRules.fav_champion || 20;
 
                 // Populate deadline input in GMT+7
                 if (scoringRules.favorite_team_deadline) {
@@ -1866,14 +2413,16 @@
                 let statusBadge = '';
                 if (match.status === 'open') {
                     statusBadge = '<span class="badge success">Mở</span>';
+                } else if (match.status === 'closed') {
+                    statusBadge = '<span class="badge" style="background:#EF4444;color:white;">Đã đóng</span>';
                 } else {
                     statusBadge = '<span class="badge warning">Chưa mở</span>';
                 }
-                
+
                 const matchPredictions = allPredictions.filter(p => p.match_id === match.id).length;
-                
+
                 const groupDisplay = match.match_group || match.group_name || 'Vòng bảng';
-                
+
                 html += `
                     <tr>
                         <td><strong>${match.home_team} vs ${match.away_team}</strong><br><small>${groupDisplay}</small></td>
@@ -1916,16 +2465,57 @@
             }
         }
 
+        let matchSortField = 'date';
+        let matchSortAsc = true;
+
+        const STATUS_ORDER = { finished: 0, open: 1, closed: 2, 'not-open': 3 };
+
+        function sortMatches(field) {
+            if (matchSortField === field) {
+                matchSortAsc = !matchSortAsc;
+            } else {
+                matchSortField = field;
+                matchSortAsc = field === 'date';
+            }
+
+            const dateEl = document.getElementById('sortDate');
+            const statusEl = document.getElementById('sortStatus');
+            if (field === 'date') {
+                dateEl.textContent = 'Thời gian (GMT+7) ' + (matchSortAsc ? '▲' : '▼');
+                dateEl.classList.add('active');
+                statusEl.textContent = 'Trạng thái ⇅';
+                statusEl.classList.remove('active');
+            } else {
+                statusEl.textContent = 'Trạng thái ' + (matchSortAsc ? '▲' : '▼');
+                statusEl.classList.add('active');
+                dateEl.textContent = 'Thời gian (GMT+7) ⇅';
+                dateEl.classList.remove('active');
+            }
+
+            renderMatchesTable();
+        }
+
         function renderMatchesTable() {
             const tbody = document.getElementById('matchesTable');
-            
+
             if (allMatches.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Chưa có trận đấu nào</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Chưa có trận đấu nào</div></td></tr>';
                 return;
             }
-            
+
+            const sorted = [...allMatches].sort((a, b) => {
+                let cmp = 0;
+                if (matchSortField === 'date') {
+                    cmp = a.date - b.date;
+                } else {
+                    cmp = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+                    if (cmp === 0) cmp = a.date - b.date;
+                }
+                return matchSortAsc ? cmp : -cmp;
+            });
+
             let html = '';
-            allMatches.forEach(match => {
+            sorted.forEach(match => {
                 const dateStr = match.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' });
                 const timeStr = match.date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
                 
@@ -1934,12 +2524,15 @@
                     statusBadge = '<span class="badge info">Kết thúc</span>';
                 } else if (match.status === 'open') {
                     statusBadge = '<span class="badge success">Mở</span>';
+                } else if (match.status === 'closed') {
+                    statusBadge = '<span class="badge" style="background:#EF4444;color:white;">Đã đóng</span>';
                 } else {
                     statusBadge = '<span class="badge warning">Chưa mở</span>';
                 }
-                
+
+                const penText = match.home_penalty != null ? ` (PEN ${match.home_penalty}-${match.away_penalty})` : '';
                 const resultText = match.home_score !== null && match.away_score !== null
-                    ? `${match.home_score}-${match.away_score} (${match.minute}')`
+                    ? `${match.home_score}-${match.away_score}${penText} (${match.minute}')`
                     : '-';
                 
                 // Display match_group (primary) or group_name (fallback)
@@ -1949,6 +2542,10 @@
                 const matchIdStr = `'${match.id}'`;
                 
                 const matchNumDisplay = match.match_number ? `M${match.match_number}` : '-';
+                const predCount = allPredictions.filter(p => p.match_id === match.id).length;
+                const totalPlayers = allPlayers.length;
+                const predPct = totalPlayers > 0 ? Math.round(predCount / totalPlayers * 100) : 0;
+                const predColor = predPct >= 80 ? '#059669' : predPct >= 50 ? '#D97706' : '#6B7280';
 
                 html += `
                     <tr>
@@ -1957,6 +2554,7 @@
                         <td>${groupDisplay}</td>
                         <td>${dateStr} ${timeStr}</td>
                         <td>${statusBadge}</td>
+                        <td><span style="color:${predColor};font-weight:600;">${predCount}/${totalPlayers}</span></td>
                         <td>${resultText}</td>
                         <td>
                             <div class="action-btns">
@@ -1986,7 +2584,10 @@
 
             let html = '';
             allPlayers.forEach(player => {
-                const groupName = player.groups?.name || 'N/A';
+                const groups = player.memberGroups || [];
+                const groupNames = groups.length > 0
+                    ? groups.map(g => `<span style="display:inline-block;background:#E0F2FE;color:#0369A1;padding:2px 6px;border-radius:4px;font-size:11px;margin:1px 2px;">${g.name}</span>`).join('')
+                    : '<span style="color:#D1D5DB;">-</span>';
                 const playerPredictions = allPredictions.filter(p => p.player_id === player.id).length;
                 const predPts = player.total_points || 0;
                 const favPts = player.favorite_points || 0;
@@ -2002,7 +2603,7 @@
                     <tr>
                         <td><strong>${player.name}</strong></td>
                         <td>${player.email}</td>
-                        <td>${groupName}</td>
+                        <td>${groupNames}</td>
                         <td>${predPts}</td>
                         <td>${favTeamDisplay}</td>
                         <td><strong>${totalPts}</strong></td>
@@ -2031,7 +2632,7 @@
             
             let html = '';
             allGroups.forEach(group => {
-                const memberCount = allPlayers.filter(p => p.group_id === group.id).length;
+                const memberCount = allPlayers.filter(p => (p.memberGroups || []).some(g => g.id === group.id)).length;
                 const createdDate = new Date(group.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
                 
                 // Use quotes for UUID strings
@@ -2209,40 +2810,30 @@
 
         // Page Navigation
         function switchAdminPage(pageId) {
-            // Remove active class from all pages and nav items
             document.querySelectorAll('.page-content').forEach(page => {
                 page.classList.remove('active');
             });
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
-            
-            // Add active class to selected page and nav item
             document.getElementById(pageId).classList.add('active');
             document.querySelector(`[onclick="switchAdminPage('${pageId}')"]`)?.classList.add('active');
+            closeMobileSidebar();
+        }
+
+        function toggleMobileSidebar() {
+            document.getElementById('adminSidebar').classList.toggle('mobile-active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+
+        function closeMobileSidebar() {
+            document.getElementById('adminSidebar').classList.remove('mobile-active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
         }
 
         // Modal Functions (Simplified - Full implementation continues...)
         function openAddMatchModal() {
             alert('Chức năng thêm trận đấu - Đang phát triển...');
-        }
-
-        function editMatch(id) {
-            alert('Chức năng sửa trận đấu ID: ' + id + ' - Đang phát triển...');
-        }
-
-        function deleteMatch(id) {
-            if (confirm('Bạn có chắc muốn xóa trận đấu này?')) {
-                alert('Delete match ID: ' + id);
-            }
-        }
-
-        function openEnterResultModal(id) {
-            alert('Chức năng nhập kết quả match ID: ' + id + ' - Đang phát triển...');
-        }
-
-        function viewMatchDetails(id) {
-            alert('Xem chi tiết match ID: ' + id);
         }
 
         function openAddPlayerModal() {
@@ -2341,6 +2932,70 @@
             } catch (error) {
                 console.error('Save deadline error:', error);
                 alert('Lỗi lưu deadline: ' + error.message);
+            }
+        }
+
+        function updateFavLockUI() {
+            if (!scoringRules) return;
+            const locked = scoringRules.favorite_team_locked;
+            const enabled = scoringRules.favorite_team_enabled !== false;
+            const statusEl = document.getElementById('favLockStatus');
+            const btn = document.getElementById('favLockBtn');
+            const enableBtn = document.getElementById('favEnableBtn');
+
+            if (statusEl) statusEl.innerHTML = !enabled
+                ? '<span style="color: #6B7280;">⛔ Tắt</span>'
+                : locked
+                    ? '<span style="color: #DC2626;">🔒 Đã khóa</span>'
+                    : '<span style="color: #059669;">🔓 Đang mở</span>';
+            if (btn) {
+                btn.textContent = locked ? '🔓 Mở khóa' : '🔒 Khóa';
+                btn.className = locked ? 'btn btn-success' : 'btn btn-warning';
+                btn.disabled = !enabled;
+            }
+            if (enableBtn) {
+                enableBtn.textContent = enabled ? '⛔ Tắt tính năng' : '✅ Bật tính năng';
+                enableBtn.className = enabled ? 'btn btn-secondary' : 'btn btn-primary';
+            }
+        }
+
+        async function toggleFavoriteLock() {
+            if (!scoringRules) { alert('Chưa tải scoring rules!'); return; }
+
+            const newLocked = !scoringRules.favorite_team_locked;
+            try {
+                const { error } = await supabase
+                    .from('scoring_rules')
+                    .update({ favorite_team_locked: newLocked })
+                    .eq('id', scoringRules.id);
+                if (error) throw error;
+
+                scoringRules.favorite_team_locked = newLocked;
+                updateFavLockUI();
+                alert(newLocked ? '🔒 Đã khóa! User không thể chọn/đổi đội yêu thích.' : '🔓 Đã mở! User có thể chọn đội yêu thích.');
+            } catch (error) {
+                console.error('Toggle fav lock error:', error);
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function toggleFavoriteEnabled() {
+            if (!scoringRules) { alert('Chưa tải scoring rules!'); return; }
+
+            const newEnabled = scoringRules.favorite_team_enabled === false;
+            try {
+                const { error } = await supabase
+                    .from('scoring_rules')
+                    .update({ favorite_team_enabled: newEnabled })
+                    .eq('id', scoringRules.id);
+                if (error) throw error;
+
+                scoringRules.favorite_team_enabled = newEnabled;
+                updateFavLockUI();
+                alert(newEnabled ? '✅ Đã bật tính năng chọn đội yêu thích!' : '⛔ Đã tắt tính năng chọn đội yêu thích!');
+            } catch (error) {
+                console.error('Toggle fav enabled error:', error);
+                alert('Lỗi: ' + error.message);
             }
         }
 
@@ -2651,7 +3306,7 @@
             // WC 2026 Hosts
             'Canada': { flag: '🇨🇦', color: '#FF0000' },
             'Mexico': { flag: '🇲🇽', color: '#006847' },
-            'United States': { flag: '🇺🇸', color: '#B22234' },
+            'USA': { flag: '🇺🇸', color: '#B22234' },
 
             // Europe - Qualified
             'Austria': { flag: '🇦🇹', color: '#ED2939' },
@@ -2915,84 +3570,128 @@
         }
 
         // Enter Result Functions
+        const KNOCKOUT_ROUNDS = ['R32', 'R16', 'QF', 'SF', '3RD', 'FINAL'];
+
+        function isKnockoutMatch(match) {
+            return KNOCKOUT_ROUNDS.includes(match?.match_group);
+        }
+
+        function updatePenaltyVisibility() {
+            if (!currentResultMatch || !isKnockoutMatch(currentResultMatch)) {
+                document.getElementById('penaltySection').style.display = 'none';
+                return;
+            }
+            const hs = parseInt(document.getElementById('resultHomeScore').value);
+            const as = parseInt(document.getElementById('resultAwayScore').value);
+            const isDraw = !isNaN(hs) && !isNaN(as) && hs === as;
+            document.getElementById('penaltySection').style.display = isDraw ? 'block' : 'none';
+            if (!isDraw) {
+                document.getElementById('resultHomePenalty').value = '';
+                document.getElementById('resultAwayPenalty').value = '';
+            }
+        }
+
         function openEnterResultModal(matchId) {
-            // matchId is already a string (UUID)
             const match = allMatches.find(m => m.id === matchId);
             if (!match) {
                 alert('Không tìm thấy trận đấu!');
                 return;
             }
-            
+
             currentResultMatch = match;
-            
+
             document.getElementById('resultMatchTitle').textContent = `${match.home_team} vs ${match.away_team}`;
             document.getElementById('enterResultModalTitle').textContent = 'Nhập kết quả trận đấu';
             document.getElementById('resultHomeScore').value = '';
             document.getElementById('resultAwayScore').value = '';
             document.getElementById('resultMinute').value = '';
-            
-            // Hide edit warning
+            document.getElementById('resultHomePenalty').value = '';
+            document.getElementById('resultAwayPenalty').value = '';
+            document.getElementById('penaltySection').style.display = 'none';
+
             document.getElementById('editResultWarning').style.display = 'none';
-            
+
             document.getElementById('enterResultModal').classList.add('active');
         }
 
         function openEditResultModal(matchId) {
-            // matchId is already a string (UUID)
             const match = allMatches.find(m => m.id === matchId);
             if (!match) {
                 alert('Không tìm thấy trận đấu!');
                 return;
             }
-            
+
             if (match.status !== 'finished') {
                 alert('Trận đấu chưa kết thúc!');
                 return;
             }
-            
+
             currentResultMatch = match;
-            
+
             document.getElementById('resultMatchTitle').textContent = `${match.home_team} vs ${match.away_team}`;
             document.getElementById('enterResultModalTitle').textContent = 'Sửa kết quả trận đấu';
-            
-            // Pre-fill with existing results
-            document.getElementById('resultHomeScore').value = match.home_score || '';
-            document.getElementById('resultAwayScore').value = match.away_score || '';
+
+            document.getElementById('resultHomeScore').value = match.home_score ?? '';
+            document.getElementById('resultAwayScore').value = match.away_score ?? '';
             document.getElementById('resultMinute').value = match.minute || '';
-            
-            // Show edit warning
+            document.getElementById('resultHomePenalty').value = match.home_penalty ?? '';
+            document.getElementById('resultAwayPenalty').value = match.away_penalty ?? '';
+            updatePenaltyVisibility();
+
             document.getElementById('editResultWarning').style.display = 'block';
-            
+
             document.getElementById('enterResultModal').classList.add('active');
         }
 
         async function saveMatchResult() {
             if (!currentResultMatch) return;
-            
+
             const homeScore = parseInt(document.getElementById('resultHomeScore').value);
             const awayScore = parseInt(document.getElementById('resultAwayScore').value);
             const minute = parseInt(document.getElementById('resultMinute').value);
-            
+
             if (isNaN(homeScore) || isNaN(awayScore) || isNaN(minute)) {
                 alert('Vui lòng nhập đầy đủ thông tin!');
                 return;
             }
-            
+
             if (homeScore < 0 || awayScore < 0 || minute < 1 || minute > 120) {
                 alert('Tỉ số hoặc phút ghi bàn không hợp lệ!');
                 return;
             }
-            
+
+            // Penalty validation for knockout draws
+            let homePenalty = null;
+            let awayPenalty = null;
+            if (isKnockoutMatch(currentResultMatch) && homeScore === awayScore) {
+                homePenalty = parseInt(document.getElementById('resultHomePenalty').value);
+                awayPenalty = parseInt(document.getElementById('resultAwayPenalty').value);
+                if (isNaN(homePenalty) || isNaN(awayPenalty)) {
+                    alert('Trận knockout hòa — vui lòng nhập kết quả penalty!');
+                    return;
+                }
+                if (homePenalty === awayPenalty) {
+                    alert('Penalty không thể hòa!');
+                    return;
+                }
+                if (homePenalty < 0 || awayPenalty < 0) {
+                    alert('Penalty không hợp lệ!');
+                    return;
+                }
+            }
+
             // Detect if editing existing result
-            const isEditing = currentResultMatch.status === 'finished' && 
+            const isEditing = currentResultMatch.status === 'finished' &&
                              currentResultMatch.home_score !== null;
-            
+
             // Confirmation message
-            let confirmMsg = `Xác nhận kết quả:\n${currentResultMatch.home_team} ${homeScore} - ${awayScore} ${currentResultMatch.away_team}\nPhút: ${minute}'`;
-            
+            let penaltyStr = homePenalty != null ? ` (PEN ${homePenalty}-${awayPenalty})` : '';
+            let confirmMsg = `Xác nhận kết quả:\n${currentResultMatch.home_team} ${homeScore} - ${awayScore} ${currentResultMatch.away_team}${penaltyStr}\nPhút: ${minute}'`;
+
             if (isEditing) {
-                const oldResult = `${currentResultMatch.home_score}-${currentResultMatch.away_score} (${currentResultMatch.minute}')`;
-                const newResult = `${homeScore}-${awayScore} (${minute}')`;
+                const oldPen = currentResultMatch.home_penalty != null ? ` (PEN ${currentResultMatch.home_penalty}-${currentResultMatch.away_penalty})` : '';
+                const oldResult = `${currentResultMatch.home_score}-${currentResultMatch.away_score}${oldPen} (${currentResultMatch.minute}')`;
+                const newResult = `${homeScore}-${awayScore}${penaltyStr} (${minute}')`;
                 confirmMsg = `⚠️ SỬA KẾT QUẢ\n\nKết quả cũ: ${oldResult}\nKết quả mới: ${newResult}\n\n` +
                            `Điểm của tất cả người chơi sẽ được tính lại!\n\nBạn có chắc chắn?`;
             }
@@ -3011,9 +3710,11 @@
                 const updateData = {
                     home_score: homeScore,
                     away_score: awayScore,
+                    home_penalty: homePenalty,
+                    away_penalty: awayPenalty,
                     minute: minute,
                     status: 'finished',
-                    points_calculated: false  // Reset flag when result changes
+                    points_calculated: false
                 };
                 
                 const { data: matchData, error: matchError } = await supabase
@@ -3030,14 +3731,21 @@
                 
                 console.log('✅ Match saved!', matchData);
                 
+                // Send notification: match result available
+                const matchLabel = `${currentResultMatch.home_team} vs ${currentResultMatch.away_team}`;
+                fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ action: 'notify', notifyType: 'match_result', matchId: currentResultMatch.id, matchLabel })
+                }).catch(e => console.warn('Notify error:', e));
+
                 // Refresh UI
                 await loadMatches();
                 renderMatchesTable();
                 renderDashboard();
-                
-                // Success message
+
                 alert('✅ Đã lưu kết quả trận đấu!\n\n⚠️ Lưu ý: Điểm predictions chưa tính tự động.\nCó thể tính thủ công sau.');
-                
+
                 closeModal('enterResultModal');
                 
             } catch (error) {
@@ -3057,7 +3765,7 @@
                 }
                 
                 // Check if match has results
-                if (match.home_score === null || match.away_score === null || !match.minute) {
+                if (match.home_score === null || match.away_score === null || match.minute === null || match.minute === undefined) {
                     alert('❌ Trận đấu chưa có kết quả!\n\nVui lòng nhập kết quả trước khi tính điểm.');
                     return;
                 }
@@ -3085,14 +3793,18 @@
                     console.warn('⚠️ Could not set points_calculated flag:', flagError);
                 }
                 
-                // Refresh data
-                await loadMatches(); // Reload to update button visibility
-                await loadPredictions();
-                await loadPlayers();
+                // Send notifications + refresh data in parallel
+                const calcMatch = allMatches.find(m => m.id === matchId);
+                const notifyPromise = calcMatch ? fetch(ADMIN_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ action: 'notify', notifyType: 'scores_calculated', matchId, matchLabel: `${calcMatch.home_team} vs ${calcMatch.away_team}` })
+                }).catch(e => console.warn('Notify error:', e)) : Promise.resolve();
+
+                await Promise.all([notifyPromise, loadMatches(), loadPredictions(), loadPlayers()]);
                 renderMatchesTable();
                 renderDashboard();
-                
-                // Success message
+
                 alert('✅ Đã tính điểm thành công!\n\n📊 Đã cập nhật:\n- Predictions table (điểm chi tiết)\n- Players table (tổng điểm)\n\n💡 Nút ⚡ đã ẩn để tránh tính trùng.\nNếu cần tính lại, dùng nút 🔄 Reset trước!');
                 
             } catch (error) {
@@ -3135,6 +3847,14 @@
                     console.log('ℹ️ No predictions to reset');
                 } else {
                     console.log(`🔄 Resetting ${predictions.length} predictions...`);
+
+                    const predIds = predictions.map(p => p.id);
+
+                    // Delete per-group scores
+                    await supabase
+                        .from('prediction_group_scores')
+                        .delete()
+                        .in('prediction_id', predIds);
 
                     // Reset prediction points to 0
                     for (const pred of predictions) {
@@ -3185,176 +3905,158 @@
         async function calculateAndUpdatePoints(matchId, actualHome, actualAway, actualMinute) {
             try {
                 console.log('🔄 Calculating points for match:', matchId);
-                
-                // Get all predictions for this match
+                console.time('⏱️ Total scoring time');
+
                 const { data: predictions, error: predError} = await supabase
                     .from('predictions')
                     .select('id, player_id, home_score, away_score, minute')
                     .eq('match_id', matchId);
-                
-                if (predError) {
-                    console.error('Error loading predictions:', predError);
-                    throw predError;
-                }
-                
+
+                if (predError) throw predError;
+
                 if (!predictions || predictions.length === 0) {
                     console.log('ℹ️ No predictions for this match');
+                    console.timeEnd('⏱️ Total scoring time');
                     return;
                 }
-                
+
                 console.log(`📊 Found ${predictions.length} predictions to score`);
-                
-                // Get scoring rules
+
                 const rules = scoringRules || {
-                    points_rank_1: 5,
-                    points_rank_2: 4,
-                    points_rank_3: 3,
-                    points_rank_other: 2,
+                    points_rank_1: 4,
+                    points_rank_2: 3,
+                    points_rank_3: 2,
+                    points_rank_other: 1,
                     points_exact_score: 5,
                     points_exact_minute: 3
                 };
-                
-                // Calculate scores for all predictions
-                // Ranking priority: 1) Exact score  2) Goal difference  3) Total score diff  4) Minute
+
                 const actualGoalDiff = actualHome - actualAway;
 
                 const scoredPredictions = predictions.map(pred => {
                     const exactScore = (pred.home_score === actualHome && pred.away_score === actualAway);
-
-                    // Goal difference accuracy: |predicted_diff - actual_diff|
                     const predGoalDiff = pred.home_score - pred.away_score;
                     const goalDiffAccuracy = Math.abs(predGoalDiff - actualGoalDiff);
-
-                    // Total individual score difference
                     const totalDiff = Math.abs(pred.home_score - actualHome) + Math.abs(pred.away_score - actualAway);
-
-                    // Minute prediction closeness
                     const minuteDiff = Math.abs(pred.minute - actualMinute);
+                    const exactScorePoints = exactScore ? rules.points_exact_score : 0;
 
                     return {
                         id: pred.id,
                         player_id: pred.player_id,
                         exactScore,
+                        exactScorePoints,
                         goalDiffAccuracy,
                         totalDiff,
                         minuteDiff
                     };
                 });
 
-                // Multi-level sort:
-                // 1. Exact score first (true > false)
-                // 2. Goal difference accuracy (lower = better)
-                // 3. Total score difference (lower = better)
-                // 4. Minute prediction (lower = better)
-                scoredPredictions.sort((a, b) => {
-                    if (a.exactScore !== b.exactScore) return a.exactScore ? -1 : 1;
-                    if (a.goalDiffAccuracy !== b.goalDiffAccuracy) return a.goalDiffAccuracy - b.goalDiffAccuracy;
-                    if (a.totalDiff !== b.totalDiff) return a.totalDiff - b.totalDiff;
-                    return a.minuteDiff - b.minuteDiff;
-                });
-                
-                // Find closest minute prediction (minimum difference)
-                const closestMinuteDiff = Math.min(...scoredPredictions.map(p => p.minuteDiff));
-                console.log(`🕐 Closest minute prediction: ${closestMinuteDiff} minutes difference`);
-                
-                // Calculate points and prepare updates
-                const updates = [];
-                const playerPointsMap = {};
-                const playerStatsMap = {};
-                
-                for (let i = 0; i < scoredPredictions.length; i++) {
-                    const pred = scoredPredictions[i];
-                    
-                    // Rank points
-                    let rankPoints = 0;
-                    if (i === 0) rankPoints = rules.points_rank_1;
-                    else if (i === 1) rankPoints = rules.points_rank_2;
-                    else if (i === 2) rankPoints = rules.points_rank_3;
-                    else rankPoints = rules.points_rank_other;
-                    
-                    const exactScorePoints = pred.exactScore ? rules.points_exact_score : 0;
-                    
-                    // Award minute points to CLOSEST prediction (not just exact)
-                    const exactMinutePoints = (pred.minuteDiff === closestMinuteDiff) ? rules.points_exact_minute : 0;
-                    
-                    const totalPoints = rankPoints + exactScorePoints + exactMinutePoints;
-                    
-                    updates.push({
-                        id: pred.id,
-                        player_id: pred.player_id,
-                        points_rank: rankPoints,
-                        points_exact_score: exactScorePoints,
-                        points_minute: exactMinutePoints,
-                        total_points: totalPoints
-                    });
-                    
-                    // Accumulate player stats
-                    if (!playerPointsMap[pred.player_id]) {
-                        playerPointsMap[pred.player_id] = 0;
-                        playerStatsMap[pred.player_id] = { exactScoreCount: 0, top1Count: 0 };
-                    }
-                    playerPointsMap[pred.player_id] += totalPoints;
-                    if (pred.exactScore) playerStatsMap[pred.player_id].exactScoreCount++;
-                    if (i === 0) playerStatsMap[pred.player_id].top1Count++;
-                    
-                    console.log(`  #${i+1} Player ${pred.player_id.substring(0,8)}: ${totalPoints} pts (rank:${rankPoints}, exact:${exactScorePoints}, min:${exactMinutePoints}) [goalDiff:${pred.goalDiffAccuracy}, totalDiff:${pred.totalDiff}, minDiff:${pred.minuteDiff}]`);
-                }
-                
-                console.log('💾 Updating predictions table (direct SQL)...');
-                
-                // Update predictions using direct SQL (RLS is disabled)
-                let successCount = 0;
-                let failCount = 0;
-                
-                for (const update of updates) {
-                    try {
-                        const { error } = await supabase
-                            .from('predictions')
-                            .update({
-                                points_rank: update.points_rank,
-                                points_exact_score: update.points_exact_score,
-                                points_minute: update.points_minute,
-                                total_points: update.total_points
-                            })
-                            .eq('id', update.id);
-                        
-                        if (error) {
-                            console.error(`  ❌ Error updating prediction ${update.id}:`, error);
-                            failCount++;
-                        } else {
-                            successCount++;
-                        }
-                        
-                        await new Promise(resolve => setTimeout(resolve, 20));
-                        
-                    } catch (err) {
-                        console.error(`  ❌ Failed to update prediction ${update.id}:`, err);
-                        failCount++;
-                    }
-                }
-                
-                console.log(`  ✅ ${successCount} predictions updated, ${failCount} failed`);
-                
-                console.log('💾 Recalculating player totals from all predictions...');
+                const playerIds = [...new Set(scoredPredictions.map(p => p.player_id))];
+                const { data: memberships } = await supabase
+                    .from('player_groups')
+                    .select('player_id, group_id')
+                    .in('player_id', playerIds);
 
-                // Recalculate player stats from scratch (sum ALL predictions, not incremental)
-                for (const playerId of Object.keys(playerPointsMap)) {
-                    try {
-                        await updatePlayerStats(playerId);
-                        console.log(`  ✅ Player ${playerId.substring(0,8)}: recalculated from all predictions`);
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                    } catch (err) {
-                        console.error(`  ❌ Failed to update player ${playerId}:`, err);
+                const groupPlayerMap = {};
+                for (const m of (memberships || [])) {
+                    if (!groupPlayerMap[m.group_id]) groupPlayerMap[m.group_id] = new Set();
+                    groupPlayerMap[m.group_id].add(m.player_id);
+                }
+
+                console.log(`📊 Scoring across ${Object.keys(groupPlayerMap).length} group(s)`);
+
+                const allGroupScores = [];
+
+                for (const [groupId, groupPlayerIds] of Object.entries(groupPlayerMap)) {
+                    const groupPreds = scoredPredictions.filter(p => groupPlayerIds.has(p.player_id));
+                    if (groupPreds.length === 0) continue;
+
+                    groupPreds.sort((a, b) => {
+                        if (a.exactScore !== b.exactScore) return a.exactScore ? -1 : 1;
+                        if (a.goalDiffAccuracy !== b.goalDiffAccuracy) return a.goalDiffAccuracy - b.goalDiffAccuracy;
+                        if (a.totalDiff !== b.totalDiff) return a.totalDiff - b.totalDiff;
+                        return a.minuteDiff - b.minuteDiff;
+                    });
+
+                    const closestMinuteDiff = Math.min(...groupPreds.map(p => p.minuteDiff));
+
+                    for (let i = 0; i < groupPreds.length; i++) {
+                        const pred = groupPreds[i];
+                        let rankPoints = 0;
+                        if (i === 0) rankPoints = rules.points_rank_1;
+                        else if (i === 1) rankPoints = rules.points_rank_2;
+                        else if (i === 2) rankPoints = rules.points_rank_3;
+                        else rankPoints = rules.points_rank_other;
+
+                        const minutePoints = (pred.minuteDiff === closestMinuteDiff) ? rules.points_exact_minute : 0;
+                        const total = rankPoints + pred.exactScorePoints + minutePoints;
+
+                        allGroupScores.push({
+                            prediction_id: pred.id,
+                            group_id: groupId,
+                            points_rank: rankPoints,
+                            points_minute: minutePoints,
+                            total_points: total
+                        });
                     }
                 }
-                
-                if (failCount > 0) {
-                    console.warn(`⚠️ Some predictions failed to update (${failCount}/${updates.length})`);
-                    throw new Error(`${failCount} predictions failed to update. Check console for details.`);
-                } else {
-                    console.log('✅ All points calculated and updated successfully!');
+
+                const predictionIds = scoredPredictions.map(p => p.id);
+
+                // Parallel batch: delete old scores + update exact_score in parallel
+                console.log('💾 Batch updating...');
+                const exactScoreUpdates = scoredPredictions.map(pred =>
+                    supabase.from('predictions')
+                        .update({ points_exact_score: pred.exactScorePoints })
+                        .eq('id', pred.id)
+                );
+                await Promise.all([
+                    supabase.from('prediction_group_scores').delete().in('prediction_id', predictionIds),
+                    ...exactScoreUpdates
+                ]);
+
+                // Bulk insert all group scores in one call
+                if (allGroupScores.length > 0) {
+                    const { error: insertErr } = await supabase
+                        .from('prediction_group_scores')
+                        .insert(allGroupScores);
+                    if (insertErr) console.error('❌ Bulk insert group scores error:', insertErr);
                 }
-                
+
+                // Parallel: update predictions backward compat
+                const predUpdates = scoredPredictions.map(pred => {
+                    const predGroupScores = allGroupScores.filter(s => s.prediction_id === pred.id);
+                    const maxTotal = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.total_points)) : pred.exactScorePoints;
+                    const maxRank = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.points_rank)) : 0;
+                    const maxMinute = predGroupScores.length > 0 ? Math.max(...predGroupScores.map(s => s.points_minute)) : 0;
+                    return supabase.from('predictions')
+                        .update({ points_rank: maxRank, points_minute: maxMinute, total_points: maxTotal })
+                        .eq('id', pred.id);
+                });
+                await Promise.all(predUpdates);
+
+                // Parallel: update player stats (fetch all predictions once, then update all players)
+                console.log('💾 Recalculating player totals...');
+                const { data: allPlayerPreds } = await supabase
+                    .from('predictions')
+                    .select('player_id, total_points, points_exact_score, points_rank')
+                    .in('player_id', playerIds);
+
+                const playerUpdates = playerIds.map(playerId => {
+                    const pPreds = (allPlayerPreds || []).filter(p => p.player_id === playerId);
+                    const totalPoints = pPreds.reduce((sum, p) => sum + (p.total_points || 0), 0);
+                    const exactScoreCount = pPreds.filter(p => p.points_exact_score > 0).length;
+                    const top1Count = pPreds.filter(p => p.points_rank === (rules.points_rank_1 || 5)).length;
+                    return supabase.from('players')
+                        .update({ total_points: totalPoints, exact_score_count: exactScoreCount, top1_count: top1Count })
+                        .eq('id', playerId);
+                });
+                await Promise.all(playerUpdates);
+
+                console.timeEnd('⏱️ Total scoring time');
+                console.log('✅ All points calculated and updated successfully!');
+
             } catch (error) {
                 console.error('❌ Calculate points error:', error);
                 throw error;
@@ -3395,6 +4097,45 @@
             }
         }
 
+        async function calculateUncalculatedMatches() {
+            const uncalculated = allMatches.filter(m =>
+                m.status === 'finished' && m.home_score !== null && m.away_score !== null &&
+                m.minute !== null && m.minute !== undefined && !m.points_calculated
+            );
+
+            if (uncalculated.length === 0) {
+                alert('✅ Tất cả trận đã có kết quả đều đã tính điểm rồi!');
+                return;
+            }
+
+            const matchList = uncalculated.map(m => `  ${m.home_team} ${m.home_score}-${m.away_score} ${m.away_team}`).join('\n');
+            if (!confirm(`⚡ Tính điểm cho ${uncalculated.length} trận chưa tính:\n\n${matchList}\n\nXác nhận?`)) return;
+
+            try {
+                for (const match of uncalculated) {
+                    console.log(`⚡ Calculating: ${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}`);
+                    await calculateAndUpdatePoints(match.id, match.home_score, match.away_score, match.minute);
+                    await supabase.from('matches').update({ points_calculated: true }).eq('id', match.id);
+                }
+
+                for (const player of allPlayers) {
+                    await updatePlayerStats(player.id);
+                }
+
+                await loadMatches();
+                await loadPredictions();
+                await loadPlayers();
+                renderMatchesTable();
+                renderPlayersTable();
+                renderDashboard();
+
+                alert(`✅ Đã tính điểm ${uncalculated.length} trận!\n\n📊 Đã cập nhật điểm cho ${allPlayers.length} người chơi.`);
+            } catch (error) {
+                console.error('❌ Calculate uncalculated error:', error);
+                alert('❌ Lỗi: ' + error.message);
+            }
+        }
+
         // Recalculate ALL player points from scratch
         async function recalculateAllPlayerPoints() {
             if (!confirm('🔄 TÍNH LẠI TOÀN BỘ ĐIỂM\n\nHành động này sẽ:\n- Tính lại điểm cho TẤT CẢ trận đã có kết quả\n- Cập nhật tổng điểm cho TẤT CẢ người chơi\n\nQuá trình có thể mất vài giây.\nXác nhận?')) {
@@ -3406,7 +4147,7 @@
 
                 // Step 1: Recalculate points for all finished matches with results
                 const finishedMatches = allMatches.filter(m =>
-                    m.status === 'finished' && m.home_score !== null && m.away_score !== null && m.minute
+                    m.status === 'finished' && m.home_score !== null && m.away_score !== null && m.minute !== null && m.minute !== undefined
                 );
 
                 console.log(`📊 Found ${finishedMatches.length} finished matches to recalculate`);
@@ -3463,31 +4204,34 @@
 
         function openAddPlayerModal() {
             currentEditingPlayer = null;
-            
+
             document.getElementById('playerName').value = '';
             document.getElementById('playerEmail').value = '';
             document.getElementById('playerPassword').value = '';
-            document.getElementById('playerGroup').value = '';
-            
+
+            populateGroupSelectors([]);
+
             document.getElementById('addPlayerModalTitle').textContent = 'Thêm người chơi mới';
             document.getElementById('playerPasswordGroup').style.display = 'block';
+            document.getElementById('playerPassword').placeholder = '••••••••';
             document.getElementById('addPlayerModal').classList.add('active');
         }
 
         async function editPlayer(id) {
-            // id is already a string (UUID)
             const player = allPlayers.find(p => p.id === id);
             if (!player) {
                 alert('Không tìm thấy người chơi!');
                 return;
             }
-            
+
             currentEditingPlayer = player;
-            
+
             document.getElementById('playerName').value = player.name;
             document.getElementById('playerEmail').value = player.email;
-            document.getElementById('playerGroup').value = player.group_id || '';
-            
+
+            const currentGroupIds = (player.memberGroups || []).map(g => g.id);
+            populateGroupSelectors(currentGroupIds);
+
             document.getElementById('addPlayerModalTitle').textContent = 'Sửa thông tin người chơi';
             document.getElementById('playerPasswordGroup').style.display = 'block';
             document.getElementById('playerPassword').value = '';
@@ -3499,63 +4243,97 @@
             const name = document.getElementById('playerName').value.trim();
             const email = document.getElementById('playerEmail').value.trim();
             const password = document.getElementById('playerPassword').value;
-            const groupId = document.getElementById('playerGroup').value; // Keep as string (UUID)
-            
+
+            const selectedGroupIds = Array.from(
+                document.querySelectorAll('.player-group-cb:checked')
+            ).map(cb => cb.value);
+
             if (!name || !email) {
                 alert('Vui lòng điền đầy đủ thông tin!');
                 return;
             }
-            
+
             if (!currentEditingPlayer && !password) {
                 alert('Vui lòng nhập mật khẩu!');
                 return;
             }
-            
-            if (!groupId) {
-                alert('Vui lòng chọn nhóm!');
+
+            if (selectedGroupIds.length === 0) {
+                alert('Vui lòng chọn ít nhất 1 nhóm!');
                 return;
             }
-            
-            const playerData = {
-                name: name,
-                email: email,
-                group_id: groupId  // Pass UUID string directly, don't parse to int
-            };
-            
-            // Include password for new players (required) or existing players (optional)
+
+            const playerData = { name, email };
             if (password) {
                 playerData.password = password;
             }
-            
+
             try {
+                let playerId;
+
                 if (currentEditingPlayer) {
-                    // Update existing player
+                    playerId = currentEditingPlayer.id;
+
                     const { error } = await supabase
                         .from('players')
                         .update(playerData)
-                        .eq('id', currentEditingPlayer.id);
-                    
+                        .eq('id', playerId);
                     if (error) throw error;
-                    
+
+                    // Sync group memberships: remove old, add new
+                    const oldGroupIds = (currentEditingPlayer.memberGroups || []).map(g => g.id);
+                    const toRemove = oldGroupIds.filter(id => !selectedGroupIds.includes(id));
+                    const toAdd = selectedGroupIds.filter(id => !oldGroupIds.includes(id));
+
+                    for (const gId of toRemove) {
+                        const { error: rmErr } = await supabase
+                            .from('player_groups')
+                            .delete()
+                            .eq('player_id', playerId)
+                            .eq('group_id', gId);
+                        if (rmErr) throw rmErr;
+                    }
+
+                    for (const gId of toAdd) {
+                        const { error: addErr } = await supabase
+                            .from('player_groups')
+                            .insert({ player_id: playerId, group_id: gId });
+                        if (addErr) throw addErr;
+                    }
+
                     alert('✅ Đã cập nhật thông tin người chơi!');
                 } else {
                     // Create new player
-                    const { error } = await supabase
+                    const { data: newPlayer, error } = await supabase
                         .from('players')
                         .insert([{
                             ...playerData,
                             total_points: 0,
                             exact_score_count: 0,
                             top1_count: 0
-                        }]);
-                    
+                        }])
+                        .select()
+                        .single();
                     if (error) throw error;
-                    
+
+                    playerId = newPlayer.id;
+
+                    // Add to selected groups
+                    const memberships = selectedGroupIds.map(gId => ({
+                        player_id: playerId,
+                        group_id: gId
+                    }));
+                    const { error: linkErr } = await supabase
+                        .from('player_groups')
+                        .insert(memberships);
+                    if (linkErr) throw linkErr;
+
                     alert('✅ Đã thêm người chơi mới!');
                 }
-                
+
                 await loadPlayers();
                 renderPlayersTable();
+                renderGroupsTable();
                 renderDashboard();
                 closeModal('addPlayerModal');
             } catch (error) {
@@ -3760,9 +4538,8 @@
         }
 
         async function deleteGroup(id) {
-            // Check if group has members
-            const members = allPlayers.filter(p => p.group_id === id);
-            
+            const members = allPlayers.filter(p => (p.memberGroups || []).some(g => g.id === id));
+
             if (members.length > 0) {
                 alert(`Không thể xóa nhóm có ${members.length} thành viên! Vui lòng chuyển họ sang nhóm khác trước.`);
                 return;
@@ -3798,8 +4575,8 @@
                 return;
             }
             
-            const members = allPlayers.filter(p => p.group_id === id);
-            
+            const members = allPlayers.filter(p => (p.memberGroups || []).some(g => g.id === id));
+
             document.getElementById('groupDetailName').textContent = group.name;
             document.getElementById('groupDetailCode').textContent = group.code;
             document.getElementById('groupDetailMembers').textContent = members.length;
@@ -3840,91 +4617,140 @@
         }
 
         // ============================================
-        // OPENFOOTBALL SYNC & AUTO-OPEN
+        // WORLDCUP26.IR SYNC & AUTO-OPEN
         // ============================================
 
-        const OPENFOOTBALL_URL = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
-
-        const openFootballNameMap = {
+        const TEAM_ALIASES = {
+            'United States': 'USA',
+            'Korea Republic': 'South Korea',
             'Brazil': 'Brasil',
-            'USA': 'United States'
+            "Côte d'Ivoire": 'Ivory Coast',
+            'Cabo Verde': 'Cape Verde',
+            'Congo DR': 'DR Congo',
+            'Democratic Republic of the Congo': 'DR Congo',
         };
 
-        function mapTeamName(ofName) {
-            return openFootballNameMap[ofName] || ofName;
+        function normalizeTeamName(name) {
+            const mapped = TEAM_ALIASES[name] || name;
+            return mapped
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[&]/g, 'and')
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
-        function findLastGoalMinute(match) {
-            const allGoals = [...(match.goals1 || []), ...(match.goals2 || [])];
-            if (allGoals.length === 0) return 90;
-            let maxMinute = 0;
-            allGoals.forEach(g => {
-                const total = g.minute + (g.offset || 0);
-                if (total > maxMinute) maxMinute = total;
+        function findDbMatch(homeName, awayName, excludeFinished) {
+            let dbMatch = allMatches.find(m =>
+                m.home_team === homeName &&
+                m.away_team === awayName &&
+                (excludeFinished ? m.status !== 'finished' : true)
+            );
+            if (dbMatch) return dbMatch;
+
+            const normHome = normalizeTeamName(homeName);
+            const normAway = normalizeTeamName(awayName);
+            return allMatches.find(m =>
+                normalizeTeamName(m.home_team) === normHome &&
+                normalizeTeamName(m.away_team) === normAway &&
+                (excludeFinished ? m.status !== 'finished' : true)
+            );
+        }
+
+        function parseScorersMinutes(scorersStr) {
+            if (!scorersStr || scorersStr === 'null' || scorersStr === '{}') return [];
+            const minutes = [];
+            const regex = /(\d+)'/g;
+            let match;
+            while ((match = regex.exec(scorersStr)) !== null) {
+                minutes.push(parseInt(match[1], 10));
+            }
+            return minutes;
+        }
+
+        function getLastGoalMinute(game) {
+            const homeMinutes = parseScorersMinutes(game.home_scorers);
+            const awayMinutes = parseScorersMinutes(game.away_scorers);
+            const allMinutes = [...homeMinutes, ...awayMinutes];
+            if (allMinutes.length === 0) return 0;
+            return Math.min(Math.max(...allMinutes), 120);
+        }
+
+        async function fetchWcGames() {
+            const resp = await fetch(ADMIN_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                body: JSON.stringify({ action: 'fetch_football_data' })
             });
-            return Math.min(maxMinute, 120);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || `API error ${resp.status}`);
+            }
+            return resp.json();
         }
 
-        function getFinalScore(match) {
-            if (!match.score) return null;
-            const ft = match.score.et || match.score.ft;
-            if (!ft || ft.length < 2) return null;
-            return { home: ft[0], away: ft[1] };
-        }
-
-        async function syncFromOpenFootball() {
+        async function syncFromFootballData() {
             const statusEl = document.getElementById('syncStatus');
             const setStatus = (msg, type) => {
                 if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : type === 'warning' ? '⏳' : '❌'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
             };
 
-            setStatus('Đang tải dữ liệu từ OpenFootball...', 'warning');
+            setStatus('Đang tải dữ liệu từ worldcup26.ir...', 'warning');
 
             try {
-                const response = await fetch(OPENFOOTBALL_URL);
-                if (!response.ok) throw new Error('Không thể tải dữ liệu OpenFootball');
-                const data = await response.json();
+                const data = await fetchWcGames();
+                const allGames = data.games || [];
+                const finishedGames = allGames.filter(g => g.finished === 'TRUE');
 
-                const ofMatches = data.matches || [];
+                console.log(`📡 worldcup26.ir: ${allGames.length} total, ${finishedGames.length} finished`);
+
                 let updatedCount = 0;
                 let skippedCount = 0;
                 let errorCount = 0;
                 const details = [];
+                const unmatchedTeams = [];
+                const fetchedResults = [];
 
-                for (const ofMatch of ofMatches) {
-                    const score = getFinalScore(ofMatch);
-                    if (!score) continue;
+                for (const game of finishedGames) {
+                    const homeScore = parseInt(game.home_score, 10);
+                    const awayScore = parseInt(game.away_score, 10);
+                    if (isNaN(homeScore) || isNaN(awayScore)) continue;
 
-                    const homeName = mapTeamName(ofMatch.team1);
-                    const awayName = mapTeamName(ofMatch.team2);
+                    const homeName = game.home_team_name_en || '';
+                    const awayName = game.away_team_name_en || '';
+                    const lastMinute = getLastGoalMinute(game);
 
-                    const dbMatch = allMatches.find(m =>
-                        m.home_team === homeName &&
-                        m.away_team === awayName &&
-                        m.status !== 'finished'
-                    );
+                    fetchedResults.push(`⚽ ${homeName} ${homeScore}-${awayScore} ${awayName} · phút ${lastMinute || '?'}`);
+
+                    const dbMatch = findDbMatch(homeName, awayName, false);
 
                     if (!dbMatch) {
-                        const alreadyFinished = allMatches.find(m =>
-                            m.home_team === homeName && m.away_team === awayName && m.status === 'finished'
-                        );
-                        if (alreadyFinished) {
-                            skippedCount++;
-                        }
+                        unmatchedTeams.push(`⚠️ "${homeName}" vs "${awayName}" — ${homeScore}-${awayScore}`);
                         continue;
                     }
 
-                    const lastMinute = findLastGoalMinute(ofMatch);
+                    if (dbMatch.status === 'finished') {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    const homePenalty = game.home_penalty != null && game.home_penalty !== '' ? parseInt(game.home_penalty, 10) : null;
+                    const awayPenalty = game.away_penalty != null && game.away_penalty !== '' ? parseInt(game.away_penalty, 10) : null;
+
+                    const updateData = {
+                        home_score: homeScore,
+                        away_score: awayScore,
+                        home_penalty: isNaN(homePenalty) ? null : homePenalty,
+                        away_penalty: isNaN(awayPenalty) ? null : awayPenalty,
+                        minute: lastMinute,
+                        status: 'finished',
+                        points_calculated: false
+                    };
 
                     const { error } = await supabase
                         .from('matches')
-                        .update({
-                            home_score: score.home,
-                            away_score: score.away,
-                            minute: lastMinute,
-                            status: 'finished',
-                            points_calculated: false
-                        })
+                        .update(updateData)
                         .eq('id', dbMatch.id);
 
                     if (error) {
@@ -3932,7 +4758,8 @@
                         details.push(`❌ ${homeName} vs ${awayName}: ${error.message}`);
                     } else {
                         updatedCount++;
-                        details.push(`✅ ${homeName} ${score.home}-${score.away} ${awayName} (${lastMinute}')`);
+                        const penStr = homePenalty != null ? ` (PEN ${homePenalty}-${awayPenalty})` : '';
+                        details.push(`✅ ${homeName} ${homeScore}-${awayScore}${penStr} ${awayName} (${lastMinute}')`);
                     }
                 }
 
@@ -3940,13 +4767,24 @@
                 renderMatchesTable();
                 renderDashboard();
 
-                const detailsHtml = details.length > 0
-                    ? `<br><small>${details.join('<br>')}</small>` : '';
+                const allDetails = [...details, ...unmatchedTeams];
+                const detailsHtml = allDetails.length > 0
+                    ? `<br><small>${allDetails.join('<br>')}</small>` : '';
+
+                const fetchedHtml = fetchedResults.length > 0
+                    ? `<br><br><b>📡 Kết quả fetch về từ worldcup26.ir (${fetchedResults.length} trận):</b><br><small>${fetchedResults.join('<br>')}</small>`
+                    : '<br><small>Không có trận nào có kết quả từ API</small>';
+
+                if (unmatchedTeams.length > 0) {
+                    console.warn('⚠️ Unmatched teams:', unmatchedTeams);
+                }
 
                 if (updatedCount > 0) {
-                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${errorCount} lỗi${detailsHtml}`, 'success');
+                    setStatus(`Đã cập nhật ${updatedCount} trận | ${skippedCount} đã có KQ | ${unmatchedTeams.length} không khớp tên | ${errorCount} lỗi${detailsHtml}${fetchedHtml}`, 'success');
+                } else if (unmatchedTeams.length > 0) {
+                    setStatus(`Tên đội không khớp! ${unmatchedTeams.length} trận có KQ nhưng không match được tên trong DB (${skippedCount} đã có KQ)${detailsHtml}${fetchedHtml}`, 'danger');
                 } else {
-                    setStatus(`Không có trận mới cần cập nhật (${skippedCount} đã có KQ)${detailsHtml}`, 'warning');
+                    setStatus(`Không có trận mới cần cập nhật (${skippedCount} đã có KQ)${detailsHtml}${fetchedHtml}`, 'warning');
                 }
 
                 return { updatedCount, skippedCount, errorCount };
@@ -4000,6 +4838,36 @@
                     }
                 }
 
+                // Send notifications for opened matches
+                if (openedCount > 0) {
+                    try {
+                        const { data: allPlayers } = await supabase.from('players').select('id');
+                        const playerIds = (allPlayers || []).map(p => p.id);
+
+                        const notifRows = [];
+                        for (const match of matchesToOpen) {
+                            const matchDate = new Date(match.match_date);
+                            const timeStr = matchDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                            for (const pid of playerIds) {
+                                notifRows.push({
+                                    player_id: pid,
+                                    type: 'match_open',
+                                    title: `${match.home_team} vs ${match.away_team}`,
+                                    body: `Đã mở dự đoán! Trận đấu lúc ${timeStr}`,
+                                    match_id: match.id,
+                                    action: 'predict',
+                                    seen: false
+                                });
+                            }
+                        }
+                        if (notifRows.length > 0) {
+                            await supabase.from('notifications').insert(notifRows);
+                        }
+                    } catch (notifErr) {
+                        console.warn('Failed to send open notifications:', notifErr);
+                    }
+                }
+
                 await loadMatches();
                 renderMatchesTable();
                 renderDashboard();
@@ -4024,9 +4892,1153 @@
             try {
                 await autoOpenPredictions();
                 await new Promise(r => setTimeout(r, 500));
-                await syncFromOpenFootball();
+                await syncFromFootballData();
             } finally {
                 if (btn) { btn.disabled = false; btn.textContent = '🔄 Đồng bộ toàn bộ'; }
+            }
+        }
+
+        // ============================================
+        // BACKUP: Export / Import Predictions
+        // ============================================
+
+        async function exportPredictions() {
+            const statusEl = document.getElementById('backupStatus');
+            const setStatus = (msg, type) => {
+                if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : '⏳'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
+            };
+
+            setStatus('Đang export predictions...', 'warning');
+
+            try {
+                const { data, error } = await supabase
+                    .from('predictions')
+                    .select('*');
+
+                if (error) throw error;
+
+                const backup = {
+                    exported_at: new Date().toISOString(),
+                    count: data.length,
+                    predictions: data
+                };
+
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 10);
+                a.href = url;
+                a.download = `predictions-backup-${dateStr}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                setStatus(`Đã export ${data.length} predictions`, 'success');
+            } catch (err) {
+                setStatus('Lỗi export: ' + err.message, 'warning');
+            }
+        }
+
+        async function importPredictions(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            event.target.value = '';
+
+            const statusEl = document.getElementById('backupStatus');
+            const setStatus = (msg, type) => {
+                if (statusEl) statusEl.innerHTML = `<div class="alert ${type}"><span class="alert-icon">${type === 'success' ? '✅' : type === 'warning' ? '⏳' : '❌'}</span><div class="alert-content"><div class="alert-text">${msg}</div></div></div>`;
+            };
+
+            try {
+                const text = await file.text();
+                const backup = JSON.parse(text);
+                const predictions = backup.predictions;
+
+                if (!Array.isArray(predictions) || predictions.length === 0) {
+                    setStatus('File không hợp lệ hoặc không có predictions', 'error');
+                    return;
+                }
+
+                if (!confirm(`Import ${predictions.length} predictions từ backup ${backup.exported_at || 'unknown'}?\n\nSẽ ghi đè predictions trùng match_id + player_id.`)) return;
+
+                setStatus(`Đang import ${predictions.length} predictions...`, 'warning');
+
+                const rows = predictions.map(p => ({
+                    match_id: p.match_id,
+                    player_id: p.player_id,
+                    home_score: p.home_score,
+                    away_score: p.away_score,
+                    minute: p.minute,
+                    total_points: p.total_points,
+                    points_rank: p.points_rank,
+                    points_exact_score: p.points_exact_score,
+                    points_minute: p.points_minute,
+                    updated_at: p.updated_at
+                }));
+
+                const { error } = await supabase
+                    .from('predictions')
+                    .upsert(rows, { onConflict: 'match_id,player_id' });
+
+                if (error) throw error;
+
+                setStatus(`Đã import ${rows.length} predictions thành công!`, 'success');
+                await loadPredictions();
+            } catch (err) {
+                setStatus('Lỗi import: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================
+        // BRACKET SIMULATION TOOL
+        // ============================================
+
+        var annexCData = null;
+        var simulatedBracket = null;
+
+        const SIM_R32_FIXED = {
+            73: { type: 'A', home: '2A', away: '2B' },
+            75: { type: 'B', home: '1F', away: '2C' },
+            76: { type: 'B', home: '1C', away: '2F' },
+            78: { type: 'A', home: '2E', away: '2I' },
+            83: { type: 'A', home: '2K', away: '2L' },
+            84: { type: 'B', home: '1H', away: '2J' },
+            86: { type: 'B', home: '1J', away: '2H' },
+            88: { type: 'A', home: '2D', away: '2G' }
+        };
+
+        const SIM_R32_VARIABLE = {
+            74: { home: '1E', annexIdx: 0 },
+            77: { home: '1I', annexIdx: 1 },
+            79: { home: '1A', annexIdx: 2 },
+            80: { home: '1L', annexIdx: 3 },
+            81: { home: '1D', annexIdx: 4 },
+            82: { home: '1G', annexIdx: 5 },
+            85: { home: '1B', annexIdx: 6 },
+            87: { home: '1K', annexIdx: 7 }
+        };
+
+        const SIM_R16 = {
+            89: { home: 'W74', away: 'W77' },
+            90: { home: 'W73', away: 'W75' },
+            91: { home: 'W76', away: 'W78' },
+            92: { home: 'W79', away: 'W80' },
+            93: { home: 'W83', away: 'W84' },
+            94: { home: 'W81', away: 'W82' },
+            95: { home: 'W86', away: 'W88' },
+            96: { home: 'W85', away: 'W87' }
+        };
+
+        const SIM_QF = {
+            97:  { home: 'W89',  away: 'W90'  },
+            98:  { home: 'W93',  away: 'W94'  },
+            99:  { home: 'W91',  away: 'W92'  },
+            100: { home: 'W95',  away: 'W96'  }
+        };
+
+        const SIM_SF = {
+            101: { home: 'W97',  away: 'W98'  },
+            102: { home: 'W99',  away: 'W100' }
+        };
+
+        const SIM_FINAL = { 104: { home: 'W101', away: 'W102' } };
+        const SIM_3RD   = { 103: { home: 'L101', away: 'L102' } };
+
+        const SIM_MATCH_DATES = {
+            // R32 (FOX Sports UTC + 7h = GMT+7)
+            73:'2026-06-29T02:00+07:00',74:'2026-06-30T03:30+07:00',75:'2026-06-30T08:00+07:00',
+            76:'2026-06-30T00:00+07:00',77:'2026-07-01T04:00+07:00',78:'2026-07-01T00:00+07:00',
+            79:'2026-07-01T08:00+07:00',80:'2026-07-01T23:00+07:00',81:'2026-07-02T07:00+07:00',
+            82:'2026-07-02T03:00+07:00',83:'2026-07-03T06:00+07:00',84:'2026-07-03T02:00+07:00',
+            85:'2026-07-03T10:00+07:00',86:'2026-07-04T05:00+07:00',87:'2026-07-04T08:30+07:00',
+            88:'2026-07-04T01:00+07:00',
+            // R16
+            89:'2026-07-05T04:00+07:00',90:'2026-07-05T00:00+07:00',
+            91:'2026-07-06T03:00+07:00',92:'2026-07-06T07:00+07:00',
+            93:'2026-07-07T02:00+07:00',94:'2026-07-07T07:00+07:00',
+            95:'2026-07-07T23:00+07:00',96:'2026-07-08T03:00+07:00',
+            // QF
+            97:'2026-07-10T03:00+07:00',98:'2026-07-11T02:00+07:00',
+            99:'2026-07-12T04:00+07:00',100:'2026-07-12T08:00+07:00',
+            // SF
+            101:'2026-07-15T02:00+07:00',102:'2026-07-16T02:00+07:00',
+            // 3rd & Final
+            103:'2026-07-19T04:00+07:00',104:'2026-07-20T02:00+07:00'
+        };
+
+        const SIM_MATCH_VENUES = {
+            73:'Los Angeles',74:'Boston',75:'Monterrey',76:'Houston',
+            77:'New York/NJ',78:'Dallas',79:'Mexico City',80:'Atlanta',
+            81:'San Francisco',82:'Seattle',83:'Toronto',84:'Los Angeles',
+            85:'Vancouver',86:'Miami',87:'Kansas City',88:'Dallas',
+            89:'Philadelphia',90:'Houston',91:'New York/NJ',92:'Mexico City',
+            93:'Dallas',94:'Seattle',95:'Atlanta',96:'Vancouver',
+            97:'Boston',98:'Los Angeles',99:'Miami',100:'Kansas City',
+            101:'Dallas',102:'Atlanta',103:'Miami',104:'New York/NJ'
+        };
+
+        async function loadAnnexCData() {
+            if (annexCData) return annexCData;
+            try {
+                const resp = await fetch('annex-c-data.json');
+                annexCData = await resp.json();
+                return annexCData;
+            } catch (e) {
+                console.error('Failed to load Annex C data:', e);
+                return null;
+            }
+        }
+
+        function simCalcGroupStandings(groupMatches) {
+            const teams = {};
+            groupMatches.forEach(m => {
+                const home = m.home_team;
+                const away = m.away_team;
+                if (!home || !away) return;
+                if (!teams[home]) teams[home] = { name: home, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+                if (!teams[away]) teams[away] = { name: away, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+                if (m.status !== 'finished' || m.home_score === null || m.home_score === undefined) return;
+                const hs = m.home_score, as = m.away_score;
+                teams[home].mp++; teams[away].mp++;
+                teams[home].gf += hs; teams[home].ga += as;
+                teams[away].gf += as; teams[away].ga += hs;
+                if (hs > as) { teams[home].w++; teams[away].l++; }
+                else if (hs < as) { teams[away].w++; teams[home].l++; }
+                else { teams[home].d++; teams[away].d++; }
+            });
+            return Object.values(teams)
+                .map(t => ({ ...t, pts: t.w * 3 + t.d, gd: t.gf - t.ga }))
+                .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.name.localeCompare(b.name));
+        }
+
+        async function generateBracketSimulation() {
+            const btn = document.getElementById('simGenerateBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang tạo...';
+
+            try {
+                const annex = await loadAnnexCData();
+                if (!annex) throw new Error('Không thể tải dữ liệu Annex C');
+
+                await loadMatches();
+
+                const groups = {};
+                const groupLetters = 'ABCDEFGHIJKL'.split('');
+                allMatches.forEach(m => {
+                    const g = m.match_group;
+                    if (groupLetters.includes(g)) {
+                        if (!groups[g]) groups[g] = [];
+                        groups[g].push(m);
+                    }
+                });
+
+                const standings = {};
+                let totalGroupMatches = 0;
+                let finishedGroupMatches = 0;
+                let groupsComplete = 0;
+
+                groupLetters.forEach(g => {
+                    const gMatches = groups[g] || [];
+                    standings[g] = simCalcGroupStandings(gMatches);
+                    const total = gMatches.length;
+                    const finished = gMatches.filter(m => m.status === 'finished').length;
+                    totalGroupMatches += total;
+                    finishedGroupMatches += finished;
+                    if (total > 0 && finished === total) groupsComplete++;
+                });
+
+                const allGroupsDone = groupsComplete === 12;
+
+                // Build status HTML
+                let statusHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:16px;">`;
+                groupLetters.forEach(g => {
+                    const gMatches = groups[g] || [];
+                    const finished = gMatches.filter(m => m.status === 'finished').length;
+                    const total = gMatches.length;
+                    const pct = total > 0 ? Math.round(finished / total * 100) : 0;
+                    const color = pct === 100 ? '#059669' : pct > 0 ? '#F59E0B' : '#9CA3AF';
+                    statusHTML += `<div style="text-align:center;padding:8px;background:var(--bg-gray);border-radius:8px;">
+                        <div style="font-weight:700;font-size:14px;">Bảng ${g}</div>
+                        <div style="font-size:12px;color:${color};font-weight:600;">${finished}/${total}</div>
+                    </div>`;
+                });
+                statusHTML += `</div>`;
+                statusHTML += `<div style="font-size:13px;color:var(--text-light);">Tổng: ${finishedGroupMatches}/${totalGroupMatches} trận hoàn tất | ${groupsComplete}/12 bảng xong</div>`;
+                document.getElementById('simGroupStatus').innerHTML = statusHTML;
+
+                // Lock banner
+                const lockBanner = document.getElementById('simLockBanner');
+                const finalizeBtn = document.getElementById('simFinalizeBtn');
+                if (!allGroupsDone) {
+                    lockBanner.style.display = 'block';
+                    finalizeBtn.style.display = 'none';
+                } else {
+                    lockBanner.style.display = 'none';
+                    finalizeBtn.style.display = 'inline-flex';
+                }
+
+                // Get 1st, 2nd, 3rd per group
+                const rank1 = {}, rank2 = {}, rank3 = {};
+                groupLetters.forEach(g => {
+                    const s = standings[g];
+                    rank1[g] = s[0] || { name: `1${g}?`, pts: 0, gd: 0, gf: 0 };
+                    rank2[g] = s[1] || { name: `2${g}?`, pts: 0, gd: 0, gf: 0 };
+                    rank3[g] = s[2] ? { ...s[2], group: g } : { name: `3${g}?`, group: g, pts: 0, gd: 0, gf: 0, mp: 0, w: 0, d: 0, l: 0 };
+                });
+
+                // Sort 3rd place teams
+                const allThirds = groupLetters.map(g => rank3[g]);
+                allThirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+                const qualifying3rds = allThirds.slice(0, 8);
+                const qualifyingGroups = qualifying3rds.map(t => t.group).sort().join('');
+
+                // Render 3rd place table
+                renderSimThirdPlace(allThirds, qualifying3rds);
+
+                // Annex C lookup
+                const annexMapping = annex[qualifyingGroups];
+                if (!annexMapping) {
+                    document.getElementById('simBracketCard').style.display = 'block';
+                    document.getElementById('simBracketContainer').innerHTML = `
+                        <div style="padding:20px;text-align:center;color:var(--red);">
+                            <strong>Lỗi:</strong> Không tìm thấy tổ hợp "${qualifyingGroups}" trong bảng Annex C (495 tổ hợp).<br>
+                            Điều này có thể xảy ra nếu chưa đủ dữ liệu vòng bảng.
+                        </div>`;
+                    return;
+                }
+
+                // Build team resolver
+                const resolveTeam = (code) => {
+                    const m = code.match(/^(\d)([A-L])$/);
+                    if (!m) return { name: code, seed: code };
+                    const rankNum = parseInt(m[1]);
+                    const group = m[2];
+                    if (rankNum === 1) return { name: rank1[group]?.name || `1${group}?`, seed: `1${group}` };
+                    if (rankNum === 2) return { name: rank2[group]?.name || `2${group}?`, seed: `2${group}` };
+                    if (rankNum === 3) {
+                        const t3 = qualifying3rds.find(t => t.group === group);
+                        return { name: t3?.name || `3${group}?`, seed: `3${group}` };
+                    }
+                    return { name: code, seed: code };
+                };
+
+                // Build R32 matches
+                const simMatches = {};
+
+                // Fixed R32
+                Object.entries(SIM_R32_FIXED).forEach(([num, def]) => {
+                    const home = resolveTeam(def.home);
+                    const away = resolveTeam(def.away);
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: home.name, away_team: away.name,
+                        home_seed: home.seed, away_seed: away.seed,
+                        type: def.type, round: 'R32',
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // Variable R32 (Annex C)
+                Object.entries(SIM_R32_VARIABLE).forEach(([num, def]) => {
+                    const home = resolveTeam(def.home);
+                    const thirdGroup = annexMapping[def.annexIdx];
+                    const away = resolveTeam(`3${thirdGroup}`);
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: home.name, away_team: away.name,
+                        home_seed: home.seed, away_seed: away.seed,
+                        type: 'C', round: 'R32',
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // R16
+                Object.entries(SIM_R16).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'R16', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // QF
+                Object.entries(SIM_QF).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'QF', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // SF
+                Object.entries(SIM_SF).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'SF', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                // Final + 3rd
+                Object.entries(SIM_FINAL).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: 'FINAL', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+                Object.entries(SIM_3RD).forEach(([num, def]) => {
+                    simMatches[num] = {
+                        match_number: parseInt(num),
+                        home_team: def.home, away_team: def.away,
+                        home_seed: def.home, away_seed: def.away,
+                        type: null, round: '3RD', tbd: true,
+                        date: SIM_MATCH_DATES[num]
+                    };
+                });
+
+                simulatedBracket = {
+                    matches: simMatches,
+                    qualifyingGroups,
+                    annexMapping,
+                    standings,
+                    rank1, rank2, rank3,
+                    qualifying3rds,
+                    allGroupsDone
+                };
+
+                // Overlay actual DB knockout results into simMatches
+                const koDbMatches = allMatches.filter(m =>
+                    ['R32','R16','QF','SF','3RD','FINAL'].includes(m.match_group)
+                );
+                const actualMap = {};
+                koDbMatches.forEach(m => { actualMap[m.match_number] = m; });
+
+                const dbWinnerOf = (num) => {
+                    const m = actualMap[num];
+                    if (!m || m.status !== 'finished') return null;
+                    const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                    const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                    return hs != null ? (hs > as ? m.home_team : m.away_team) : null;
+                };
+                const dbLoserOf = (num) => {
+                    const m = actualMap[num];
+                    if (!m || m.status !== 'finished') return null;
+                    const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                    const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                    return hs != null ? (hs > as ? m.away_team : m.home_team) : null;
+                };
+                const resolveWL = (code) => {
+                    const wm = code.match(/^W(\d+)$/);
+                    if (wm) return dbWinnerOf(parseInt(wm[1])) || code;
+                    const lm = code.match(/^L(\d+)$/);
+                    if (lm) return dbLoserOf(parseInt(lm[1])) || code;
+                    return code;
+                };
+
+                Object.values(simMatches).forEach(sm => {
+                    // Step 1: overlay actual DB data (scores, status, team names)
+                    const dbM = actualMap[sm.match_number];
+                    if (dbM) {
+                        if (dbM.home_team) sm.home_team = dbM.home_team;
+                        if (dbM.away_team) sm.away_team = dbM.away_team;
+                        sm.home_score   = dbM.home_score   ?? null;
+                        sm.away_score   = dbM.away_score   ?? null;
+                        sm.home_penalty = dbM.home_penalty ?? null;
+                        sm.away_penalty = dbM.away_penalty ?? null;
+                        sm.status = dbM.status;
+                    }
+                    // Step 2: resolve any remaining W??/L?? codes using actual results.
+                    // Runs unconditionally so DB entries with placeholder names (e.g. created
+                    // by finalizeSimulation before R32 results) also get resolved.
+                    if (/^[WL]\d+$/.test(sm.home_team)) sm.home_team = resolveWL(sm.home_team);
+                    if (/^[WL]\d+$/.test(sm.away_team)) sm.away_team = resolveWL(sm.away_team);
+                    sm.tbd = /^[WL]\d+$/.test(sm.home_team) || /^[WL]\d+$/.test(sm.away_team);
+                });
+
+                renderSimBracket(simMatches);
+                updateRoundGenButtons();
+
+            } catch (err) {
+                console.error('Simulation error:', err);
+                alert('Lỗi tạo mô phỏng: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Tạo mô phỏng';
+            }
+        }
+
+        function renderSimThirdPlace(allThirds, qualifying3rds) {
+            const card = document.getElementById('simThirdPlaceCard');
+            const container = document.getElementById('simThirdPlaceTable');
+            card.style.display = 'block';
+
+            const qualGroups = new Set(qualifying3rds.map(t => t.group));
+
+            const rows = allThirds.map((t, i) => {
+                const flag = countries[t.name]?.flag || '';
+                const isQual = qualGroups.has(t.group);
+                return `<tr class="${isQual ? 'qualify' : ''}">
+                    <td style="font-weight:600;">${i + 1}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:14px;">${flag}</span>
+                            <span style="font-weight:600;">${t.name}</span>
+                            <span style="font-size:10px;color:var(--text-light);background:var(--bg-gray);padding:1px 5px;border-radius:4px;">Bảng ${t.group}</span>
+                        </div>
+                    </td>
+                    <td>${t.mp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+                    <td>${t.gf}:${t.ga}</td>
+                    <td style="font-weight:600;color:${t.gd > 0 ? '#059669' : t.gd < 0 ? '#DC2626' : '#6B7280'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+                    <td style="font-weight:700;">${t.pts}</td>
+                </tr>`;
+            }).join('');
+
+            container.innerHTML = `
+                <table class="sim-third-table">
+                    <thead><tr>
+                        <th>#</th><th>Đội</th><th>T</th><th>Th</th><th>H</th><th>B</th><th>BT</th><th>HS</th><th>Đ</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="sim-legend" style="margin-top:8px;">
+                    <div class="sim-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:#059669;display:inline-block;"></span> Top 8 đi tiếp vòng 32</div>
+                    <div class="sim-legend-item"><strong>Tổ hợp Annex C:</strong> ${qualifying3rds.map(t => t.group).sort().join('')}</div>
+                </div>`;
+        }
+
+        function renderSimBracket(simMatches) {
+            const card = document.getElementById('simBracketCard');
+            const container = document.getElementById('simBracketContainer');
+            card.style.display = 'block';
+
+            const leftR32 = [74, 77, 73, 75, 83, 84, 81, 82];
+            const leftR16 = [89, 90, 93, 94];
+            const leftQF = [97, 98];
+            const leftSF = [101];
+            const rightR32 = [76, 78, 79, 80, 86, 88, 85, 87];
+            const rightR16 = [91, 92, 95, 96];
+            const rightQF = [99, 100];
+            const rightSF = [102];
+
+            const roundColors = {
+                R32: '#3B82F6', R16: '#6366F1', QF: '#EC4899',
+                SF: '#8B5CF6', FINAL: '#EAB308', '3RD': '#78716C'
+            };
+
+            const CARD_H = 82;
+            const GAP = 6;
+            const SLOT_H = CARD_H + GAP;
+            const HALF_DIVIDER = 24;
+            const totalH = 8 * SLOT_H + HALF_DIVIDER;
+
+            const r32Centers = [];
+            for (let i = 0; i < 8; i++) {
+                const base = i < 4 ? 0 : 4 * SLOT_H + HALF_DIVIDER;
+                const local = i < 4 ? i : i - 4;
+                r32Centers.push(base + local * SLOT_H + SLOT_H / 2);
+            }
+            const r16Centers = [0,1,2,3].map(j => (r32Centers[j*2] + r32Centers[j*2+1]) / 2);
+            const qfCenters = [0,1].map(k => (r16Centers[k*2] + r16Centers[k*2+1]) / 2);
+            const sfCenter = (qfCenters[0] + qfCenters[1]) / 2;
+            const finalCenter = totalH / 2;
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }) +
+                    ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+            };
+
+            const renderTeamRow = (name, seed, isTbd, isWinner, isLoser, score, penalty) => {
+                const teamData = countries[name];
+                const flag = teamData ? teamData.flag : (isTbd ? '' : '❓');
+                const scoreHTML = score !== null && score !== undefined
+                    ? `<span class="sim-team-score${isWinner ? ' win' : ''}">${score}${penalty != null ? `<span class="sim-team-score-pen">(${penalty})</span>` : ''}</span>`
+                    : `<span class="sim-team-score"></span>`;
+                return `<div class="sim-team-row${isWinner ? ' winner' : ''}${isLoser ? ' loser' : ''}">
+                    <span class="sim-team-flag">${flag}</span>
+                    <span class="sim-team-name ${isTbd ? 'tbd' : ''}">${name}</span>
+                    <span class="sim-team-seed">${seed}</span>
+                    ${scoreHTML}
+                </div>`;
+            };
+
+            const renderMatchCard = (m, roundKey, rightSide) => {
+                const isFinished = m.status === 'finished';
+                const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                const homeWin = isFinished && hs != null && hs > as;
+                const awayWin = isFinished && as != null && as > hs;
+
+                const typeClass = m.type ? `type-${m.type.toLowerCase()}` : `round-${roundKey.toLowerCase()}`;
+                const sideClass = rightSide ? 'right-side' : '';
+                const finishedClass = isFinished ? 'finished' : '';
+                const venue = SIM_MATCH_VENUES[m.match_number] || '';
+                return `<div class="sim-match-card ${typeClass} ${sideClass} ${finishedClass}" data-sim-match="${m.match_number}">
+                    <div class="sim-match-header">
+                        <span class="sim-match-num">M${m.match_number}${m.type ? ` • ${m.type}` : ''}</span>
+                        <span class="sim-match-date">${formatDate(m.date)}</span>
+                    </div>
+                    <div class="sim-match-teams">
+                        ${renderTeamRow(m.home_team, m.home_seed, m.tbd, homeWin, isFinished && !homeWin && hs != null, m.home_score, m.home_penalty)}
+                        ${renderTeamRow(m.away_team, m.away_seed, m.tbd, awayWin, isFinished && !awayWin && as != null, m.away_score, m.away_penalty)}
+                    </div>
+                    ${venue ? `<div class="sim-match-venue">📍 ${venue}</div>` : ''}
+                </div>`;
+            };
+
+            const roundLabels = { R32: 'Vòng 32', R16: 'Vòng 16', QF: 'Tứ kết', SF: 'Bán kết' };
+
+            const buildRoundCol = (roundKey, matchNums, centers, rightSide, roundId) => {
+                const color = roundColors[roundKey];
+                let h = `<div class="sim-round" data-sim-round="${roundId}">`;
+                h += `<div class="sim-round-title" style="background:${color}15;color:${color};">${roundLabels[roundKey]}</div>`;
+                h += `<div class="sim-round-matches" style="height:${totalH}px;">`;
+                matchNums.forEach((num, i) => {
+                    const m = simMatches[num];
+                    if (!m) return;
+                    const y = centers[i] - CARD_H / 2;
+                    h += `<div class="sim-match-slot" style="position:absolute;top:${y}px;left:0;right:0;">${renderMatchCard(m, roundKey, rightSide)}</div>`;
+                });
+                h += `</div></div>`;
+                return h;
+            };
+
+            let html = `<div class="sim-bracket-wrapper" style="min-height:${totalH + 50}px;">`;
+
+            // LEFT BRACKET: R32 → R16 → QF → SF
+            html += buildRoundCol('R32', leftR32, r32Centers, false, 'R32-L');
+            html += `<div class="sim-connector-col" data-connector="R32-L"></div>`;
+            html += buildRoundCol('R16', leftR16, r16Centers, false, 'R16-L');
+            html += `<div class="sim-connector-col" data-connector="R16-L"></div>`;
+            html += buildRoundCol('QF', leftQF, qfCenters, false, 'QF-L');
+            html += `<div class="sim-connector-col" data-connector="QF-L"></div>`;
+            html += buildRoundCol('SF', leftSF, [sfCenter], false, 'SF-L');
+            html += `<div class="sim-connector-col" data-connector="SF-L"></div>`;
+
+            // CENTER: Final + 3rd place
+            const fColor = roundColors.FINAL;
+            html += `<div class="sim-round" style="min-width:195px;" data-sim-round="FINAL">`;
+            html += `<div class="sim-round-title" style="background:${fColor}25;color:${fColor};font-size:12px;">🏆 Chung kết</div>`;
+            html += `<div class="sim-round-matches" style="height:${totalH}px;">`;
+            const fm = simMatches[104];
+            const tm = simMatches[103];
+            const finalY = finalCenter - CARD_H - 14;
+            const thirdY = finalCenter + 14;
+            if (fm) html += `<div class="sim-match-slot" style="position:absolute;top:${finalY}px;left:0;right:0;">${renderMatchCard(fm, 'FINAL', false)}</div>`;
+            if (tm) html += `<div class="sim-match-slot" style="position:absolute;top:${thirdY}px;left:0;right:0;">${renderMatchCard(tm, '3RD', false)}</div>`;
+            html += `</div></div>`;
+
+            // RIGHT BRACKET (mirrored): SF ← QF ← R16 ← R32
+            html += `<div class="sim-connector-col" data-connector="SF-R"></div>`;
+            html += buildRoundCol('SF', rightSF, [sfCenter], true, 'SF-R');
+            html += `<div class="sim-connector-col" data-connector="QF-R"></div>`;
+            html += buildRoundCol('QF', rightQF, qfCenters, true, 'QF-R');
+            html += `<div class="sim-connector-col" data-connector="R16-R"></div>`;
+            html += buildRoundCol('R16', rightR16, r16Centers, true, 'R16-R');
+            html += `<div class="sim-connector-col" data-connector="R32-R"></div>`;
+            html += buildRoundCol('R32', rightR32, r32Centers, true, 'R32-R');
+
+            html += '</div>';
+
+            // Legend
+            html += `<div class="sim-legend">
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#3B82F6;"></span> R32 A (Nhì vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#10B981;"></span> R32 B (Nhất vs Nhì)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#F59E0B;"></span> R32 C (Nhất vs Hạng 3)</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#6366F1;"></span> Vòng 16</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#EC4899;"></span> Tứ kết</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#8B5CF6;"></span> Bán kết</div>
+                <div class="sim-legend-item"><span class="sim-legend-color" style="background:#EAB308;"></span> Chung kết</div>
+            </div>`;
+
+            container.innerHTML = html;
+            requestAnimationFrame(() => drawSimConnectors(totalH));
+        }
+
+        function drawSimConnectors(totalH) {
+            const wrapper = document.querySelector('.sim-bracket-wrapper');
+            if (!wrapper) return;
+
+            const defs = [
+                { id:'R32-L', src:'R32-L', tgt:'R16-L', color:'#3B82F6', mirror:false },
+                { id:'R16-L', src:'R16-L', tgt:'QF-L',  color:'#6366F1', mirror:false },
+                { id:'QF-L',  src:'QF-L',  tgt:'SF-L',  color:'#EC4899', mirror:false },
+                { id:'SF-L',  src:'SF-L',  tgt:'FINAL',  color:'#8B5CF6', mirror:false, single:true },
+                { id:'SF-R',  src:'SF-R',  tgt:'FINAL',  color:'#8B5CF6', mirror:true,  single:true },
+                { id:'QF-R',  src:'QF-R',  tgt:'SF-R',  color:'#EC4899', mirror:true },
+                { id:'R16-R', src:'R16-R', tgt:'QF-R',  color:'#6366F1', mirror:true },
+                { id:'R32-R', src:'R32-R', tgt:'R16-R', color:'#3B82F6', mirror:true },
+            ];
+
+            const getY = (card, colRect) => {
+                const r = card.getBoundingClientRect();
+                return (r.top + r.height / 2) - colRect.top;
+            };
+
+            defs.forEach(def => {
+                const col = wrapper.querySelector(`[data-connector="${def.id}"]`);
+                if (!col) return;
+                const srcEl = wrapper.querySelector(`[data-sim-round="${def.src}"]`);
+                const tgtEl = wrapper.querySelector(`[data-sim-round="${def.tgt}"]`);
+                if (!srcEl || !tgtEl) return;
+
+                const srcCards = [...srcEl.querySelectorAll('.sim-match-card')];
+                let tgtCards = [...tgtEl.querySelectorAll('.sim-match-card')];
+                if (def.tgt === 'FINAL') tgtCards = tgtCards.filter(c => c.dataset.simMatch === '104');
+                if (!srcCards.length || !tgtCards.length) return;
+
+                const colRect = col.getBoundingClientRect();
+                const colW = colRect.width;
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', colW);
+                svg.setAttribute('height', totalH + 50);
+                svg.style.cssText = 'position:absolute;top:0;left:0;';
+
+                const makePath = (d) => {
+                    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    p.setAttribute('d', d);
+                    p.setAttribute('fill', 'none');
+                    p.setAttribute('stroke', def.color);
+                    p.setAttribute('stroke-width', '1.5');
+                    p.setAttribute('stroke-opacity', '0.45');
+                    p.setAttribute('stroke-linecap', 'round');
+                    return p;
+                };
+
+                if (def.single) {
+                    const ys = getY(srcCards[0], colRect);
+                    const yt = getY(tgtCards[0], colRect);
+                    if (def.mirror) {
+                        svg.appendChild(makePath(`M ${colW} ${ys} C ${colW*0.35} ${ys}, ${colW*0.65} ${yt}, 0 ${yt}`));
+                    } else {
+                        svg.appendChild(makePath(`M 0 ${ys} C ${colW*0.65} ${ys}, ${colW*0.35} ${yt}, ${colW} ${yt}`));
+                    }
+                } else {
+                    const xMid = colW / 2;
+                    for (let i = 0; i < srcCards.length - 1; i += 2) {
+                        const c1 = srcCards[i], c2 = srcCards[i+1];
+                        const tc = tgtCards[Math.floor(i/2)];
+                        if (!c1 || !c2 || !tc) continue;
+                        const y1 = getY(c1, colRect), y2 = getY(c2, colRect), yT = getY(tc, colRect);
+                        if (def.mirror) {
+                            svg.appendChild(makePath([
+                                `M ${colW} ${y1} H ${xMid}`,
+                                `M ${colW} ${y2} H ${xMid}`,
+                                `M ${xMid} ${y1} V ${y2}`,
+                                `M ${xMid} ${yT} H 0`
+                            ].join(' ')));
+                        } else {
+                            svg.appendChild(makePath([
+                                `M 0 ${y1} H ${xMid}`,
+                                `M 0 ${y2} H ${xMid}`,
+                                `M ${xMid} ${y1} V ${y2}`,
+                                `M ${xMid} ${yT} H ${colW}`
+                            ].join(' ')));
+                        }
+                    }
+                }
+
+                col.innerHTML = '';
+                col.appendChild(svg);
+            });
+        }
+
+        async function finalizeSimulation() {
+            if (!simulatedBracket) {
+                alert('Vui lòng tạo mô phỏng trước!');
+                return;
+            }
+
+            if (!simulatedBracket.allGroupsDone) {
+                alert('Không thể chốt: Vòng bảng chưa kết thúc!');
+                return;
+            }
+
+            // Check if R32 matches already exist
+            const existingR32 = allMatches.filter(m => m.match_group === 'R32');
+            if (existingR32.length > 0) {
+                if (!confirm(`⚠️ Đã có ${existingR32.length} trận vòng 32 trong hệ thống.\n\nBạn muốn XÓA các trận cũ và tạo lại toàn bộ từ mô phỏng?\n\n(Các dự đoán cho trận cũ cũng sẽ bị xóa!)`)) {
+                    return;
+                }
+                // Delete existing knockout matches
+                const existingKO = allMatches.filter(m =>
+                    ['R32','R16','QF','SF','3RD','FINAL'].includes(m.match_group)
+                );
+                for (const m of existingKO) {
+                    await supabase.from('predictions').delete().eq('match_id', m.id);
+                    await supabase.from('matches').delete().eq('id', m.id);
+                }
+            } else {
+                if (!confirm(`Chốt mô phỏng → tạo 32 trận loại trực tiếp thật trong hệ thống?\n\n(R32: 16 trận, R16: 8, QF: 4, SF: 2, 3RD: 1, Final: 1)`)) {
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('simFinalizeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang tạo...';
+
+            try {
+                const matchRows = [];
+                const allNums = Object.keys(simulatedBracket.matches).map(Number).sort((a, b) => a - b);
+
+                for (const num of allNums) {
+                    const m = simulatedBracket.matches[num];
+                    const roundMap = { R32: 'R32', R16: 'R16', QF: 'QF', SF: 'SF', FINAL: 'FINAL', '3RD': '3RD' };
+                    const matchGroup = roundMap[m.round] || m.round;
+
+                    matchRows.push({
+                        match_number: m.match_number,
+                        match_group: matchGroup,
+                        home_team: m.home_team,
+                        away_team: m.away_team,
+                        match_date: m.date,
+                        status: 'not-open'
+                    });
+                }
+
+                const { data, error } = await supabase
+                    .from('matches')
+                    .insert(matchRows)
+                    .select();
+
+                if (error) throw error;
+
+                alert(`✅ Đã tạo ${data.length} trận loại trực tiếp thành công!`);
+                await loadMatches();
+                renderMatchesTable();
+                renderDashboard();
+            } catch (err) {
+                console.error('Finalize error:', err);
+                alert('Lỗi chốt dữ liệu: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Chốt → Tạo trận thật';
+            }
+        }
+
+        function updateRoundGenButtons() {
+            const card = document.getElementById('simRoundGenCard');
+            if (!card) return;
+            card.style.display = 'block';
+
+            const r32    = allMatches.filter(m => m.match_group === 'R32');
+            const r16    = allMatches.filter(m => m.match_group === 'R16');
+            const qf     = allMatches.filter(m => m.match_group === 'QF');
+            const sf     = allMatches.filter(m => m.match_group === 'SF');
+            const finals = allMatches.filter(m => ['FINAL','3RD'].includes(m.match_group));
+
+            const allDone = (arr) => arr.length > 0 && arr.every(m => m.status === 'finished');
+
+            const setBtn = (id, enabled, exists) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.disabled = !enabled;
+                btn.style.opacity = enabled ? '1' : '0.45';
+                btn.style.background = exists ? '#6B7280' : '';
+                btn.style.color = exists ? 'white' : '';
+            };
+
+            setBtn('genR16Btn',   allDone(r32), r16.length > 0);
+            setBtn('genQFBtn',    allDone(r16), qf.length  > 0);
+            setBtn('genSFBtn',    allDone(qf),  sf.length  > 0);
+            setBtn('genFinalBtn', allDone(sf),  finals.length > 0);
+
+            const parts = [];
+            if (r32.length)    parts.push(`R32: ${r32.filter(m=>m.status==='finished').length}/${r32.length}`);
+            if (r16.length)    parts.push(`R16: ${r16.filter(m=>m.status==='finished').length}/${r16.length}`);
+            if (qf.length)     parts.push(`QF: ${qf.filter(m=>m.status==='finished').length}/${qf.length}`);
+            if (sf.length)     parts.push(`SF: ${sf.filter(m=>m.status==='finished').length}/${sf.length}`);
+            if (finals.length) parts.push(`Final: ${finals.filter(m=>m.status==='finished').length}/${finals.length}`);
+            const statusEl = document.getElementById('simRoundGenStatus');
+            if (statusEl) statusEl.textContent = parts.join(' · ') || 'Chưa có trận knockout nào trong hệ thống.';
+        }
+
+        async function generateNextRound(round) {
+            await loadMatches();
+
+            const depRound = { R16: 'R32', QF: 'R16', SF: 'QF', FINAL: 'SF' }[round];
+            const templates = {
+                R16:   SIM_R16,
+                QF:    SIM_QF,
+                SF:    SIM_SF,
+                FINAL: { ...SIM_FINAL, ...SIM_3RD }
+            };
+            const targetGroups = round === 'FINAL' ? ['FINAL','3RD'] : [round];
+            const template = templates[round];
+
+            const depMatches = allMatches.filter(m => m.match_group === depRound);
+            if (depMatches.length === 0) {
+                alert(`Chưa có trận ${depRound} nào trong hệ thống!\nHãy tạo/chốt ${depRound} trước.`);
+                return;
+            }
+
+            const unfinished = depMatches.filter(m => m.status !== 'finished');
+            if (unfinished.length > 0 &&
+                !confirm(`Còn ${unfinished.length} trận ${depRound} chưa có kết quả. Tiếp tục tạo ${round}?\n(Trận chưa có kết quả sẽ dùng placeholder "W??")`)) {
+                return;
+            }
+
+            const winnerOf = {}, loserOf = {};
+            depMatches.forEach(m => {
+                if (m.status !== 'finished') return;
+                const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                if (hs == null) return;
+                winnerOf[m.match_number] = hs > as ? m.home_team : m.away_team;
+                loserOf[m.match_number]  = hs > as ? m.away_team : m.home_team;
+            });
+
+            const resolveCode = (code) => {
+                const wm = code.match(/^W(\d+)$/);
+                if (wm) return winnerOf[parseInt(wm[1])] || code;
+                const lm = code.match(/^L(\d+)$/);
+                if (lm) return loserOf[parseInt(lm[1])] || code;
+                return code;
+            };
+
+            // Delete existing if any
+            const existing = allMatches.filter(m => targetGroups.includes(m.match_group));
+            if (existing.length > 0) {
+                if (!confirm(`⚠️ Đã có ${existing.length} trận ${round} trong hệ thống.\nXóa và tạo lại với kết quả mới nhất?`)) return;
+                for (const m of existing) {
+                    await supabase.from('predictions').delete().eq('match_id', m.id);
+                    await supabase.from('matches').delete().eq('id', m.id);
+                }
+            } else {
+                if (!confirm(`Tạo ${Object.keys(template).length} trận ${round} từ kết quả ${depRound}?`)) return;
+            }
+
+            const rows = [];
+            Object.entries(template).forEach(([num, def]) => {
+                const numI = parseInt(num);
+                const matchGroup = numI === 103 ? '3RD' : numI === 104 ? 'FINAL' : round;
+                rows.push({
+                    match_number: numI,
+                    match_group:  matchGroup,
+                    home_team:    resolveCode(def.home),
+                    away_team:    resolveCode(def.away),
+                    match_date:   SIM_MATCH_DATES[numI] || null,
+                    status:       'not-open'
+                });
+            });
+
+            try {
+                const { data, error } = await supabase.from('matches').insert(rows).select();
+                if (error) throw error;
+                alert(`✅ Đã tạo ${data.length} trận ${round}!`);
+                await loadMatches();
+                updateRoundGenButtons();
+                renderMatchesTable();
+                renderDashboard();
+            } catch (err) {
+                console.error('generateNextRound error:', err);
+                alert('Lỗi: ' + err.message);
+            }
+        }
+
+        async function publishToPublic() {
+            const btn = document.getElementById('btnPublish');
+            const status = document.getElementById('publishStatus');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang publish...';
+            status.textContent = '';
+
+            try {
+                const annex = await loadAnnexCData();
+                const { data: matches, error: mErr } = await supabase.from('matches').select('*');
+                if (mErr) throw mErr;
+
+                // Group standings
+                const groupLetters = 'ABCDEFGHIJKL'.split('');
+                const groupStage = matches.filter(m => m.match_group && m.match_group.length === 1);
+                const byGroup = {};
+                groupStage.forEach(m => {
+                    const g = m.match_group;
+                    if (!byGroup[g]) byGroup[g] = [];
+                    byGroup[g].push(m);
+                });
+
+                const groups = {};
+                groupLetters.forEach(g => {
+                    const gm = byGroup[g] || [];
+                    const standings = simCalcGroupStandings(gm);
+                    groups[g] = { standings: standings.map((t, i) => ({
+                        pos: i + 1, name: t.name, flag: countries[t.name]?.flag || '',
+                        mp: t.mp, w: t.w, d: t.d, l: t.l,
+                        gf: t.gf, ga: t.ga, gd: t.gf - t.ga, pts: t.w * 3 + t.d
+                    }))};
+                });
+
+                // 3rd place
+                const allThirds = Object.entries(groups)
+                    .filter(([_, g]) => g.standings.length >= 3)
+                    .map(([gName, g]) => ({ ...g.standings[2], group: gName }))
+                    .sort((a, b) => (b.pts - a.pts) || (b.gd - a.gd) || (b.gf - a.gf));
+
+                allThirds.forEach((t, i) => { t.rank = i + 1; t.qualifying = i < 8; });
+                const qualifying3rds = allThirds.filter(t => t.qualifying);
+                const qualifyingGroups = qualifying3rds.map(t => t.group).sort().join('');
+
+                // Resolve team name from group standings
+                const resolveTeam = (code) => {
+                    const m = code.match(/^(\d)([A-L])$/);
+                    if (!m) return code;
+                    const rankNum = parseInt(m[1]);
+                    const group = m[2];
+                    const s = groups[group]?.standings || [];
+                    if (rankNum === 1 && s[0]) return s[0].name;
+                    if (rankNum === 2 && s[1]) return s[1].name;
+                    if (rankNum === 3) {
+                        const t3 = qualifying3rds.find(t => t.group === group);
+                        return t3?.name || `3${group}?`;
+                    }
+                    return `${rankNum}${group}?`;
+                };
+
+                const makeBracketEntry = (num, round, type, homeName, awayName) => ({
+                    num: parseInt(num), round, type,
+                    home: homeName, homeFlag: countries[homeName]?.flag || '',
+                    away: awayName, awayFlag: countries[awayName]?.flag || '',
+                    date: SIM_MATCH_DATES[num] || null,
+                    venue: SIM_MATCH_VENUES[num] || '',
+                    homeScore: null, awayScore: null,
+                    homePenalty: null, awayPenalty: null,
+                    status: 'not-open'
+                });
+
+                // Build simulated bracket (R32 with resolved team names)
+                const bracket = {};
+
+                Object.entries(SIM_R32_FIXED).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'R32', def.type, resolveTeam(def.home), resolveTeam(def.away));
+                    bracket[num].homeGroupPos = def.home;
+                    bracket[num].awayGroupPos = def.away;
+                });
+
+                const annexMapping = annex ? annex[qualifyingGroups] : null;
+                Object.entries(SIM_R32_VARIABLE).forEach(([num, def]) => {
+                    const homeName = resolveTeam(def.home);
+                    let awayName = '3???';
+                    let awayPos = '3?';
+                    if (annexMapping) {
+                        const thirdGroup = annexMapping[def.annexIdx];
+                        awayName = resolveTeam(`3${thirdGroup}`);
+                        awayPos = '3' + thirdGroup;
+                    }
+                    bracket[num] = makeBracketEntry(num, 'R32', 'C', homeName, awayName);
+                    bracket[num].homeGroupPos = def.home;
+                    bracket[num].awayGroupPos = awayPos;
+                });
+
+                Object.entries(SIM_R16).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'R16', null, def.home, def.away);
+                });
+                Object.entries(SIM_QF).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'QF', null, def.home, def.away);
+                });
+                Object.entries(SIM_SF).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'SF', null, def.home, def.away);
+                });
+                Object.entries(SIM_FINAL).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, 'FINAL', null, def.home, def.away);
+                });
+                Object.entries(SIM_3RD).forEach(([num, def]) => {
+                    bracket[num] = makeBracketEntry(num, '3RD', null, def.home, def.away);
+                });
+
+                // Overlay actual knockout results from database
+                const knockoutRounds = ['R32','R16','QF','SF','3RD','FINAL'];
+                const koResultMap = {};
+                matches.filter(m => knockoutRounds.includes(m.match_group)).forEach(m => {
+                    koResultMap[m.match_number] = m;
+                    const num = m.match_number;
+                    if (!bracket[num]) return;
+                    if (m.home_team) {
+                        bracket[num].home = m.home_team;
+                        bracket[num].homeFlag = countries[m.home_team]?.flag || '';
+                    }
+                    if (m.away_team) {
+                        bracket[num].away = m.away_team;
+                        bracket[num].awayFlag = countries[m.away_team]?.flag || '';
+                    }
+                    if (m.home_score !== null && m.home_score !== undefined) {
+                        bracket[num].homeScore = m.home_score;
+                        bracket[num].awayScore = m.away_score;
+                    }
+                    if (m.home_penalty !== null && m.home_penalty !== undefined) {
+                        bracket[num].homePenalty = m.home_penalty;
+                        bracket[num].awayPenalty = m.away_penalty;
+                    }
+                    if (m.match_date) bracket[num].date = m.match_date;
+                    bracket[num].status = m.status;
+                });
+
+                // Resolve any W??/L?? placeholders from actual DB results
+                // (e.g. R16 entry shows "W74" until that match exists in DB — resolve it
+                //  as soon as M74 is finished, even before R16 matches are created)
+                const resolveCode = (code) => {
+                    const wm = code.match(/^W(\d+)$/);
+                    if (wm) {
+                        const m = koResultMap[parseInt(wm[1])];
+                        if (!m || m.status !== 'finished') return null;
+                        const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                        const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                        return hs != null ? (hs > as ? m.home_team : m.away_team) : null;
+                    }
+                    const lm = code.match(/^L(\d+)$/);
+                    if (lm) {
+                        const m = koResultMap[parseInt(lm[1])];
+                        if (!m || m.status !== 'finished') return null;
+                        const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                        const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                        return hs != null ? (hs > as ? m.away_team : m.home_team) : null;
+                    }
+                    return null;
+                };
+
+                Object.values(bracket).forEach(entry => {
+                    if (/^[WL]\d+$/.test(entry.home)) {
+                        const r = resolveCode(entry.home);
+                        if (r) { entry.home = r; entry.homeFlag = countries[r]?.flag || ''; }
+                    }
+                    if (/^[WL]\d+$/.test(entry.away)) {
+                        const r = resolveCode(entry.away);
+                        if (r) { entry.away = r; entry.awayFlag = countries[r]?.flag || ''; }
+                    }
+                });
+
+                const payload = {
+                    groups,
+                    thirdPlace: { teams: allThirds, qualifyingCombination: qualifyingGroups },
+                    bracket,
+                    publishedAt: new Date().toISOString()
+                };
+
+                const { error: pubErr } = await supabase.from('public_snapshots')
+                    .upsert({ id: 'latest', data: payload, published_at: new Date().toISOString() });
+
+                if (pubErr) throw pubErr;
+
+                const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+                status.innerHTML = `<span style="color:#059669;">✅ Published lúc ${timeStr}</span>`;
+                alert(`✅ Publish thành công!\n\nStandings: ${Object.keys(groups).length} bảng\nHạng 3: ${allThirds.length} đội\nKnockout: ${Object.keys(bracket).length} trận\nAnnex C: ${annexMapping ? qualifyingGroups : 'N/A'}`);
+            } catch (err) {
+                console.error('Publish error:', err);
+                status.innerHTML = `<span style="color:#EF4444;">❌ Lỗi: ${err.message}</span>`;
+                alert('Lỗi publish: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📤 Publish';
             }
         }
 

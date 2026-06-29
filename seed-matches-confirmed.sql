@@ -36,7 +36,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status) VALU
 
 -- 12/06 (Fri)
 ('B', 'Canada',         'Bosnia & Herzegovina',     '2026-06-13 02:00:00+07', 'not-open'),  -- M7  | Jun 12 3PM ET  | BMO Field, Toronto
-('D', 'United States',  'Paraguay',                 '2026-06-13 08:00:00+07', 'not-open'),  -- M19 | Jun 12 9PM ET  | SoFi Stadium, Inglewood
+('D', 'USA',  'Paraguay',                 '2026-06-13 08:00:00+07', 'not-open'),  -- M19 | Jun 12 9PM ET  | SoFi Stadium, Inglewood
 ('D', 'Australia',      'Turkey',                  '2026-06-13 11:00:00+07', 'not-open'),  -- M20 | Jun 13 12AM ET | BC Place, Vancouver
 
 -- 13/06 (Sat)
@@ -80,7 +80,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status) VALU
 
 -- 19/06 (Fri)
 ('D', 'Turkey',                 'Paraguay',        '2026-06-19 11:00:00+07', 'not-open'),  -- M21 | Jun 19 12AM ET | Levi's Stadium, Santa Clara
-('D', 'United States',           'Australia',       '2026-06-20 02:00:00+07', 'not-open'),  -- M22 | Jun 19 3PM ET  | Lumen Field, Seattle
+('D', 'USA',           'Australia',       '2026-06-20 02:00:00+07', 'not-open'),  -- M22 | Jun 19 3PM ET  | Lumen Field, Seattle
 ('C', 'Scotland',                'Morocco',         '2026-06-20 05:00:00+07', 'not-open'),  -- M15 | Jun 19 6PM ET  | Gillette Stadium, Foxboro
 ('C', 'Brasil',                  'Haiti',           '2026-06-20 08:00:00+07', 'not-open'),  -- M16 | Jun 19 9PM ET  | Lincoln Financial Field, Philadelphia
 
@@ -125,7 +125,7 @@ INSERT INTO matches (match_group, home_team, away_team, match_date, status) VALU
 ('E', 'Ecuador',        'Germany',                  '2026-06-26 03:00:00+07', 'not-open'),  -- M30 | Jun 25 4PM ET  | MetLife Stadium, East Rutherford
 ('F', 'Tunisia',        'Netherlands',              '2026-06-26 06:00:00+07', 'not-open'),  -- M36 | Jun 25 7PM ET  | Arrowhead Stadium, Kansas City
 ('F', 'Japan',          'Sweden',                   '2026-06-26 06:00:00+07', 'not-open'),  -- M35 | Jun 25 7PM ET  | AT&T Stadium, Arlington
-('D', 'Turkey',        'United States',            '2026-06-26 09:00:00+07', 'not-open'),  -- M23 | Jun 25 10PM ET | SoFi Stadium, Inglewood
+('D', 'Turkey',        'USA',            '2026-06-26 09:00:00+07', 'not-open'),  -- M23 | Jun 25 10PM ET | SoFi Stadium, Inglewood
 ('D', 'Paraguay',       'Australia',                '2026-06-26 09:00:00+07', 'not-open'),  -- M24 | Jun 25 10PM ET | Levi's Stadium, Santa Clara
 
 -- 26/06 (Fri)
