@@ -877,6 +877,25 @@
         .sim-match-card.round-sf { border-left-color: #8B5CF6; }
         .sim-match-card.round-final { border-left-color: #EAB308; border-left-width: 4px; }
         .sim-match-card.round-3rd { border-left-color: #78716C; }
+        .sim-match-card.finished { background: #F0FDF9; }
+        .sim-team-score {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-dark);
+            min-width: 16px;
+            text-align: right;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .sim-team-score.win { color: #059669; }
+        .sim-team-score-pen {
+            font-size: 7px;
+            color: #F59E0B;
+            font-weight: 600;
+            vertical-align: super;
+        }
+        .sim-team-row.winner .sim-team-name { color: #059669; }
+        .sim-team-row.loser { opacity: 0.38; }
         .sim-match-card.right-side {
             border-left: 1px solid var(--stroke);
             border-right: 3px solid #3B82F6;
@@ -1587,6 +1606,23 @@
                     <div id="simGroupStatus" style="padding:16px;">
                         <p style="color:var(--text-light);">Bấm "Tạo mô phỏng" để xem sơ đồ nhánh đấu dựa trên kết quả hiện tại.</p>
                     </div>
+                </div>
+
+                <!-- Per-round generation tools -->
+                <div id="simRoundGenCard" class="card" style="display:none;margin-top:0;">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                        <div>
+                            <h2 class="card-title">⚡ Tạo trận vòng sau</h2>
+                            <p style="font-size:12px;color:var(--text-light);margin-top:2px;">Tạo trận thật từ kết quả thực tế — khi vòng trước hoàn tất</p>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn btn-sm" id="genR16Btn" onclick="generateNextRound('R16')" disabled style="opacity:0.45;">🏆 Tạo R16</button>
+                            <button class="btn btn-sm" id="genQFBtn"  onclick="generateNextRound('QF')"  disabled style="opacity:0.45;">⚡ Tạo QF</button>
+                            <button class="btn btn-sm" id="genSFBtn"  onclick="generateNextRound('SF')"  disabled style="opacity:0.45;">🥊 Tạo SF</button>
+                            <button class="btn btn-sm" id="genFinalBtn" onclick="generateNextRound('FINAL')" disabled style="opacity:0.45;">🏅 Tạo Final+3RD</button>
+                        </div>
+                    </div>
+                    <div id="simRoundGenStatus" style="padding:8px 16px;font-size:12px;color:var(--text-light);"></div>
                 </div>
 
                 <div id="simThirdPlaceCard" class="card" style="display:none;">
@@ -5278,7 +5314,57 @@
                     allGroupsDone
                 };
 
+                // Overlay actual DB knockout results into simMatches
+                const koDbMatches = allMatches.filter(m =>
+                    ['R32','R16','QF','SF','3RD','FINAL'].includes(m.match_group)
+                );
+                const actualMap = {};
+                koDbMatches.forEach(m => { actualMap[m.match_number] = m; });
+
+                const dbWinnerOf = (num) => {
+                    const m = actualMap[num];
+                    if (!m || m.status !== 'finished') return null;
+                    const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                    const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                    return hs != null ? (hs > as ? m.home_team : m.away_team) : null;
+                };
+                const dbLoserOf = (num) => {
+                    const m = actualMap[num];
+                    if (!m || m.status !== 'finished') return null;
+                    const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                    const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                    return hs != null ? (hs > as ? m.away_team : m.home_team) : null;
+                };
+                const resolveWL = (code) => {
+                    const wm = code.match(/^W(\d+)$/);
+                    if (wm) return dbWinnerOf(parseInt(wm[1])) || code;
+                    const lm = code.match(/^L(\d+)$/);
+                    if (lm) return dbLoserOf(parseInt(lm[1])) || code;
+                    return code;
+                };
+
+                Object.values(simMatches).forEach(sm => {
+                    const dbM = actualMap[sm.match_number];
+                    if (dbM) {
+                        if (dbM.home_team) sm.home_team = dbM.home_team;
+                        if (dbM.away_team) sm.away_team = dbM.away_team;
+                        sm.home_score   = dbM.home_score   ?? null;
+                        sm.away_score   = dbM.away_score   ?? null;
+                        sm.home_penalty = dbM.home_penalty ?? null;
+                        sm.away_penalty = dbM.away_penalty ?? null;
+                        sm.status = dbM.status;
+                        sm.tbd = false;
+                    } else if (sm.tbd) {
+                        const rh = resolveWL(sm.home_team);
+                        const ra = resolveWL(sm.away_team);
+                        sm.home_team = rh;
+                        sm.away_team = ra;
+                        sm.tbd = /^[WL]\d+$/.test(rh) || /^[WL]\d+$/.test(ra);
+                    }
+                });
+
                 renderSimBracket(simMatches);
+                updateRoundGenButtons();
 
             } catch (err) {
                 console.error('Simulation error:', err);
@@ -5371,29 +5457,39 @@
                     ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
             };
 
-            const renderTeamRow = (name, seed, isTbd) => {
+            const renderTeamRow = (name, seed, isTbd, isWinner, isLoser, score, penalty) => {
                 const teamData = countries[name];
-                const flag = teamData ? teamData.flag : '❓';
-                return `<div class="sim-team-row">
+                const flag = teamData ? teamData.flag : (isTbd ? '' : '❓');
+                const scoreHTML = score !== null && score !== undefined
+                    ? `<span class="sim-team-score${isWinner ? ' win' : ''}">${score}${penalty != null ? `<span class="sim-team-score-pen">(${penalty})</span>` : ''}</span>`
+                    : `<span class="sim-team-score"></span>`;
+                return `<div class="sim-team-row${isWinner ? ' winner' : ''}${isLoser ? ' loser' : ''}">
                     <span class="sim-team-flag">${flag}</span>
                     <span class="sim-team-name ${isTbd ? 'tbd' : ''}">${name}</span>
                     <span class="sim-team-seed">${seed}</span>
+                    ${scoreHTML}
                 </div>`;
             };
 
             const renderMatchCard = (m, roundKey, rightSide) => {
+                const isFinished = m.status === 'finished';
+                const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                const homeWin = isFinished && hs != null && hs > as;
+                const awayWin = isFinished && as != null && as > hs;
+
                 const typeClass = m.type ? `type-${m.type.toLowerCase()}` : `round-${roundKey.toLowerCase()}`;
                 const sideClass = rightSide ? 'right-side' : '';
-                const typeLabel = m.type ? ` • ${m.type}` : '';
+                const finishedClass = isFinished ? 'finished' : '';
                 const venue = SIM_MATCH_VENUES[m.match_number] || '';
-                return `<div class="sim-match-card ${typeClass} ${sideClass}" data-sim-match="${m.match_number}">
+                return `<div class="sim-match-card ${typeClass} ${sideClass} ${finishedClass}" data-sim-match="${m.match_number}">
                     <div class="sim-match-header">
-                        <span class="sim-match-num">M${m.match_number}${typeLabel}</span>
+                        <span class="sim-match-num">M${m.match_number}${m.type ? ` • ${m.type}` : ''}</span>
                         <span class="sim-match-date">${formatDate(m.date)}</span>
                     </div>
                     <div class="sim-match-teams">
-                        ${renderTeamRow(m.home_team, m.home_seed, m.tbd)}
-                        ${renderTeamRow(m.away_team, m.away_seed, m.tbd)}
+                        ${renderTeamRow(m.home_team, m.home_seed, m.tbd, homeWin, isFinished && !homeWin && hs != null, m.home_score, m.home_penalty)}
+                        ${renderTeamRow(m.away_team, m.away_seed, m.tbd, awayWin, isFinished && !awayWin && as != null, m.away_score, m.away_penalty)}
                     </div>
                     ${venue ? `<div class="sim-match-venue">📍 ${venue}</div>` : ''}
                 </div>`;
@@ -5627,6 +5723,126 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = '✅ Chốt → Tạo trận thật';
+            }
+        }
+
+        function updateRoundGenButtons() {
+            const card = document.getElementById('simRoundGenCard');
+            if (!card) return;
+            card.style.display = 'block';
+
+            const r32    = allMatches.filter(m => m.match_group === 'R32');
+            const r16    = allMatches.filter(m => m.match_group === 'R16');
+            const qf     = allMatches.filter(m => m.match_group === 'QF');
+            const sf     = allMatches.filter(m => m.match_group === 'SF');
+            const finals = allMatches.filter(m => ['FINAL','3RD'].includes(m.match_group));
+
+            const allDone = (arr) => arr.length > 0 && arr.every(m => m.status === 'finished');
+
+            const setBtn = (id, enabled, exists) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.disabled = !enabled;
+                btn.style.opacity = enabled ? '1' : '0.45';
+                btn.style.background = exists ? '#6B7280' : '';
+                btn.style.color = exists ? 'white' : '';
+            };
+
+            setBtn('genR16Btn',   allDone(r32), r16.length > 0);
+            setBtn('genQFBtn',    allDone(r16), qf.length  > 0);
+            setBtn('genSFBtn',    allDone(qf),  sf.length  > 0);
+            setBtn('genFinalBtn', allDone(sf),  finals.length > 0);
+
+            const parts = [];
+            if (r32.length)    parts.push(`R32: ${r32.filter(m=>m.status==='finished').length}/${r32.length}`);
+            if (r16.length)    parts.push(`R16: ${r16.filter(m=>m.status==='finished').length}/${r16.length}`);
+            if (qf.length)     parts.push(`QF: ${qf.filter(m=>m.status==='finished').length}/${qf.length}`);
+            if (sf.length)     parts.push(`SF: ${sf.filter(m=>m.status==='finished').length}/${sf.length}`);
+            if (finals.length) parts.push(`Final: ${finals.filter(m=>m.status==='finished').length}/${finals.length}`);
+            const statusEl = document.getElementById('simRoundGenStatus');
+            if (statusEl) statusEl.textContent = parts.join(' · ') || 'Chưa có trận knockout nào trong hệ thống.';
+        }
+
+        async function generateNextRound(round) {
+            await loadMatches();
+
+            const depRound = { R16: 'R32', QF: 'R16', SF: 'QF', FINAL: 'SF' }[round];
+            const templates = {
+                R16:   SIM_R16,
+                QF:    SIM_QF,
+                SF:    SIM_SF,
+                FINAL: { ...SIM_FINAL, ...SIM_3RD }
+            };
+            const targetGroups = round === 'FINAL' ? ['FINAL','3RD'] : [round];
+            const template = templates[round];
+
+            const depMatches = allMatches.filter(m => m.match_group === depRound);
+            if (depMatches.length === 0) {
+                alert(`Chưa có trận ${depRound} nào trong hệ thống!\nHãy tạo/chốt ${depRound} trước.`);
+                return;
+            }
+
+            const unfinished = depMatches.filter(m => m.status !== 'finished');
+            if (unfinished.length > 0 &&
+                !confirm(`Còn ${unfinished.length} trận ${depRound} chưa có kết quả. Tiếp tục tạo ${round}?\n(Trận chưa có kết quả sẽ dùng placeholder "W??")`)) {
+                return;
+            }
+
+            const winnerOf = {}, loserOf = {};
+            depMatches.forEach(m => {
+                if (m.status !== 'finished') return;
+                const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                if (hs == null) return;
+                winnerOf[m.match_number] = hs > as ? m.home_team : m.away_team;
+                loserOf[m.match_number]  = hs > as ? m.away_team : m.home_team;
+            });
+
+            const resolveCode = (code) => {
+                const wm = code.match(/^W(\d+)$/);
+                if (wm) return winnerOf[parseInt(wm[1])] || code;
+                const lm = code.match(/^L(\d+)$/);
+                if (lm) return loserOf[parseInt(lm[1])] || code;
+                return code;
+            };
+
+            // Delete existing if any
+            const existing = allMatches.filter(m => targetGroups.includes(m.match_group));
+            if (existing.length > 0) {
+                if (!confirm(`⚠️ Đã có ${existing.length} trận ${round} trong hệ thống.\nXóa và tạo lại với kết quả mới nhất?`)) return;
+                for (const m of existing) {
+                    await supabase.from('predictions').delete().eq('match_id', m.id);
+                    await supabase.from('matches').delete().eq('id', m.id);
+                }
+            } else {
+                if (!confirm(`Tạo ${Object.keys(template).length} trận ${round} từ kết quả ${depRound}?`)) return;
+            }
+
+            const rows = [];
+            Object.entries(template).forEach(([num, def]) => {
+                const numI = parseInt(num);
+                const matchGroup = numI === 103 ? '3RD' : numI === 104 ? 'FINAL' : round;
+                rows.push({
+                    match_number: numI,
+                    match_group:  matchGroup,
+                    home_team:    resolveCode(def.home),
+                    away_team:    resolveCode(def.away),
+                    match_date:   SIM_MATCH_DATES[numI] || null,
+                    status:       'not-open'
+                });
+            });
+
+            try {
+                const { data, error } = await supabase.from('matches').insert(rows).select();
+                if (error) throw error;
+                alert(`✅ Đã tạo ${data.length} trận ${round}!`);
+                await loadMatches();
+                updateRoundGenButtons();
+                renderMatchesTable();
+                renderDashboard();
+            } catch (err) {
+                console.error('generateNextRound error:', err);
+                alert('Lỗi: ' + err.message);
             }
         }
 
