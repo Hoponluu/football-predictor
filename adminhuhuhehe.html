@@ -5344,6 +5344,7 @@
                 };
 
                 Object.values(simMatches).forEach(sm => {
+                    // Step 1: overlay actual DB data (scores, status, team names)
                     const dbM = actualMap[sm.match_number];
                     if (dbM) {
                         if (dbM.home_team) sm.home_team = dbM.home_team;
@@ -5353,14 +5354,13 @@
                         sm.home_penalty = dbM.home_penalty ?? null;
                         sm.away_penalty = dbM.away_penalty ?? null;
                         sm.status = dbM.status;
-                        sm.tbd = false;
-                    } else if (sm.tbd) {
-                        const rh = resolveWL(sm.home_team);
-                        const ra = resolveWL(sm.away_team);
-                        sm.home_team = rh;
-                        sm.away_team = ra;
-                        sm.tbd = /^[WL]\d+$/.test(rh) || /^[WL]\d+$/.test(ra);
                     }
+                    // Step 2: resolve any remaining W??/L?? codes using actual results.
+                    // Runs unconditionally so DB entries with placeholder names (e.g. created
+                    // by finalizeSimulation before R32 results) also get resolved.
+                    if (/^[WL]\d+$/.test(sm.home_team)) sm.home_team = resolveWL(sm.home_team);
+                    if (/^[WL]\d+$/.test(sm.away_team)) sm.away_team = resolveWL(sm.away_team);
+                    sm.tbd = /^[WL]\d+$/.test(sm.home_team) || /^[WL]\d+$/.test(sm.away_team);
                 });
 
                 renderSimBracket(simMatches);
