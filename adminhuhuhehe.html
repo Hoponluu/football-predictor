@@ -5912,7 +5912,8 @@
                     date: SIM_MATCH_DATES[num] || null,
                     venue: SIM_MATCH_VENUES[num] || '',
                     homeScore: null, awayScore: null,
-                    homePenalty: null, awayPenalty: null
+                    homePenalty: null, awayPenalty: null,
+                    status: 'not-open'
                 });
 
                 // Build simulated bracket (R32 with resolved team names)
@@ -5957,7 +5958,9 @@
 
                 // Overlay actual knockout results from database
                 const knockoutRounds = ['R32','R16','QF','SF','3RD','FINAL'];
+                const koResultMap = {};
                 matches.filter(m => knockoutRounds.includes(m.match_group)).forEach(m => {
+                    koResultMap[m.match_number] = m;
                     const num = m.match_number;
                     if (!bracket[num]) return;
                     if (m.home_team) {
@@ -5978,6 +5981,40 @@
                     }
                     if (m.match_date) bracket[num].date = m.match_date;
                     bracket[num].status = m.status;
+                });
+
+                // Resolve any W??/L?? placeholders from actual DB results
+                // (e.g. R16 entry shows "W74" until that match exists in DB — resolve it
+                //  as soon as M74 is finished, even before R16 matches are created)
+                const resolveCode = (code) => {
+                    const wm = code.match(/^W(\d+)$/);
+                    if (wm) {
+                        const m = koResultMap[parseInt(wm[1])];
+                        if (!m || m.status !== 'finished') return null;
+                        const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                        const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                        return hs != null ? (hs > as ? m.home_team : m.away_team) : null;
+                    }
+                    const lm = code.match(/^L(\d+)$/);
+                    if (lm) {
+                        const m = koResultMap[parseInt(lm[1])];
+                        if (!m || m.status !== 'finished') return null;
+                        const hs = m.home_penalty != null ? m.home_penalty : m.home_score;
+                        const as = m.away_penalty != null ? m.away_penalty : m.away_score;
+                        return hs != null ? (hs > as ? m.away_team : m.home_team) : null;
+                    }
+                    return null;
+                };
+
+                Object.values(bracket).forEach(entry => {
+                    if (/^[WL]\d+$/.test(entry.home)) {
+                        const r = resolveCode(entry.home);
+                        if (r) { entry.home = r; entry.homeFlag = countries[r]?.flag || ''; }
+                    }
+                    if (/^[WL]\d+$/.test(entry.away)) {
+                        const r = resolveCode(entry.away);
+                        if (r) { entry.away = r; entry.awayFlag = countries[r]?.flag || ''; }
+                    }
                 });
 
                 const payload = {
