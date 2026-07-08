@@ -105,8 +105,8 @@ function sortByBracketPosition(matchesArr, bracketOrder) {
 function renderMatchRowCard(match) {
     const homeTeam = match.home || match.home_team || 'TBD';
     const awayTeam = match.away || match.away_team || 'TBD';
-    const homeData = countries[homeTeam] || { flag: '🏴', color: '#f0f0f0' };
-    const awayData = countries[awayTeam] || { flag: '🏴', color: '#f0f0f0' };
+    const homeData = countries[homeTeam] || { flag: '🏴', color: '#f0f0f0', flagImage: null };
+    const awayData = countries[awayTeam] || { flag: '🏴', color: '#f0f0f0', flagImage: null };
 
     const isFinished = match.status === 'finished';
     const scores = getMatchScores(match);
@@ -159,13 +159,13 @@ function renderMatchRowCard(match) {
         <div class="row-match-content">
             <div class="row-team home ${homeWin ? 'winner' : ''} ${awayWin ? 'loser' : ''}">
                 <span class="row-team-code">${typeof getCountryCode === 'function' ? getCountryCode(homeTeam) : homeTeam.substring(0,3).toUpperCase()}</span>
-                <span class="row-team-flag" style="background: ${homeData.color}">${homeData.flag}</span>
+                <span class="row-team-flag" style="${homeData.flagImage ? '' : 'background:' + homeData.color}">${typeof getFlagHTML === 'function' ? getFlagHTML(homeTeam, 22) : homeData.flag}</span>
             </div>
             <div class="row-center">
                 ${centerHTML}
             </div>
             <div class="row-team away ${awayWin ? 'winner' : ''} ${homeWin ? 'loser' : ''}">
-                <span class="row-team-flag" style="background: ${awayData.color}">${awayData.flag}</span>
+                <span class="row-team-flag" style="${awayData.flagImage ? '' : 'background:' + awayData.color}">${typeof getFlagHTML === 'function' ? getFlagHTML(awayTeam, 22) : awayData.flag}</span>
                 <span class="row-team-code">${typeof getCountryCode === 'function' ? getCountryCode(awayTeam) : awayTeam.substring(0,3).toUpperCase()}</span>
             </div>
         </div>
@@ -236,7 +236,7 @@ function renderStandingsTableV2(standings, groupLabel) {
     if (standings.length === 0) return '';
 
     const rows = standings.map((t, i) => {
-        const flag = (typeof countries !== 'undefined' && countries[t.name]?.flag) || '';
+        const flagHTML = (typeof getFlagHTML === 'function') ? getFlagHTML(t.name, 22) : ((typeof countries !== 'undefined' && countries[t.name]?.flag) || '');
         const teamName = t.name;
         const isQualify = i < 2;
         const rowClass = isQualify ? 'qualify-row-v2' : '';
@@ -247,7 +247,7 @@ function renderStandingsTableV2(standings, groupLabel) {
                 <div class="standings-team-cell">
                     ${qualifyBar}
                     <span class="standings-team-rank">${i + 1}</span>
-                    <span class="standings-team-flag">${flag}</span>
+                    <span class="standings-team-flag">${flagHTML}</span>
                     <span class="standings-team-name">${teamName}</span>
                 </div>
             </td>
@@ -558,17 +558,15 @@ function renderBracketMiniCard(match, roundKey, side) {
         badgeHTML = `<div class="bracket-mini-points">+${total}</div>`;
     }
 
-    const homeFlag = homeData ? homeData.flag : '❓';
-    const awayFlag = awayData ? awayData.flag : '❓';
-
-    const renderTeamRow = (team, flag, isWinner, isLoser, score, penalty) => {
+    const renderTeamRow = (team, isWinner, isLoser, score, penalty) => {
         const nameClass = ['bracket-mini-name', !countries[team] ? 'tbd-name' : ''].filter(Boolean).join(' ');
         const rowClass = ['bracket-mini-team', isWinner ? 'winner' : '', isLoser ? 'loser' : ''].filter(Boolean).join(' ');
         const scoreHTML = isFinished && score !== null
             ? `<span class="bracket-mini-score-val">${score}</span>${penalty != null ? `<span class="bracket-mini-score-pen">(${penalty})</span>` : ''}`
             : '';
+        const flagHTML = (typeof getFlagHTML === 'function') ? getFlagHTML(team, 15) : (countries[team]?.flag || '❓');
         return `<div class="${rowClass}">
-            <span class="bracket-mini-flag">${flag}</span>
+            <span class="bracket-mini-flag">${flagHTML}</span>
             <span class="${nameClass}">${team}</span>
             <div class="bracket-mini-score-block">${scoreHTML}</div>
         </div>`;
@@ -587,8 +585,8 @@ function renderBracketMiniCard(match, roundKey, side) {
                 <span class="bracket-mini-datetime">${dateStr} ${timeStr}</span>
             </div>
             <div class="bracket-mini-teams">
-                ${renderTeamRow(homeTeam, homeFlag, homeIsWinner, homeIsLoser, scores.homeScore, scores.homePenalty)}
-                ${renderTeamRow(awayTeam, awayFlag, awayIsWinner, awayIsLoser, scores.awayScore, scores.awayPenalty)}
+                ${renderTeamRow(homeTeam, homeIsWinner, homeIsLoser, scores.homeScore, scores.homePenalty)}
+                ${renderTeamRow(awayTeam, awayIsWinner, awayIsLoser, scores.awayScore, scores.awayPenalty)}
             </div>
             ${badgeHTML}
         </div>
@@ -767,7 +765,7 @@ function renderThirdPlaceComparison() {
     const qualifyCount = 8;
 
     const rows = thirdPlaceTeams.map((t, i) => {
-        const flag = (typeof countries !== 'undefined' && countries[t.name]?.flag) || '';
+        const flagHTML3 = (typeof getFlagHTML === 'function') ? getFlagHTML(t.name, 18) : ((typeof countries !== 'undefined' && countries[t.name]?.flag) || '');
         const isQualify = hasPlayed && i < qualifyCount;
         const rowClass = isQualify ? 'third-qualify' : '';
 
@@ -775,7 +773,7 @@ function renderThirdPlaceComparison() {
             <td style="text-align:center;font-weight:600;font-size:12px;color:var(--text-tertiary);">${i + 1}</td>
             <td>
                 <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:14px;">${flag}</span>
+                    <span style="font-size:14px;display:inline-flex;align-items:center;">${flagHTML3}</span>
                     <span style="font-weight:600;font-size:13px;">${t.name}</span>
                     <span style="font-size:10px;color:var(--text-tertiary);background:var(--bg);padding:1px 5px;border-radius:4px;">${t.group}</span>
                 </div>

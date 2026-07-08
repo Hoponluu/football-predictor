@@ -1786,10 +1786,10 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Phút ghi bàn đầu tiên</label>
-                    <input type="number" class="form-input" id="resultMinute" min="1" max="120" placeholder="VD: 75">
+                    <label class="form-label">Số phút ghi bàn cuối cùng</label>
+                    <input type="number" class="form-input" id="resultMinute" min="0" max="150" placeholder="VD: 75">
                     <small style="color: var(--text-light); display: block; margin-top: 8px;">
-                        Nhập phút ghi bàn đầu tiên (1-120)
+                        Nhập phút ghi bàn cuối cùng (0-150)
                     </small>
                 </div>
                 
@@ -3655,7 +3655,7 @@
                 return;
             }
 
-            if (homeScore < 0 || awayScore < 0 || minute < 1 || minute > 120) {
+            if (homeScore < 0 || awayScore < 0 || minute < 0 || minute > 150) {
                 alert('Tỉ số hoặc phút ghi bàn không hợp lệ!');
                 return;
             }
@@ -4661,10 +4661,18 @@
         function parseScorersMinutes(scorersStr) {
             if (!scorersStr || scorersStr === 'null' || scorersStr === '{}') return [];
             const minutes = [];
-            const regex = /(\d+)'/g;
+            // Match patterns like: 45', 90+5', 65(P)'
+            // Strip penalty marker (P) and handle added time (90+5 → 95)
+            const regex = /([\d+]+)(?:\(P\))?'/g;
             let match;
             while ((match = regex.exec(scorersStr)) !== null) {
-                minutes.push(parseInt(match[1], 10));
+                const raw = match[1]; // e.g. "90+5" or "65"
+                if (raw.includes('+')) {
+                    const parts = raw.split('+');
+                    minutes.push(parseInt(parts[0], 10) + parseInt(parts[1], 10));
+                } else {
+                    minutes.push(parseInt(raw, 10));
+                }
             }
             return minutes;
         }
@@ -4674,7 +4682,7 @@
             const awayMinutes = parseScorersMinutes(game.away_scorers);
             const allMinutes = [...homeMinutes, ...awayMinutes];
             if (allMinutes.length === 0) return 0;
-            return Math.min(Math.max(...allMinutes), 120);
+            return Math.min(Math.max(...allMinutes), 150);
         }
 
         async function fetchWcGames() {

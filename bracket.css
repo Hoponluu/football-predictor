@@ -220,9 +220,15 @@
 .bracket-mini-flag {
     font-size: 14px;
     width: 17px;
+    height: 17px;
     text-align: center;
     flex-shrink: 0;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 50%;
 }
 
 .bracket-mini-name {
