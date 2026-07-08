@@ -975,6 +975,13 @@
 
         .favorite-team-selected-flag {
             font-size: 40px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .favorite-team-selected-name {
@@ -1008,6 +1015,13 @@
 
         .stats-favorite-team-icon {
             font-size: 32px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .stats-favorite-team-info {
@@ -1308,6 +1322,7 @@
             align-items: center;
             justify-content: center;
             font-size: 30px;
+            overflow: hidden;
         }
 
         .modal-team-name {
@@ -1512,6 +1527,7 @@
             align-items: center;
             justify-content: center;
             font-size: 24px;
+            overflow: hidden;
         }
 
         .results-team-name {

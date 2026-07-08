@@ -2151,7 +2151,7 @@
                 const selected = document.createElement('div');
                 selected.className = 'favorite-team-selected';
                 selected.innerHTML = `
-                    <div class="favorite-team-selected-flag">${teamData.flag}</div>
+                    <div class="favorite-team-selected-flag">${getFlagHTML(favoriteTeamSettings.selectedTeam, 40)}</div>
                     <div class="favorite-team-selected-name">${favoriteTeamSettings.selectedTeam}</div>
                 `;
                 
@@ -2896,7 +2896,7 @@
             container.innerHTML = `
                 <div class="stats-favorite-team">
                     <div class="stats-favorite-team-header">
-                        <div class="stats-favorite-team-icon">${teamData.flag}</div>
+                        <div class="stats-favorite-team-icon">${getFlagHTML(favoriteTeamSettings.selectedTeam, 32)}</div>
                         <div class="stats-favorite-team-info">
                             <div class="stats-favorite-team-name">${favoriteTeamSettings.selectedTeam}</div>
                             <div class="stats-favorite-team-status">${statusText}</div>
@@ -2964,10 +2964,10 @@
                 return;
             }
 
-            homeFlag.innerHTML = countries[match.home].flag;
-            homeFlag.style.background = countries[match.home].color;
-            awayFlag.innerHTML = countries[match.away].flag;
-            awayFlag.style.background = countries[match.away].color;
+            homeFlag.innerHTML = getFlagHTML(match.home, 60);
+            homeFlag.style.background = countries[match.home].flagImage ? '' : countries[match.home].color;
+            awayFlag.innerHTML = getFlagHTML(match.away, 60);
+            awayFlag.style.background = countries[match.away].flagImage ? '' : countries[match.away].color;
             homeName.textContent = match.home;
             awayName.textContent = match.away;
 
@@ -3097,10 +3097,10 @@
 
             const hasResult = match.actualScore && match.actualScore.homeScore !== null && match.actualScore.homeScore !== undefined;
 
-            document.getElementById('resultsHomeFlag').innerHTML = countries[match.home].flag;
-            document.getElementById('resultsHomeFlag').style.background = countries[match.home].color;
-            document.getElementById('resultsAwayFlag').innerHTML = countries[match.away].flag;
-            document.getElementById('resultsAwayFlag').style.background = countries[match.away].color;
+            document.getElementById('resultsHomeFlag').innerHTML = getFlagHTML(match.home, 50);
+            document.getElementById('resultsHomeFlag').style.background = countries[match.home].flagImage ? '' : countries[match.home].color;
+            document.getElementById('resultsAwayFlag').innerHTML = getFlagHTML(match.away, 50);
+            document.getElementById('resultsAwayFlag').style.background = countries[match.away].flagImage ? '' : countries[match.away].color;
             document.getElementById('resultsHomeName').textContent = match.home;
             document.getElementById('resultsAwayName').textContent = match.away;
 
@@ -3340,7 +3340,7 @@
                 }
 
                 item.innerHTML = `
-                    <div style="font-size: 32px;">${teamData.flag}</div>
+                    <div style="width:36px;height:36px;flex-shrink:0;">${getFlagHTML(teamName, 36)}</div>
                     <div style="flex: 1;">
                         <div style="font-size: 14px; font-weight: 600; color: var(--text-primary);">${teamName}</div>
                         <div style="font-size: 12px; color: var(--text-secondary);">Điểm max: ${favoriteTeamSettings.points.champion}</div>
@@ -3376,7 +3376,7 @@
             const selectedDiv = document.getElementById('favoriteTeamSelected');
             const teamData = countries[teamName];
             
-            document.getElementById('selectedTeamFlag').textContent = teamData.flag;
+            document.getElementById('selectedTeamFlag').innerHTML = getFlagHTML(teamName, 40) || teamData.flag;
             document.getElementById('selectedTeamName').textContent = teamName;
             document.getElementById('selectedTeamPoints').textContent = `Điểm nếu vô địch: ${favoriteTeamSettings.points.champion} điểm`;
             
