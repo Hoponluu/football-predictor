@@ -551,9 +551,7 @@
                 </div>
             </div>
 
-            <div class="validation-warning" id="validationWarning">
-                ⚠️ Tỉ số 0-0 thì số phút phải là 0
-            </div>
+            <div class="validation-warning" id="validationWarning"></div>
 
             <svg class="success-checkmark" id="successCheckmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
                 <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
@@ -3034,11 +3032,6 @@
             const homeScore = parseInt(document.getElementById('inputHomeScore').value);
             const awayScore = parseInt(document.getElementById('inputAwayScore').value);
             const minute = parseInt(document.getElementById('inputMinute').value);
-            
-            if (homeScore === 0 && awayScore === 0 && minute !== 0) {
-                showValidationWarning();
-                return;
-            }
             
             console.log('💾 Saving prediction...', { homeScore, awayScore, minute });
             
