@@ -546,12 +546,19 @@
 
         const picker = document.getElementById('tournamentPicker');
 
+        const demoCard = `
+            <div class="tournament-card" onclick="window.location.href='?t=demo'" style="border-style:dashed;opacity:0.7;">
+                <div class="tournament-card-icon">🧪</div>
+                <div class="tournament-card-name">Demo (data ảo)</div>
+                <div class="tournament-card-date">3 nhóm · 9 người chơi · 19 trận</div>
+            </div>`;
+
         if (error || !data || data.length === 0) {
             picker.style.display = 'block';
             document.getElementById('tournamentList').innerHTML = `
                 <div style="text-align:center;grid-column:1/-1;padding:40px;color:var(--text-secondary);font-size:14px;">
                     Chưa có giải đấu nào được công bố.
-                </div>`;
+                </div>` + demoCard;
             return;
         }
 
@@ -562,7 +569,116 @@
                 <div class="tournament-card-name">${t.name}</div>
                 <div class="tournament-card-date">Lưu trữ: ${new Date(t.archived_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })}</div>
             </div>
-        `).join('');
+        `).join('') + demoCard;
+    }
+
+    // =============================================
+    // Mock data (demo mode: ?t=demo)
+    // =============================================
+    function generateMockData() {
+        const PLAYERS = [
+            { id: 'p1', name: 'Nhân Lưu',    fav: 'France',   favPts: 10 },
+            { id: 'p2', name: 'Tú Phạm',     fav: 'Brasil',   favPts: 0  },
+            { id: 'p3', name: 'Phong Trần',  fav: 'Spain',    favPts: 20 },
+            { id: 'p4', name: 'Khoa Nguyễn', fav: null,       favPts: 0  },
+            { id: 'p5', name: 'Linh Võ',     fav: 'Germany',  favPts: 0  },
+            { id: 'p6', name: 'An Lê',       fav: 'USA',      favPts: 0  },
+            { id: 'p7', name: 'Bình Đào',    fav: 'Japan',    favPts: 0  },
+            { id: 'p8', name: 'Cường Hồ',    fav: 'Morocco',  favPts: 0  },
+            { id: 'p9', name: 'Minh Hoàng',  fav: 'Spain',    favPts: 20 },
+        ];
+        const GROUPS = [
+            { id: 'g1', name: 'Đánh bắt cá độ xa bờ' },
+            { id: 'g2', name: 'Bạn bè FC'            },
+            { id: 'g3', name: 'Văn phòng xanh'       },
+        ];
+        // p1 in g1+g2, p2 in g1+g3
+        const MEMBERSHIPS = {
+            p1: ['g1', 'g2'], p2: ['g1', 'g3'], p3: ['g1'],
+            p4: ['g1'], p5: ['g1'], p6: ['g2'], p7: ['g2'],
+            p8: ['g3'], p9: ['g3'],
+        };
+        // 19 matches: M1-M12 (group), M73-M74 (R32), M89 (R16), M97 (QF), M101 (SF), M103 (3rd), M104 (Final)
+        const MATCHES = [
+            { match_number:1,   match_group:'A',     home_team:'USA',       away_team:'Mexico',    match_date:'2026-06-11T19:00:00Z', status:'finished', home_score:2, away_score:1, minute:null },
+            { match_number:2,   match_group:'A',     home_team:'Canada',    away_team:'Colombia',  match_date:'2026-06-11T22:00:00Z', status:'finished', home_score:1, away_score:1, minute:null },
+            { match_number:3,   match_group:'A',     home_team:'Mexico',    away_team:'Canada',    match_date:'2026-06-15T19:00:00Z', status:'finished', home_score:0, away_score:2, minute:null },
+            { match_number:4,   match_group:'A',     home_team:'Colombia',  away_team:'USA',       match_date:'2026-06-15T22:00:00Z', status:'finished', home_score:1, away_score:3, minute:null },
+            { match_number:5,   match_group:'A',     home_team:'USA',       away_team:'Canada',    match_date:'2026-06-19T22:00:00Z', status:'finished', home_score:2, away_score:0, minute:null },
+            { match_number:6,   match_group:'A',     home_team:'Mexico',    away_team:'Colombia',  match_date:'2026-06-19T22:00:00Z', status:'finished', home_score:1, away_score:2, minute:null },
+            { match_number:7,   match_group:'B',     home_team:'Spain',     away_team:'Morocco',   match_date:'2026-06-12T16:00:00Z', status:'finished', home_score:3, away_score:0, minute:null },
+            { match_number:8,   match_group:'B',     home_team:'Japan',     away_team:'Ecuador',   match_date:'2026-06-12T19:00:00Z', status:'finished', home_score:2, away_score:2, minute:null },
+            { match_number:9,   match_group:'B',     home_team:'Spain',     away_team:'Japan',     match_date:'2026-06-16T19:00:00Z', status:'finished', home_score:2, away_score:1, minute:null },
+            { match_number:10,  match_group:'B',     home_team:'Morocco',   away_team:'Ecuador',   match_date:'2026-06-16T22:00:00Z', status:'finished', home_score:1, away_score:1, minute:null },
+            { match_number:11,  match_group:'B',     home_team:'Spain',     away_team:'Ecuador',   match_date:'2026-06-20T22:00:00Z', status:'finished', home_score:1, away_score:0, minute:null },
+            { match_number:12,  match_group:'B',     home_team:'Japan',     away_team:'Morocco',   match_date:'2026-06-20T22:00:00Z', status:'finished', home_score:2, away_score:0, minute:null },
+            { match_number:73,  match_group:'R32',   home_team:'USA',       away_team:'Japan',     match_date:'2026-06-29T20:00:00Z', status:'finished', home_score:2, away_score:1, minute:null },
+            { match_number:74,  match_group:'R32',   home_team:'Spain',     away_team:'Colombia',  match_date:'2026-06-29T23:00:00Z', status:'finished', home_score:4, away_score:0, minute:null },
+            { match_number:89,  match_group:'R16',   home_team:'USA',       away_team:'Spain',     match_date:'2026-07-03T23:00:00Z', status:'finished', home_score:1, away_score:2, minute:null },
+            { match_number:97,  match_group:'QF',    home_team:'Spain',     away_team:'France',    match_date:'2026-07-07T23:00:00Z', status:'finished', home_score:2, away_score:1, minute:null },
+            { match_number:101, match_group:'SF',    home_team:'Spain',     away_team:'Brasil',    match_date:'2026-07-14T23:00:00Z', status:'finished', home_score:3, away_score:1, minute:null },
+            { match_number:103, match_group:'3RD',   home_team:'Brasil',    away_team:'France',    match_date:'2026-07-17T19:00:00Z', status:'finished', home_score:2, away_score:1, minute:null },
+            { match_number:104, match_group:'FINAL', home_team:'Spain',     away_team:'Argentina', match_date:'2026-07-19T20:00:00Z', status:'finished', home_score:3, away_score:2, minute:null },
+        ];
+        // Points per player per match (index matches MATCHES array above)
+        const PTS = {
+            p1: [10,5,0,5,10,0, 5,10,5,0,10,5, 10,5, 5, 0,  0, 5,  0],
+            p2: [5,10,5,0,5,10, 0,5,10,5,5,10,  5,10, 0, 5,  5, 0,  5],
+            p3: [10,5,10,5,10,5, 10,5,10,5,10,5, 10,10, 10, 10, 10, 0, 10],
+            p4: [5,0,5,0,5,5,   5,0,5,0,0,5,    5,0,  5,  5,  0, 0,  5],
+            p5: [0,5,0,5,0,5,   0,5,0,5,5,0,    0,5,  0,  0,  5, 5,  0],
+            p6: [10,10,5,10,5,5, 10,0,10,5,5,10, 5,5,  5,  5,  5, 5,  5],
+            p7: [0,5,5,0,5,0,   5,5,0,10,0,5,   5,0,  5,  0,  0, 0,  0],
+            p8: [5,5,5,5,5,5,   5,5,5,5,5,5,    5,5,  5,  5,  5, 5,  5],
+            p9: [10,5,10,10,5,10, 5,10,10,5,10,10, 10,10, 10, 10, 10, 5, 10],
+        };
+        const groupMap = {};
+        GROUPS.forEach(g => { groupMap[g.id] = g.name; });
+
+        // Build archive_players — one row per (player × group)
+        const archivePlayers = [];
+        for (const [pid, gids] of Object.entries(MEMBERSHIPS)) {
+            const pl = PLAYERS.find(p => p.id === pid);
+            const predTotal = PTS[pid].reduce((a, b) => a + b, 0);
+            const exactCount = PTS[pid].filter(v => v === 10).length;
+            const top1Count  = PTS[pid].filter(v => v >= 8).length;
+            for (const gid of gids) {
+                archivePlayers.push({
+                    tournament_id: 'demo', player_id: pid, name: pl.name,
+                    group_id: gid, group_name: groupMap[gid],
+                    total_points: predTotal + pl.favPts,
+                    exact_score_count: exactCount, top1_count: top1Count,
+                    favorite_team: pl.fav, favorite_points: pl.favPts,
+                });
+            }
+        }
+
+        // Build archive_predictions — one row per (prediction × group)
+        const archivePredictions = [];
+        MATCHES.forEach((m, mi) => {
+            for (const [pid, gids] of Object.entries(MEMBERSHIPS)) {
+                const pl = PLAYERS.find(p => p.id === pid);
+                const pts = PTS[pid][mi] || 0;
+                for (const gid of gids) {
+                    archivePredictions.push({
+                        tournament_id: 'demo', player_id: pid, player_name: pl.name,
+                        group_id: gid, group_name: groupMap[gid],
+                        match_number: m.match_number,
+                        home_score: m.home_score, away_score: m.away_score, minute: null,
+                        points_exact_score: pts === 10 ? 10 : 0,
+                        points_rank: pts > 0 && pts < 10 ? pts : 0,
+                        points_minute: 0, total_points: pts,
+                    });
+                }
+            }
+        });
+
+        return {
+            tournament: { id: 'demo', name: 'FIFA World Cup 2026 (Demo)', archived_at: '2026-07-19T10:00:00Z', is_public: true },
+            matches: MATCHES,
+            archivePlayers,
+            archivePredictions,
+        };
     }
 
     async function loadTournament(id) {
@@ -577,20 +693,34 @@
         document.querySelectorAll('.tab-panel').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
 
         try {
-            // Load tournament meta
-            const { data: tournament, error: tErr } = await supabase
-                .from('archive_tournaments').select('*').eq('id', id).single();
-            if (tErr || !tournament) throw new Error('Không tìm thấy giải đấu này hoặc chưa được công bố.');
+            let tournament, rawMatches, players;
 
-            // Load matches (predictions loaded lazily on demand)
-            const { data: rawMatches, error: mErr } = await supabase
-                .from('archive_matches').select('*').eq('tournament_id', id).order('match_date');
-            if (mErr) throw mErr;
+            if (id === 'demo') {
+                const mock = generateMockData();
+                tournament   = mock.tournament;
+                rawMatches   = mock.matches;
+                players      = mock.archivePlayers;
+                archivePredictions = mock.archivePredictions;
+                predictionsLoaded  = true;
+            } else {
+                // Load tournament meta
+                const { data: t, error: tErr } = await supabase
+                    .from('archive_tournaments').select('*').eq('id', id).single();
+                if (tErr || !t) throw new Error('Không tìm thấy giải đấu này hoặc chưa được công bố.');
+                tournament = t;
 
-            // Load players
-            const { data: players, error: pErr } = await supabase
-                .from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false });
-            if (pErr) throw pErr;
+                // Load matches (predictions loaded lazily on demand)
+                const { data: rm, error: mErr } = await supabase
+                    .from('archive_matches').select('*').eq('tournament_id', id).order('match_date');
+                if (mErr) throw mErr;
+                rawMatches = rm;
+
+                // Load players
+                const { data: pl, error: pErr } = await supabase
+                    .from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false });
+                if (pErr) throw pErr;
+                players = pl;
+            }
 
             archivePlayers = players || [];
 
