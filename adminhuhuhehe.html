@@ -6137,9 +6137,11 @@
                 if (mErr) throw mErr;
 
                 // Build matchNumMap trước — group stage thường không có match_number trong DB
-                // → tự gán số thứ tự 1..N theo ngày, knockout giữ nguyên 73-104
+                // → chỉ tự gán số cho các trận vòng bảng (match_group A-L), knockout giữ nguyên 73-104
+                const STAGE_GROUPS = new Set(['A','B','C','D','E','F','G','H','I','J','K','L']);
                 const matchNumMap = {};
-                const noNum = allMatches.filter(m => m.match_number == null)
+                const noNum = allMatches
+                    .filter(m => m.match_number == null && STAGE_GROUPS.has(m.match_group))
                     .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
                 const hasNum = allMatches.filter(m => m.match_number != null);
                 let autoSeq = 1;

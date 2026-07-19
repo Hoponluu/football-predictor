@@ -958,6 +958,11 @@ async function renderChartTab() {
     const ok = await ensurePredictions(container);
     if (!ok) return;
 
+    // Tất cả trận đã kết thúc, sắp xếp theo ngày
+    const finishedMatches = matches
+        .filter(m => m.actualScore !== null)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
     const groupsToShow = currentGroup ? [currentGroup] : predGroups;
     let html = '';
 
@@ -983,37 +988,51 @@ async function renderChartTab() {
             </div>`;
         }).join('');
 
-        // Line chart (SVG) for cumulative points
+        if (finishedMatches.length === 0) {
+            html += `<div class="arc-chart-section">
+                <div class="arc-chart-group-title">📊 ${grp}</div>
+                <div class="arc-bar-chart">${barRows}</div>
+                <div style="padding:20px;text-align:center;color:var(--text-secondary);font-size:13px;">Chưa có trận kết thúc.</div>
+            </div>`;
+            return;
+        }
+
         const top8 = sorted.slice(0, 8);
         const keyOf = p => (p.player_id || p.name) + '::' + (p.group_id || grp);
         const predKeyOf = pred => (pred.player_id || pred.player_name) + '::' + (pred.group_id || grp);
         const playerSet = new Set(top8.map(keyOf));
 
-        const roundPts = {};
-        top8.forEach(p => { roundPts[keyOf(p)] = [0,0,0,0,0,0]; });
-
+        // Lookup: "match_number::playerKey" → điểm
+        const predLookup = {};
         archivePredictions.filter(pred => pred.group_name === grp).forEach(pred => {
-            const k = predKeyOf(pred);
-            if (!playerSet.has(k)) return;
-            const ri = getMatchRoundIdx(pred.match_number);
-            if (ri === null) return;
-            roundPts[k][ri] += pred.total_points || 0;
+            const pk = predKeyOf(pred);
+            if (!playerSet.has(pk)) return;
+            const k = `${pred.match_number}::${pk}`;
+            predLookup[k] = (predLookup[k] || 0) + (pred.total_points || 0);
         });
 
-        // Cumulate
-        top8.forEach(p => {
-            const k = keyOf(p);
-            for (let i = 1; i < 6; i++) roundPts[k][i] += roundPts[k][i-1];
+        // Tích lũy điểm theo từng trận
+        const running = {};
+        const cumulPts = {};
+        top8.forEach(p => { running[keyOf(p)] = 0; cumulPts[keyOf(p)] = []; });
+        finishedMatches.forEach(m => {
+            top8.forEach(p => {
+                const pk = keyOf(p);
+                running[pk] += predLookup[`${m.match_number}::${pk}`] || 0;
+                cumulPts[pk].push(running[pk]);
+            });
         });
 
-        const W = 660, H = 280;
+        const N = finishedMatches.length;
+        const W = Math.max(660, N * 9 + 140);
+        const H = 280;
         const PAD = { top: 18, right: 80, bottom: 38, left: 48 };
         const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
-        const N = 6;
-        const maxV = Math.max(...top8.map(p => roundPts[keyOf(p)][5]), 10);
-        const xOf = i => PAD.left + (i / (N-1)) * cW;
+        const maxV = Math.max(...top8.map(p => cumulPts[keyOf(p)][N-1] || 0), 10);
+        const xOf = i => PAD.left + (N > 1 ? (i / (N-1)) * cW : cW / 2);
         const yOf = v => PAD.top + cH - (v / maxV) * cH;
 
+        // Đường kẻ ngang
         let gridSvg = '';
         for (let g = 0; g <= 4; g++) {
             const v = Math.round(maxV / 4 * g);
@@ -1021,20 +1040,33 @@ async function renderChartTab() {
             gridSvg += `<line x1="${PAD.left}" y1="${y}" x2="${PAD.left+cW}" y2="${y}" stroke="var(--stroke)" stroke-width="1" ${g>0?'stroke-dasharray="3,3"':""}/>`;
             gridSvg += `<text x="${PAD.left-6}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--text-secondary)">${v}</text>`;
         }
-        LINE_ROUNDS.forEach((label, i) => {
-            gridSvg += `<text x="${xOf(i)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--text-secondary)">${label}</text>`;
+
+        // Đường kẻ dọc phân vòng đấu + nhãn
+        const ROUND_LABELS = ['Vòng bảng','Vòng 32','Vòng 16','Tứ kết','Bán kết','Chung kết'];
+        let lastRi = -1;
+        finishedMatches.forEach((m, i) => {
+            const ri = getMatchRoundIdx(m.match_number);
+            if (ri === null || ri === lastRi) return;
+            lastRi = ri;
+            const x = xOf(i);
+            if (i > 0) {
+                gridSvg += `<line x1="${x.toFixed(1)}" y1="${PAD.top}" x2="${x.toFixed(1)}" y2="${PAD.top+cH}" stroke="var(--stroke)" stroke-width="1" stroke-dasharray="4,3"/>`;
+            }
+            gridSvg += `<text x="${(x + (i > 0 ? 3 : 0)).toFixed(1)}" y="${H-6}" text-anchor="start" font-size="9" fill="var(--text-secondary)">${ROUND_LABELS[ri] || ''}</text>`;
         });
 
+        // Đường biểu đồ mỗi player
         const lineSvg = top8.map((p, pi) => {
             const color = CHART_COLORS[pi % CHART_COLORS.length];
             const k = keyOf(p);
-            const pts = roundPts[k];
-            const pathD = pts.map((v, i) => `${i===0?'M':'L'} ${xOf(i)} ${yOf(v)}`).join(' ');
-            const dots  = pts.map((v, i) => `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3.5" fill="${color}"/>`).join('');
+            const pts = cumulPts[k];
+            if (!pts.length) return '';
+            const pathD = pts.map((v, i) => `${i===0?'M':'L'} ${xOf(i).toFixed(1)} ${yOf(v).toFixed(1)}`).join(' ');
+            const dots  = N <= 30 ? pts.map((v, i) => `<circle cx="${xOf(i).toFixed(1)}" cy="${yOf(v).toFixed(1)}" r="3" fill="${color}"/>`).join('') : '';
             const lastY = yOf(pts[N-1]);
             return `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
                     ${dots}
-                    <text x="${xOf(N-1)+7}" y="${lastY+4}" font-size="10" fill="${color}" font-weight="700">${pts[N-1]}</text>`;
+                    <text x="${(xOf(N-1)+7).toFixed(1)}" y="${(lastY+4).toFixed(1)}" font-size="10" fill="${color}" font-weight="700">${pts[N-1]}</text>`;
         }).join('');
 
         const legend = top8.map((p, pi) => {
@@ -1048,8 +1080,8 @@ async function renderChartTab() {
             <div class="arc-chart-group-title">📊 ${grp}</div>
             <div class="arc-bar-chart">${barRows}</div>
             <div style="margin-top:20px;background:var(--surface);border:1px solid var(--stroke);border-radius:var(--border-radius);padding:16px;">
-                <div style="font-size:13px;font-weight:700;margin-bottom:4px;">📈 Tích lũy điểm theo vòng · Top ${top8.length}</div>
-                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">Điểm cộng dồn cuối mỗi vòng đấu</div>
+                <div style="font-size:13px;font-weight:700;margin-bottom:4px;">📈 Tích lũy điểm theo trận · Top ${top8.length}</div>
+                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">Điểm cộng dồn qua ${N} trận đã kết thúc</div>
                 <div style="overflow-x:auto;">
                     <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;min-width:${W}px;">
                         ${gridSvg}${lineSvg}
