@@ -447,9 +447,16 @@
     function openLoginModal() {}
 
     // =============================================
-    // Supabase init
+    // Supabase init (lazy — demo mode không cần CDN)
     // =============================================
-    const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    let supabase = null;
+    try {
+        if (window.supabase && typeof SUPABASE_CONFIG !== 'undefined') {
+            supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        }
+    } catch (e) {
+        console.warn('Supabase init failed:', e);
+    }
 
     // =============================================
     // State
@@ -485,6 +492,10 @@
         } else if (tab === 'progress') {
             if (!predictionsLoaded) {
                 const container = document.getElementById('tab-progress');
+                if (!supabase) {
+                    if (container) container.innerHTML = '<div class="history-loading">Không thể tải dữ liệu điểm — database không kết nối được.</div>';
+                    return;
+                }
                 if (container) container.innerHTML = '<div class="history-loading"><div class="history-loading-spinner"></div>Đang tải dữ liệu điểm...</div>';
                 supabase.from('archive_predictions').select('*').eq('tournament_id', currentTournamentId)
                     .then(({ data: preds, error: prErr }) => {
@@ -538,20 +549,29 @@
 
     async function showTournamentPicker() {
         document.getElementById('historyLoading').style.display = 'none';
-        const { data, error } = await supabase
-            .from('archive_tournaments')
-            .select('*')
-            .eq('is_public', true)
-            .order('archived_at', { ascending: false });
 
         const picker = document.getElementById('tournamentPicker');
-
         const demoCard = `
             <div class="tournament-card" onclick="window.location.href='?t=demo'" style="border-style:dashed;opacity:0.7;">
                 <div class="tournament-card-icon">🧪</div>
                 <div class="tournament-card-name">Demo (data ảo)</div>
                 <div class="tournament-card-date">3 nhóm · 9 người chơi · 19 trận</div>
             </div>`;
+
+        if (!supabase) {
+            picker.style.display = 'block';
+            document.getElementById('tournamentList').innerHTML =
+                `<div style="text-align:center;grid-column:1/-1;padding:40px;color:var(--text-secondary);font-size:14px;">
+                    Không thể kết nối database.
+                </div>` + demoCard;
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from('archive_tournaments')
+            .select('*')
+            .eq('is_public', true)
+            .order('archived_at', { ascending: false });
 
         if (error || !data || data.length === 0) {
             picker.style.display = 'block';
@@ -703,6 +723,7 @@
                 archivePredictions = mock.archivePredictions;
                 predictionsLoaded  = true;
             } else {
+                if (!supabase) throw new Error('Không thể kết nối database. Vui lòng thử lại sau.');
                 // Load tournament meta
                 const { data: t, error: tErr } = await supabase
                     .from('archive_tournaments').select('*').eq('id', id).single();
