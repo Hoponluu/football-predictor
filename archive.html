@@ -326,6 +326,8 @@ let predLoaded = false;
 let predGroups = [];
 let currentGroup = null;
 let currentTab = 'schedule';
+let matchByMatchId = {};      // UUID → match object, dùng để join predictions
+let finishedMatchesCache = []; // cache để predictions tab dùng index làm DOM key
 
 // ================================================================
 // ROUND LABELS
@@ -599,6 +601,10 @@ async function loadTournament(id) {
             } : null
         }));
 
+        // Build UUID → match lookup (match_id từ archive_matches, nếu có)
+        matchByMatchId = {};
+        matches.forEach(m => { if (m.match_id) matchByMatchId[m.match_id] = m; });
+
         // Header
         document.getElementById('arcTitle').textContent = tournament.name;
         const uniquePl = new Set(archivePlayers.map(p => p.player_id || p.name)).size;
@@ -692,13 +698,12 @@ function injectBracketPredStats() {
         // Remove previous stat rows
         card.querySelectorAll('.bracket-pred-row').forEach(el => el.remove());
 
-        const matchId = card.getAttribute('data-match-id');
-        const matchNum = parseInt(matchId);
+        const matchNum = parseInt(card.getAttribute('data-match-id'));
         if (isNaN(matchNum)) return;
 
-        const pool = currentGroup
-            ? archivePredictions.filter(p => p.match_number === matchNum && p.group_name === currentGroup)
-            : archivePredictions.filter(p => p.match_number === matchNum);
+        // Tìm match object để dùng match_id cho join
+        const matchObj = matches.find(m => m.match_number === matchNum);
+        const pool = predsForMatch(matchObj || { match_number: matchNum }, currentGroup);
 
         // Deduplicate by player_id (or player_name) when showing "all groups"
         const seen = new Set();
@@ -730,13 +735,14 @@ function injectBracketPredStats() {
 
 function overrideBracketClicks() {
     document.querySelectorAll('.bracket-mini-card').forEach(card => {
-        const matchId = card.getAttribute('data-match-id');
-        const matchNum = parseInt(matchId);
+        const matchNum = parseInt(card.getAttribute('data-match-id'));
         if (isNaN(matchNum)) { card.style.cursor = 'default'; return; }
+        const matchObj = matches.find(m => m.match_number === matchNum);
         card.style.cursor = 'pointer';
         card.onclick = () => {
             switchTab('predictions');
-            setTimeout(() => expandMatchPred(matchNum), 80);
+            // Truyền match_id nếu có, fallback về match_number
+            setTimeout(() => expandMatchPred(matchObj?.match_id || matchNum), 80);
         };
     });
 }
@@ -751,19 +757,17 @@ async function renderPredictionsTab() {
     const ok = await ensurePredictions(container);
     if (!ok) return;
 
-    const finishedMatches = matches.filter(m => m.status === 'finished')
+    // Dùng index i làm DOM key — tránh vấn đề match_number null với vòng bảng
+    finishedMatchesCache = matches.filter(m => m.status === 'finished')
         .sort((a, b) => new Date(a.match_date || a.date) - new Date(b.match_date || b.date));
 
-    if (finishedMatches.length === 0) {
+    if (finishedMatchesCache.length === 0) {
         container.innerHTML = '<div class="arc-loading">Chưa có trận đấu kết thúc.</div>';
         return;
     }
 
-    const html = finishedMatches.map(m => {
-        const matchNum = m.match_number || parseInt(m.id);
-        const pool = archivePredictions.filter(p =>
-            p.match_number === matchNum && (!currentGroup || p.group_name === currentGroup)
-        );
+    const html = finishedMatchesCache.map((m, i) => {
+        const pool = predsForMatch(m, currentGroup);
         const exactN = pool.filter(p => (p.points_exact_score||0) > 0).length;
         const rankN  = pool.filter(p => (p.points_rank||0) > 0 && !((p.points_exact_score||0)>0)).length;
         const scoreStr = `${m.home_score}–${m.away_score}`;
@@ -773,26 +777,26 @@ async function renderPredictionsTab() {
               (exactN === 0 && rankN === 0 ? `<span class="pred-stat-chip chip-zero">0 đúng</span>` : '')
             : `<span class="pred-stat-chip chip-zero">Chưa có dự đoán</span>`;
         const rndLabel = ROUND_LABELS[m.match_group || m.group] || (m.match_group || m.group || '');
-        return `<div class="pred-match-item" id="pred-item-${matchNum}">
-            <div class="pred-match-hdr" onclick="toggleMatchPred(${matchNum})">
+        return `<div class="pred-match-item" id="pred-item-${i}">
+            <div class="pred-match-hdr" onclick="toggleMatchPred(${i})">
                 <div class="pred-match-teams">
                     <div class="pred-match-name">${m.home_team||m.home} vs ${m.away_team||m.away}</div>
                     <div class="pred-match-round">${rndLabel}${m.match_number ? ' · M'+m.match_number : ''}</div>
                 </div>
                 <div class="pred-match-result">${scoreStr}</div>
                 <div class="pred-stat-chips">${chips}</div>
-                <span class="pred-chevron" id="chev-${matchNum}">▶</span>
+                <span class="pred-chevron" id="chev-${i}">▶</span>
             </div>
-            <div class="pred-body" id="pred-body-${matchNum}"></div>
+            <div class="pred-body" id="pred-body-${i}"></div>
         </div>`;
     }).join('');
 
     container.innerHTML = html;
 }
 
-function toggleMatchPred(matchNum) {
-    const body  = document.getElementById('pred-body-' + matchNum);
-    const chev  = document.getElementById('chev-' + matchNum);
+function toggleMatchPred(i) {
+    const body = document.getElementById('pred-body-' + i);
+    const chev = document.getElementById('chev-' + i);
     if (!body) return;
     const isOpen = body.classList.contains('open');
     if (isOpen) {
@@ -803,28 +807,36 @@ function toggleMatchPred(matchNum) {
         if (chev) chev.classList.add('open');
         if (!body.dataset.rendered) {
             body.dataset.rendered = '1';
-            renderMatchPredTable(matchNum, body);
+            renderMatchPredTable(i, body);
         }
     }
 }
 
-function expandMatchPred(matchNum) {
-    // Scroll to + open
-    const item = document.getElementById('pred-item-' + matchNum);
+// Gọi từ bracket clicks (truyền match_id UUID) hoặc matchNum (số)
+function expandMatchPred(matchIdOrNum) {
+    let i = -1;
+    if (typeof matchIdOrNum === 'string') {
+        // match_id UUID — tìm index trong cache
+        i = finishedMatchesCache.findIndex(m => m.match_id === matchIdOrNum);
+    }
+    if (i < 0) {
+        // Fallback: tìm theo match_number
+        const num = parseInt(matchIdOrNum);
+        if (!isNaN(num)) i = finishedMatchesCache.findIndex(m => m.match_number === num);
+    }
+    if (i < 0) return;
+    const item = document.getElementById('pred-item-' + i);
     if (item) {
         item.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        setTimeout(() => toggleMatchPred(matchNum), 100);
+        setTimeout(() => toggleMatchPred(i), 100);
     }
 }
 
-function renderMatchPredTable(matchNum, container) {
-    const m = matches.find(x => (x.match_number || parseInt(x.id)) === matchNum);
-    const actualH = m ? m.home_score : null;
-    const actualA = m ? m.away_score : null;
+function renderMatchPredTable(i, container) {
+    const m = finishedMatchesCache[i];
+    if (!m) { container.innerHTML = '<div style="padding:16px;color:var(--text-secondary);">Lỗi dữ liệu.</div>'; return; }
 
-    const pool = archivePredictions.filter(p =>
-        p.match_number === matchNum && (!currentGroup || p.group_name === currentGroup)
-    );
+    const pool = predsForMatch(m, currentGroup);
 
     if (pool.length === 0) {
         container.innerHTML = '<div style="padding:16px;font-size:13px;color:var(--text-secondary);">Không có dự đoán nào.</div>';
@@ -850,6 +862,7 @@ function renderMatchPredTable(matchNum, container) {
         </tr>`;
     }).join('');
 
+    const actualH = m.home_score, actualA = m.away_score;
     const resultStr = (actualH !== null && actualA !== null) ? `${actualH}–${actualA}` : '?';
     container.innerHTML = `
         <div style="padding:8px 14px;font-size:11px;color:var(--text-secondary);background:var(--bg);">
@@ -940,15 +953,26 @@ const CHART_COLORS = ['#6366F1','#F59E0B','#10B981','#EF4444','#8B5CF6','#EC4899
 const BAR_COLORS   = ['#EAB308','#94A3B8','#F87171','#60A5FA','#A78BFA','#34D399','#F472B6','#2DD4BF','#FB923C','#A3E635'];
 const LINE_ROUNDS  = ['Vòng bảng','Vòng 32','Vòng 16','Tứ kết','Bán kết','Chung kết'];
 
-function getMatchRoundIdx(num) {
-    if (!num) return null;
-    if (num >= 1  && num <= 72)  return 0;
-    if (num >= 73 && num <= 88)  return 1;
-    if (num >= 89 && num <= 96)  return 2;
-    if (num >= 97 && num <= 100) return 3;
-    if (num >= 101&& num <= 102) return 4;
-    if (num >= 103&& num <= 104) return 5;
-    return null;
+const MATCH_GROUP_ROUND = {'A':0,'B':0,'C':0,'D':0,'E':0,'F':0,'G':0,'H':0,'I':0,'J':0,'K':0,'L':0,'R32':1,'R16':2,'QF':3,'SF':4,'3RD':5,'FINAL':5};
+
+function getMatchRoundIdx(num, group) {
+    if (num) {
+        if (num >= 1  && num <= 72)  return 0;
+        if (num >= 73 && num <= 88)  return 1;
+        if (num >= 89 && num <= 96)  return 2;
+        if (num >= 97 && num <= 100) return 3;
+        if (num >= 101&& num <= 102) return 4;
+        if (num >= 103&& num <= 104) return 5;
+    }
+    return group != null ? (MATCH_GROUP_ROUND[group] ?? null) : null;
+}
+
+// Helper: lấy predictions cho một trận, dùng match_id nếu có, fallback match_number
+function predsForMatch(m, grp) {
+    const byId = m.match_id
+        ? archivePredictions.filter(p => p.match_id === m.match_id)
+        : archivePredictions.filter(p => p.match_number != null && p.match_number === m.match_number);
+    return grp ? byId.filter(p => p.group_name === grp) : byId;
 }
 
 async function renderChartTab() {
@@ -1002,12 +1026,14 @@ async function renderChartTab() {
         const predKeyOf = pred => (pred.player_id || pred.player_name) + '::' + (pred.group_id || grp);
         const playerSet = new Set(top8.map(keyOf));
 
-        // Lookup: "match_number::playerKey" → điểm
+        // Lookup: "match_id_or_num::playerKey" → điểm (dùng match_id UUID nếu có)
         const predLookup = {};
         archivePredictions.filter(pred => pred.group_name === grp).forEach(pred => {
             const pk = predKeyOf(pred);
             if (!playerSet.has(pk)) return;
-            const k = `${pred.match_number}::${pk}`;
+            const joinKey = pred.match_id || String(pred.match_number);
+            if (!joinKey || joinKey === 'null' || joinKey === 'undefined') return;
+            const k = `${joinKey}::${pk}`;
             predLookup[k] = (predLookup[k] || 0) + (pred.total_points || 0);
         });
 
@@ -1016,9 +1042,10 @@ async function renderChartTab() {
         const cumulPts = {};
         top8.forEach(p => { running[keyOf(p)] = 0; cumulPts[keyOf(p)] = []; });
         finishedMatches.forEach(m => {
+            const joinKey = m.match_id || String(m.match_number);
             top8.forEach(p => {
                 const pk = keyOf(p);
-                running[pk] += predLookup[`${m.match_number}::${pk}`] || 0;
+                running[pk] += predLookup[`${joinKey}::${pk}`] || 0;
                 cumulPts[pk].push(running[pk]);
             });
         });
@@ -1042,17 +1069,17 @@ async function renderChartTab() {
         }
 
         // Đường kẻ dọc phân vòng đấu + nhãn
-        const ROUND_LABELS = ['Vòng bảng','Vòng 32','Vòng 16','Tứ kết','Bán kết','Chung kết'];
+        const ROUND_LABELS_CHART = ['Vòng bảng','Vòng 32','Vòng 16','Tứ kết','Bán kết','Chung kết'];
         let lastRi = -1;
         finishedMatches.forEach((m, i) => {
-            const ri = getMatchRoundIdx(m.match_number);
+            const ri = getMatchRoundIdx(m.match_number, m.match_group || m.group);
             if (ri === null || ri === lastRi) return;
             lastRi = ri;
             const x = xOf(i);
             if (i > 0) {
                 gridSvg += `<line x1="${x.toFixed(1)}" y1="${PAD.top}" x2="${x.toFixed(1)}" y2="${PAD.top+cH}" stroke="var(--stroke)" stroke-width="1" stroke-dasharray="4,3"/>`;
             }
-            gridSvg += `<text x="${(x + (i > 0 ? 3 : 0)).toFixed(1)}" y="${H-6}" text-anchor="start" font-size="9" fill="var(--text-secondary)">${ROUND_LABELS[ri] || ''}</text>`;
+            gridSvg += `<text x="${(x + (i > 0 ? 3 : 0)).toFixed(1)}" y="${H-6}" text-anchor="start" font-size="9" fill="var(--text-secondary)">${ROUND_LABELS_CHART[ri] || ''}</text>`;
         });
 
         // Đường biểu đồ mỗi player

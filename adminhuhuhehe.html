@@ -6136,38 +6136,14 @@
                 const { data: allMatches, error: mErr } = await supabase.from('matches').select('*');
                 if (mErr) throw mErr;
 
-                // Build matchNumMap — gán số thứ tự cho từng trận
-                // • Vòng bảng (A-L): tự gán 1-72 theo ngày nếu match_number null
-                // • Knockout có match_number: giữ nguyên
-                // • Knockout thiếu match_number: suy ra từ range của vòng đấu + thứ tự ngày
-                const STAGE_GROUPS = new Set(['A','B','C','D','E','F','G','H','I','J','K','L']);
-                const KO_RANGE = { R32:[73,88], R16:[89,96], QF:[97,100], SF:[101,102], '3RD':[103,103], 'FINAL':[104,104] };
+                // matchNumMap chỉ dùng để hiển thị (badge M85, M86...)
+                // match_id (UUID) là khóa join chính — không cần tự gán số mới
                 const matchNumMap = {};
-
-                // 1. Vòng bảng: dùng match_number có sẵn hoặc tự gán theo ngày
-                allMatches
-                    .filter(m => STAGE_GROUPS.has(m.match_group))
-                    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
-                    .forEach((m, i) => { matchNumMap[m.id] = m.match_number ?? (i + 1); });
-
-                // 2. Knockout có match_number: giữ nguyên
-                allMatches
-                    .filter(m => !STAGE_GROUPS.has(m.match_group) && m.match_number != null)
-                    .forEach(m => { matchNumMap[m.id] = m.match_number; });
-
-                // 3. Knockout thiếu match_number: điền số còn trống trong range của vòng đó
-                Object.entries(KO_RANGE).forEach(([grp, [lo, hi]]) => {
-                    const nullKO = allMatches.filter(m => m.match_group === grp && m.match_number == null);
-                    if (!nullKO.length) return;
-                    const used = new Set(allMatches.filter(m => m.match_group === grp && m.match_number != null).map(m => m.match_number));
-                    const free = [];
-                    for (let n = lo; n <= hi; n++) if (!used.has(n)) free.push(n);
-                    nullKO.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-                    nullKO.forEach((m, i) => { if (i < free.length) matchNumMap[m.id] = free[i]; });
-                });
+                allMatches.forEach(m => { matchNumMap[m.id] = m.match_number; });
 
                 const archiveMatches = allMatches.map(m => ({
                     tournament_id: id,
+                    match_id: m.id,
                     match_number: matchNumMap[m.id],
                     match_group: m.match_group,
                     home_team: m.home_team,
@@ -6256,6 +6232,7 @@
                             player_name: pred.players?.name || 'Unknown',
                             group_id: String(gs.group_id),
                             group_name: groupMap[gs.group_id] || null,
+                            match_id: pred.match_id,
                             match_number: matchNumMap[pred.match_id] || null,
                             home_score: pred.home_score,
                             away_score: pred.away_score,
