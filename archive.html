@@ -583,6 +583,23 @@ async function loadTournament(id) {
                 .from('archive_players').select('*').eq('tournament_id', id).order('total_points',{ascending:false});
             if (pErr) throw pErr;
             players = pl;
+
+            // Patch match_id cho archive_matches cũ (chưa lưu match_id)
+            if (rawMatches && rawMatches.some(m => !m.match_id)) {
+                try {
+                    const { data: liveMs } = await sb.from('matches').select('id, home_team, away_team');
+                    if (liveMs) {
+                        const liveMap = {};
+                        liveMs.forEach(lm => { liveMap[`${lm.home_team}||${lm.away_team}`] = lm.id; });
+                        rawMatches.forEach(m => {
+                            if (!m.match_id) {
+                                const key = `${m.home_team}||${m.away_team}`;
+                                if (liveMap[key]) m.match_id = liveMap[key];
+                            }
+                        });
+                    }
+                } catch(e) { /* silent — dữ liệu cũ thiếu match_id sẽ dùng fallback */ }
+            }
         }
 
         archivePlayers = players || [];
