@@ -6136,17 +6136,35 @@
                 const { data: allMatches, error: mErr } = await supabase.from('matches').select('*');
                 if (mErr) throw mErr;
 
-                // Build matchNumMap trước — group stage thường không có match_number trong DB
-                // → chỉ tự gán số cho các trận vòng bảng (match_group A-L), knockout giữ nguyên 73-104
+                // Build matchNumMap — gán số thứ tự cho từng trận
+                // • Vòng bảng (A-L): tự gán 1-72 theo ngày nếu match_number null
+                // • Knockout có match_number: giữ nguyên
+                // • Knockout thiếu match_number: suy ra từ range của vòng đấu + thứ tự ngày
                 const STAGE_GROUPS = new Set(['A','B','C','D','E','F','G','H','I','J','K','L']);
+                const KO_RANGE = { R32:[73,88], R16:[89,96], QF:[97,100], SF:[101,102], '3RD':[103,103], 'FINAL':[104,104] };
                 const matchNumMap = {};
-                const noNum = allMatches
-                    .filter(m => m.match_number == null && STAGE_GROUPS.has(m.match_group))
-                    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-                const hasNum = allMatches.filter(m => m.match_number != null);
-                let autoSeq = 1;
-                noNum.forEach(m => { matchNumMap[m.id] = autoSeq++; });
-                hasNum.forEach(m => { matchNumMap[m.id] = m.match_number; });
+
+                // 1. Vòng bảng: dùng match_number có sẵn hoặc tự gán theo ngày
+                allMatches
+                    .filter(m => STAGE_GROUPS.has(m.match_group))
+                    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date))
+                    .forEach((m, i) => { matchNumMap[m.id] = m.match_number ?? (i + 1); });
+
+                // 2. Knockout có match_number: giữ nguyên
+                allMatches
+                    .filter(m => !STAGE_GROUPS.has(m.match_group) && m.match_number != null)
+                    .forEach(m => { matchNumMap[m.id] = m.match_number; });
+
+                // 3. Knockout thiếu match_number: điền số còn trống trong range của vòng đó
+                Object.entries(KO_RANGE).forEach(([grp, [lo, hi]]) => {
+                    const nullKO = allMatches.filter(m => m.match_group === grp && m.match_number == null);
+                    if (!nullKO.length) return;
+                    const used = new Set(allMatches.filter(m => m.match_group === grp && m.match_number != null).map(m => m.match_number));
+                    const free = [];
+                    for (let n = lo; n <= hi; n++) if (!used.has(n)) free.push(n);
+                    nullKO.sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+                    nullKO.forEach((m, i) => { if (i < free.length) matchNumMap[m.id] = free[i]; });
+                });
 
                 const archiveMatches = allMatches.map(m => ({
                     tournament_id: id,
@@ -6290,6 +6308,7 @@
                         <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:${t.is_public ? '#D1FAE5' : '#F3F4F6'};color:${t.is_public ? '#059669' : '#6B7280'};">${t.is_public ? '🌐 Public' : '🔒 Private'}</span>
                         <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="toggleArchivePublish('${t.id}', ${t.is_public})">${t.is_public ? 'Ẩn' : 'Publish'}</button>
                         <a href="/archive?t=${t.id}" target="_blank" class="btn btn-secondary" style="padding:5px 12px;font-size:12px;">Xem →</a>
+                        <button class="btn btn-danger" style="padding:5px 12px;font-size:12px;" onclick="deleteArchive('${t.id}', '${t.name.replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">Xóa</button>
                     </div>
                 </div>
             `).join('');
@@ -6300,6 +6319,23 @@
             const { error } = await supabase.from('archive_tournaments').update({ is_public: newVal }).eq('id', id);
             if (error) { alert('Lỗi: ' + error.message); return; }
             loadArchiveList();
+        }
+
+        async function deleteArchive(id, name) {
+            if (!confirm(`Xóa archive "${name}"?\n\nThao tác này sẽ xóa toàn bộ dữ liệu archive (trận đấu, dự đoán, bảng điểm). Không thể hoàn tác.`)) return;
+
+            try {
+                // Xóa child tables trước (tournament_id), rồi mới xóa tournament (id)
+                for (const table of ['archive_predictions', 'archive_players', 'archive_matches']) {
+                    const { error } = await supabase.from(table).delete().eq('tournament_id', id);
+                    if (error) throw error;
+                }
+                const { error: tErr } = await supabase.from('archive_tournaments').delete().eq('id', id);
+                if (tErr) throw tErr;
+                loadArchiveList();
+            } catch (err) {
+                alert('Lỗi khi xóa: ' + err.message);
+            }
         }
 
         console.log('✅ Admin panel script loaded');
