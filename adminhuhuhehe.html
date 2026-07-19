@@ -6138,7 +6138,7 @@
 
                 const archiveMatches = allMatches.map(m => ({
                     tournament_id: id,
-                    match_number: m.match_number,
+                    match_number: matchNumMap[m.id],   // đã bao gồm auto-assign cho group stage
                     match_group: m.match_group,
                     home_team: m.home_team,
                     away_team: m.away_team,
@@ -6177,8 +6177,15 @@
                 if (gsErr) throw gsErr;
 
                 // Build lookup maps
+                // Group stage matches thường không có match_number trong DB → tự gán số thứ tự 1..N
+                // Knockout matches giữ nguyên match_number (73-104)
                 const matchNumMap = {};
-                allMatches.forEach(m => { matchNumMap[m.id] = m.match_number; });
+                const noNum = allMatches.filter(m => m.match_number == null)
+                    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+                const hasNum = allMatches.filter(m => m.match_number != null);
+                let autoSeq = 1;
+                noNum.forEach(m => { matchNumMap[m.id] = autoSeq++; });
+                hasNum.forEach(m => { matchNumMap[m.id] = m.match_number; });
 
                 const predMap = {};
                 allPreds.forEach(p => { predMap[p.id] = p; });
@@ -6281,7 +6288,7 @@
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:${t.is_public ? '#D1FAE5' : '#F3F4F6'};color:${t.is_public ? '#059669' : '#6B7280'};">${t.is_public ? '🌐 Public' : '🔒 Private'}</span>
                         <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="toggleArchivePublish('${t.id}', ${t.is_public})">${t.is_public ? 'Ẩn' : 'Publish'}</button>
-                        <a href="/history?t=${t.id}" target="_blank" class="btn btn-secondary" style="padding:5px 12px;font-size:12px;">Xem →</a>
+                        <a href="/archive?t=${t.id}" target="_blank" class="btn btn-secondary" style="padding:5px 12px;font-size:12px;">Xem →</a>
                     </div>
                 </div>
             `).join('');
