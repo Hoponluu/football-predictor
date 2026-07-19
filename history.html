@@ -446,16 +446,16 @@
     function openResultsModal() {}
     function openLoginModal() {}
 
-    // =============================================
-    // Supabase init (lazy — demo mode không cần CDN)
-    // =============================================
+    // Supabase client — khởi tạo lazy trong loadTournament khi cần
     let supabase = null;
-    try {
-        if (window.supabase && typeof SUPABASE_CONFIG !== 'undefined') {
-            supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-        }
-    } catch (e) {
-        console.warn('Supabase init failed:', e);
+    function getSupabase() {
+        if (supabase) return supabase;
+        try {
+            if (window.supabase && typeof SUPABASE_CONFIG !== 'undefined') {
+                supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+            }
+        } catch (e) { console.warn('Supabase init failed:', e); }
+        return supabase;
     }
 
     // =============================================
@@ -492,12 +492,13 @@
         } else if (tab === 'progress') {
             if (!predictionsLoaded) {
                 const container = document.getElementById('tab-progress');
-                if (!supabase) {
+                const sb = getSupabase();
+                if (!sb) {
                     if (container) container.innerHTML = '<div class="history-loading">Không thể tải dữ liệu điểm — database không kết nối được.</div>';
                     return;
                 }
                 if (container) container.innerHTML = '<div class="history-loading"><div class="history-loading-spinner"></div>Đang tải dữ liệu điểm...</div>';
-                supabase.from('archive_predictions').select('*').eq('tournament_id', currentTournamentId)
+                sb.from('archive_predictions').select('*').eq('tournament_id', currentTournamentId)
                     .then(({ data: preds, error: prErr }) => {
                         if (prErr) {
                             if (container) container.innerHTML = `<div class="history-loading">Lỗi tải dữ liệu: ${prErr.message}</div>`;
@@ -558,7 +559,8 @@
                 <div class="tournament-card-date">3 nhóm · 9 người chơi · 19 trận</div>
             </div>`;
 
-        if (!supabase) {
+        const sb = getSupabase();
+        if (!sb) {
             picker.style.display = 'block';
             document.getElementById('tournamentList').innerHTML =
                 `<div style="text-align:center;grid-column:1/-1;padding:40px;color:var(--text-secondary);font-size:14px;">
@@ -567,7 +569,7 @@
             return;
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await sb
             .from('archive_tournaments')
             .select('*')
             .eq('is_public', true)
@@ -723,21 +725,22 @@
                 archivePredictions = mock.archivePredictions;
                 predictionsLoaded  = true;
             } else {
-                if (!supabase) throw new Error('Không thể kết nối database. Vui lòng thử lại sau.');
+                const sb = getSupabase();
+                if (!sb) throw new Error('Không thể kết nối database. Vui lòng thử lại sau.');
                 // Load tournament meta
-                const { data: t, error: tErr } = await supabase
+                const { data: t, error: tErr } = await sb
                     .from('archive_tournaments').select('*').eq('id', id).single();
                 if (tErr || !t) throw new Error('Không tìm thấy giải đấu này hoặc chưa được công bố.');
                 tournament = t;
 
                 // Load matches (predictions loaded lazily on demand)
-                const { data: rm, error: mErr } = await supabase
+                const { data: rm, error: mErr } = await sb
                     .from('archive_matches').select('*').eq('tournament_id', id).order('match_date');
                 if (mErr) throw mErr;
                 rawMatches = rm;
 
                 // Load players
-                const { data: pl, error: pErr } = await supabase
+                const { data: pl, error: pErr } = await sb
                     .from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false });
                 if (pErr) throw pErr;
                 players = pl;
@@ -1066,14 +1069,18 @@
     }
 
     // =============================================
-    // Start
+    // Start — dùng DOMContentLoaded như index.html
     // =============================================
-    window.onerror = function(msg, src, line) {
+    function showError(msg) {
         const el = document.getElementById('historyLoading');
-        if (el) { el.style.display = 'block'; el.innerHTML = `<div style="font-size:24px;margin-bottom:12px;">⚠️ JS Error</div><div style="font-size:12px;color:var(--text-secondary);word-break:break-all;">${msg}<br>${src}:${line}</div>`; }
-        return true;
-    };
-    init();
+        if (el) {
+            el.style.display = 'block';
+            el.innerHTML = `<div style="font-size:24px;margin-bottom:12px;">⚠️</div><div style="font-size:13px;color:var(--text-secondary);word-break:break-all;max-width:600px;margin:0 auto;">${msg}</div>`;
+        }
+    }
+    window.onerror = function(msg, src, line) { showError(msg + '<br><small>' + src + ':' + line + '</small>'); return true; };
+    window.addEventListener('unhandledrejection', function(e) { showError('Async error: ' + (e.reason?.message || String(e.reason))); });
+    document.addEventListener('DOMContentLoaded', function() { init(); });
 </script>
 </body>
 </html>
