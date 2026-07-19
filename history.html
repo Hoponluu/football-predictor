@@ -620,9 +620,10 @@
 
             // Update header
             document.getElementById('headerTitle').textContent = tournament.name;
+            const uniquePlayerCount = new Set(archivePlayers.map(p => p.player_id || p.name)).size;
             const groupSub = archiveGroups.length > 1 ? ` · ${archiveGroups.length} nhóm` : '';
             document.getElementById('headerSub').textContent =
-                `Lưu trữ ${new Date(tournament.archived_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })} · ${matches.length} trận · ${archivePlayers.length} người chơi${groupSub}`;
+                `Lưu trữ ${new Date(tournament.archived_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })} · ${matches.length} trận · ${uniquePlayerCount} người chơi${groupSub}`;
             document.title = tournament.name + ' — Lịch sử';
 
             // Show group filter bar if multiple groups exist
@@ -819,9 +820,13 @@
         const top10 = [...playerPool]
             .sort((a, b) => b.total_points - a.total_points)
             .slice(0, 10);
-        // Use "group::name" as key to avoid collisions when currentGroup is null (all groups)
-        const keyOf = (p) => (p.group_name || '') + '::' + p.name;
-        const predKeyOf = (pred) => (pred.group_name || '') + '::' + pred.player_name;
+        // Dùng player_id+group_id làm key (mới), fallback về group::name cho archive cũ
+        const keyOf = (p) => p.player_id
+            ? (p.player_id + '::' + (p.group_id || ''))
+            : ((p.group_name || '') + '::' + p.name);
+        const predKeyOf = (pred) => pred.player_id
+            ? (pred.player_id + '::' + (pred.group_id || ''))
+            : ((pred.group_name || '') + '::' + pred.player_name);
         const playerSet = new Set(top10.map(keyOf));
 
         // Accumulate per-round points
