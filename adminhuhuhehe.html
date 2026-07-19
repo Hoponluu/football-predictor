@@ -6183,7 +6183,6 @@
 
                 const archivePreds = allPreds.map(pred => ({
                     tournament_id: id,
-                    orig_player_id: pred.player_id,
                     player_name: pred.players?.name || 'Unknown',
                     match_number: matchNumMap[pred.match_id] || null,
                     home_score: pred.home_score,
