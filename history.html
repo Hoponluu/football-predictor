@@ -515,22 +515,21 @@
         document.querySelectorAll('.tab-panel').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
 
         try {
-            // Load 3 queries in parallel (predictions loaded lazily on demand)
-            const [
-                { data: tournament, error: tErr },
-                { data: rawMatches, error: mErr },
-                { data: players, error: pErr }
-            ] = await Promise.all([
-                supabase.from('archive_tournaments').select('*').eq('id', id).single(),
-                supabase.from('archive_matches').select('*').eq('tournament_id', id).order('match_date'),
-                supabase.from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false })
-            ]);
-
+            // Load tournament meta
+            const { data: tournament, error: tErr } = await supabase
+                .from('archive_tournaments').select('*').eq('id', id).single();
             if (tErr || !tournament) throw new Error('Không tìm thấy giải đấu này hoặc chưa được công bố.');
-            if (mErr) throw mErr;
-            if (pErr) throw pErr;
 
-            archivePlayers = players || [];
+            // Load matches + players in parallel (predictions loaded lazily on demand)
+            const [matchRes, playerRes] = await Promise.all([
+                supabase.from('archive_matches').select('*').eq('tournament_id', id).order('match_date').then(r => r),
+                supabase.from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false }).then(r => r)
+            ]);
+            if (matchRes.error) throw matchRes.error;
+            if (playerRes.error) throw playerRes.error;
+            const rawMatches = matchRes.data;
+
+            archivePlayers = playerRes.data || [];
 
             // Transform matches to format bracket-render.js expects
             matches = (rawMatches || []).map(m => ({
