@@ -417,6 +417,8 @@
     let archivePlayers = [];
     let archivePredictions = [];
     let currentTab = 'schedule';
+    let currentTournamentId = null;
+    let predictionsLoaded = false;
 
     // =============================================
     // Tab switching
@@ -439,7 +441,22 @@
         } else if (tab === 'leaderboard') {
             renderLeaderboard();
         } else if (tab === 'progress') {
-            renderProgressChart();
+            if (!predictionsLoaded) {
+                const container = document.getElementById('tab-progress');
+                if (container) container.innerHTML = '<div class="history-loading"><div class="history-loading-spinner"></div>Đang tải dữ liệu điểm...</div>';
+                supabase.from('archive_predictions').select('*').eq('tournament_id', currentTournamentId)
+                    .then(({ data: preds, error: prErr }) => {
+                        if (prErr) {
+                            if (container) container.innerHTML = `<div class="history-loading">Lỗi tải dữ liệu: ${prErr.message}</div>`;
+                            return;
+                        }
+                        archivePredictions = preds || [];
+                        predictionsLoaded = true;
+                        renderProgressChart();
+                    });
+            } else {
+                renderProgressChart();
+            }
         }
     }
 
@@ -488,6 +505,9 @@
 
     async function loadTournament(id) {
         if (!id) return;
+        currentTournamentId = id;
+        predictionsLoaded = false;
+        archivePredictions = [];
         document.getElementById('historyLoading').style.display = 'block';
         document.getElementById('historyLoading').innerHTML = '<div class="history-loading-spinner"></div>Đang tải dữ liệu...';
         document.getElementById('tournamentPicker').style.display = 'none';
@@ -495,33 +515,27 @@
         document.querySelectorAll('.tab-panel').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
 
         try {
-            // Load tournament meta
-            const { data: tournament, error: tErr } = await supabase
-                .from('archive_tournaments').select('*').eq('id', id).single();
+            // Load 3 queries in parallel (predictions loaded lazily on demand)
+            const [
+                { data: tournament, error: tErr },
+                { data: rawMatches, error: mErr },
+                { data: players, error: pErr }
+            ] = await Promise.all([
+                supabase.from('archive_tournaments').select('*').eq('id', id).single(),
+                supabase.from('archive_matches').select('*').eq('tournament_id', id).order('match_date'),
+                supabase.from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false })
+            ]);
+
             if (tErr || !tournament) throw new Error('Không tìm thấy giải đấu này hoặc chưa được công bố.');
-
-            // Load matches
-            const { data: rawMatches, error: mErr } = await supabase
-                .from('archive_matches').select('*').eq('tournament_id', id).order('match_date');
             if (mErr) throw mErr;
-
-            // Load players
-            const { data: players, error: pErr } = await supabase
-                .from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false });
             if (pErr) throw pErr;
 
-            // Load predictions
-            const { data: preds, error: prErr } = await supabase
-                .from('archive_predictions').select('*').eq('tournament_id', id);
-            if (prErr) throw prErr;
-
             archivePlayers = players || [];
-            archivePredictions = preds || [];
 
             // Transform matches to format bracket-render.js expects
             matches = (rawMatches || []).map(m => ({
                 ...m,
-                id: String(m.orig_id),
+                id: m.match_number != null ? String(m.match_number) : m.id,
                 home: m.home_team,
                 away: m.away_team,
                 group: m.match_group,
