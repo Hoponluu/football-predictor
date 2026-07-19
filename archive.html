@@ -404,6 +404,18 @@ async function ensurePredictions(container) {
         return false;
     }
     archivePredictions = data || [];
+
+    // Patch match_id trong predictions (nếu null) bằng match_number → matches lookup
+    if (archivePredictions.some(p => !p.match_id)) {
+        const matchByNum = {};
+        matches.forEach(m => { if (m.match_number != null && m.match_id) matchByNum[m.match_number] = m.match_id; });
+        archivePredictions.forEach(p => {
+            if (!p.match_id && p.match_number != null && matchByNum[p.match_number]) {
+                p.match_id = matchByNum[p.match_number];
+            }
+        });
+    }
+
     predLoaded = true;
     return true;
 }
@@ -585,20 +597,35 @@ async function loadTournament(id) {
             players = pl;
 
             // Patch match_id cho archive_matches cũ (chưa lưu match_id)
+            // Ưu tiên: match_date (unique, không đổi) → match_number → home+away team
             if (rawMatches && rawMatches.some(m => !m.match_id)) {
                 try {
-                    const { data: liveMs } = await sb.from('matches').select('id, home_team, away_team');
+                    const { data: liveMs } = await sb.from('matches')
+                        .select('id, match_date, match_number, home_team, away_team');
                     if (liveMs) {
-                        const liveMap = {};
-                        liveMs.forEach(lm => { liveMap[`${lm.home_team}||${lm.away_team}`] = lm.id; });
-                        rawMatches.forEach(m => {
-                            if (!m.match_id) {
-                                const key = `${m.home_team}||${m.away_team}`;
-                                if (liveMap[key]) m.match_id = liveMap[key];
+                        const byDate = {}, byNum = {}, byTeams = {};
+                        liveMs.forEach(lm => {
+                            if (lm.match_date) {
+                                const ts = new Date(lm.match_date).getTime();
+                                if (!isNaN(ts)) byDate[ts] = lm.id;
                             }
+                            if (lm.match_number != null) byNum[lm.match_number] = lm.id;
+                            byTeams[`${lm.home_team}||${lm.away_team}`] = lm.id;
+                        });
+                        rawMatches.forEach(m => {
+                            if (m.match_id) return;
+                            if (m.match_date) {
+                                const ts = new Date(m.match_date).getTime();
+                                if (!isNaN(ts) && byDate[ts]) { m.match_id = byDate[ts]; return; }
+                            }
+                            if (m.match_number != null && byNum[m.match_number]) {
+                                m.match_id = byNum[m.match_number]; return;
+                            }
+                            const tk = `${m.home_team}||${m.away_team}`;
+                            if (byTeams[tk]) m.match_id = byTeams[tk];
                         });
                     }
-                } catch(e) { /* silent — dữ liệu cũ thiếu match_id sẽ dùng fallback */ }
+                } catch(e) { /* silent — dữ liệu cũ thiếu match_id */ }
             }
         }
 
