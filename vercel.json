@@ -2,7 +2,8 @@
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
     { "source": "/adminhuhuhehe", "destination": "/adminhuhuhehe.html" },
-    { "source": "/history", "destination": "/history.html" }
+    { "source": "/history", "destination": "/history.html" },
+    { "source": "/archive", "destination": "/archive.html" }
   ],
   "crons": [
     {

@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive – World Cup Prediction</title>
+    <link rel="icon" type="image/png" href="Favicon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="bracket.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        /* ── Header ── */
+        .arc-header {
+            background: var(--surface); border-bottom: 1px solid var(--stroke);
+            padding: 14px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        }
+        .arc-header-logo { font-size: 26px; }
+        .arc-header-info { flex: 1; min-width: 0; }
+        .arc-header-title { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+        .arc-header-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+        /* ── Tabs ── */
+        .arc-tabs {
+            display: flex; background: var(--surface);
+            border-bottom: 2px solid var(--stroke);
+            padding: 0 20px; overflow-x: auto;
+        }
+        .arc-tab {
+            padding: 11px 16px; font-size: 13px; font-weight: 600;
+            color: var(--text-secondary); cursor: pointer; white-space: nowrap;
+            border-bottom: 2px solid transparent; margin-bottom: -2px;
+            transition: color .15s, border-color .15s;
+        }
+        .arc-tab:hover { color: var(--text-primary); }
+        .arc-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* ── Group filter ── */
+        .arc-group-bar {
+            background: var(--bg); border-bottom: 1px solid var(--stroke);
+            padding: 8px 20px; display: none; align-items: center; gap: 6px; flex-wrap: wrap;
+        }
+        .arc-group-label {
+            font-size: 11px; font-weight: 700; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: .05em; margin-right: 2px;
+        }
+        .arc-group-btn {
+            padding: 4px 12px; border-radius: 20px;
+            border: 1.5px solid var(--stroke); background: var(--surface);
+            color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all .15s;
+        }
+        .arc-group-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+        /* ── Body / loading ── */
+        .arc-body { padding: 20px; max-width: 1100px; margin: 0 auto; }
+        .arc-loading { text-align: center; padding: 80px 20px; color: var(--text-secondary); font-size: 14px; }
+        .arc-spinner {
+            width: 34px; height: 34px;
+            border: 3px solid var(--stroke); border-top-color: var(--primary);
+            border-radius: 50%; animation: arc-spin .7s linear infinite; margin: 0 auto 14px;
+        }
+        @keyframes arc-spin { to { transform: rotate(360deg); } }
+
+        /* ── Picker ── */
+        .arc-picker-title { text-align: center; padding: 40px 0 16px; font-size: 20px; font-weight: 700; color: var(--text-primary); }
+        .arc-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; max-width: 780px; margin: 0 auto 40px; }
+        .arc-picker-card {
+            background: var(--surface); border: 1px solid var(--stroke);
+            border-radius: var(--border-radius); padding: 18px; cursor: pointer;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .arc-picker-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+        .arc-picker-card-icon { font-size: 32px; margin-bottom: 8px; }
+        .arc-picker-card-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+        .arc-picker-card-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+        /* ── Schedule ── */
+        .arc-round-section { margin-bottom: 24px; }
+        .arc-round-title {
+            font-size: 12px; font-weight: 700; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: .07em;
+            padding: 8px 0 10px; display: flex; align-items: center; gap: 8px;
+        }
+        .arc-round-count {
+            font-size: 11px; background: var(--bg); border: 1px solid var(--stroke);
+            border-radius: 10px; padding: 1px 8px; color: var(--text-secondary); font-weight: 600;
+        }
+        .arc-matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+
+        /* ── Predictions tab ── */
+        .pred-match-item { background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--border-radius); margin-bottom: 8px; overflow: hidden; }
+        .pred-match-hdr {
+            padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            transition: background .1s;
+        }
+        .pred-match-hdr:hover { background: var(--bg); }
+        .pred-match-teams { flex: 1; min-width: 0; }
+        .pred-match-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+        .pred-match-round { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+        .pred-match-result { font-size: 16px; font-weight: 800; color: var(--text-primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .pred-stat-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+        .pred-stat-chip {
+            font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; white-space: nowrap;
+        }
+        .chip-exact { background: #D1FAE5; color: #065F46; }
+        .chip-rank  { background: #DBEAFE; color: #1E40AF; }
+        .chip-zero  { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--stroke); }
+        .pred-chevron { color: var(--text-secondary); font-size: 11px; transition: transform .2s; flex-shrink: 0; }
+        .pred-chevron.open { transform: rotate(90deg); }
+        .pred-body { display: none; border-top: 1px solid var(--stroke); }
+        .pred-body.open { display: block; }
+        .pred-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .pred-table th, .pred-table td { padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--stroke); }
+        .pred-table th { font-size: 11px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; background: var(--bg); }
+        .pred-table tr:last-child td { border-bottom: none; }
+        .pred-pts-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 11px; }
+        .pts-exact { background: #D1FAE5; color: #065F46; }
+        .pts-rank  { background: #DBEAFE; color: #1E40AF; }
+        .pts-zero  { background: var(--bg); color: var(--text-secondary); }
+        .pred-score-right { color: #059669; font-weight: 700; }
+        .pred-score-wrong { color: var(--text-secondary); }
+
+        /* ── Leaderboard ── */
+        .arc-bxh-card { background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--border-radius); overflow: hidden; margin-bottom: 20px; }
+        .arc-bxh-title { padding: 14px 18px; border-bottom: 1px solid var(--stroke); font-weight: 700; font-size: 14px; }
+        .arc-bxh-table { width: 100%; border-collapse: collapse; }
+        .arc-bxh-table th, .arc-bxh-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--stroke); }
+        .arc-bxh-table th { font-size: 11px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; background: var(--bg); }
+        .arc-bxh-table tbody tr:last-child td { border-bottom: none; }
+        .arc-bxh-table tbody tr:hover { background: var(--bg); }
+        .arc-rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 12px; font-weight: 700; }
+        .rank-1 { background: #FEF3C7; color: #92400E; }
+        .rank-2 { background: #F3F4F6; color: #374151; }
+        .rank-3 { background: #FEE2E2; color: #9B1C1C; }
+        .arc-pts { font-size: 16px; font-weight: 800; color: var(--text-primary); }
+        .arc-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+
+        /* ── Chart ── */
+        .arc-chart-section { margin-bottom: 32px; }
+        .arc-chart-group-title {
+            font-size: 14px; font-weight: 700; color: var(--text-primary);
+            padding: 12px 0 8px; border-bottom: 2px solid var(--primary); margin-bottom: 16px;
+        }
+        .arc-bar-chart { padding: 4px 0 12px; }
+        .arc-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+        .arc-bar-rank { width: 22px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
+        .arc-bar-label { width: 110px; min-width: 110px; font-size: 12px; font-weight: 600; color: var(--text-primary); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+        .arc-bar-track { flex: 1; height: 22px; background: var(--bg); border-radius: 11px; overflow: hidden; border: 1px solid var(--stroke); position: relative; }
+        .arc-bar-fill { height: 100%; border-radius: 11px; min-width: 24px; display: flex; align-items: center; justify-content: flex-end; }
+        .arc-bar-val { font-size: 11px; font-weight: 700; padding: 0 9px; color: #fff; white-space: nowrap; }
+
+        /* Bracket prediction overlay */
+        .bracket-pred-row {
+            margin: 3px 6px 4px; display: flex; gap: 5px; flex-wrap: wrap;
+        }
+
+        @media (max-width: 600px) {
+            .arc-body { padding: 14px 12px; }
+            .arc-tabs { padding: 0 10px; }
+            .arc-tab { padding: 10px 12px; font-size: 12px; }
+            .arc-bar-label { width: 80px; min-width: 80px; }
+            .arc-matches-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="arc-header">
+    <div class="arc-header-logo">🏆</div>
+    <div class="arc-header-info">
+        <div class="arc-header-title" id="arcTitle">Lịch sử giải đấu</div>
+        <div class="arc-header-sub" id="arcSub">World Cup Prediction Game</div>
+    </div>
+    <a href="/" style="font-size:13px;color:var(--text-secondary);text-decoration:none;">← Trang chủ</a>
+</div>
+
+<div class="arc-tabs" id="arcTabs" style="display:none;">
+    <div class="arc-tab active" onclick="switchTab('schedule')">📅 Lịch đấu</div>
+    <div class="arc-tab" onclick="switchTab('standings')">📊 Bảng đấu</div>
+    <div class="arc-tab" onclick="switchTab('bracket')">🏆 Nhánh KO</div>
+    <div class="arc-tab" onclick="switchTab('predictions')">🎯 Dự đoán</div>
+    <div class="arc-tab" onclick="switchTab('leaderboard')">🥇 Bảng điểm</div>
+    <div class="arc-tab" onclick="switchTab('chart')">📈 Tiến độ</div>
+</div>
+
+<div class="arc-group-bar" id="arcGroupBar"></div>
+
+<div class="arc-body">
+    <div id="arcLoading" class="arc-loading">
+        <div class="arc-spinner"></div>
+        Đang tải...
+    </div>
+    <div id="arcPicker" style="display:none;">
+        <div class="arc-picker-title">Chọn giải đấu để xem lại</div>
+        <div class="arc-picker-grid" id="arcPickerGrid"></div>
+    </div>
+    <div id="tab-schedule" class="tab-panel" style="display:none;"></div>
+    <div id="tab-standings" class="tab-panel" style="display:none;">
+        <div id="scheduleGroupStandings"></div>
+    </div>
+    <div id="tab-bracket" class="tab-panel" style="display:none;">
+        <div id="scheduleKnockout"></div>
+    </div>
+    <div id="tab-predictions" class="tab-panel" style="display:none;"></div>
+    <div id="tab-leaderboard" class="tab-panel" style="display:none;"></div>
+    <div id="tab-chart" class="tab-panel" style="display:none;"></div>
+</div>
+
+<script src="bracket-render.js"></script>
+<script>
+// ================================================================
+// GLOBALS required by bracket-render.js
+// ================================================================
+var matches = [];
+var currentPlayer = { id: 'archive', name: 'Archive View' };
+
+const countries = {
+    'TBU': { flag: '🏴', color: '#E5E7EB' },
+    'Canada':    { flag: '🇨🇦', color: '#FEE2E2', flagImage: '300wflags/Canada.png' },
+    'Mexico':    { flag: '🇲🇽', color: '#D1FAE5', flagImage: '300wflags/Mexico.png' },
+    'USA':       { flag: '🇺🇸', color: '#DBEAFE', flagImage: '300wflags/USA.png' },
+    'Austria':   { flag: '🇦🇹', color: '#FEE2E2', flagImage: '300wflags/Austria.png' },
+    'Belgium':   { flag: '🇧🇪', color: '#FEF3C7', flagImage: '300wflags/Belgium.png' },
+    'Croatia':   { flag: '🇭🇷', color: '#FEE2E2', flagImage: '300wflags/Croatia.png' },
+    'England':   { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', color: '#E0E0E0', flagImage: '300wflags/England.png' },
+    'France':    { flag: '🇫🇷', color: '#DBEAFE', flagImage: '300wflags/France.png' },
+    'Germany':   { flag: '🇩🇪', color: '#FEF3C7', flagImage: '300wflags/Germany.png' },
+    'Netherlands': { flag: '🇳🇱', color: '#FEE2E2', flagImage: '300wflags/Netherlands.png' },
+    'Norway':    { flag: '🇳🇴', color: '#FEE2E2', flagImage: '300wflags/Norway.png' },
+    'Portugal':  { flag: '🇵🇹', color: '#D1FAE5', flagImage: '300wflags/Portugal.png' },
+    'Scotland':  { flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: '#DBEAFE', flagImage: '300wflags/Scotland.png' },
+    'Spain':     { flag: '🇪🇸', color: '#FEF3C7', flagImage: '300wflags/Spain.png' },
+    'Switzerland': { flag: '🇨🇭', color: '#FEE2E2', flagImage: '300wflags/Switzerland.png' },
+    'Italy':     { flag: '🇮🇹', color: '#D1FAE5' }, 'Poland': { flag: '🇵🇱', color: '#FEE2E2' },
+    'Ukraine':   { flag: '🇺🇦', color: '#FEF3C7' }, 'Sweden': { flag: '🇸🇪', color: '#DBEAFE', flagImage: '300wflags/Sweden.png' },
+    'Turkey':    { flag: '🇹🇷', color: '#FEE2E2', flagImage: '300wflags/T%C3%BCrkiye.png' },
+    'Romania':   { flag: '🇷🇴', color: '#DBEAFE' }, 'Bosnia & Herzegovina': { flag: '🇧🇦', color: '#DBEAFE', flagImage: '300wflags/Bosnia%20and%20Herzegovina.png' },
+    'Australia': { flag: '🇦🇺', color: '#DBEAFE', flagImage: '300wflags/Australia.png' },
+    'Iran':      { flag: '🇮🇷', color: '#D1FAE5', flagImage: '300wflags/IR%20Iran.png' },
+    'Japan':     { flag: '🇯🇵', color: '#FEE2E2', flagImage: '300wflags/Japan.png' },
+    'Jordan':    { flag: '🇯🇴', color: '#FEE2E2', flagImage: '300wflags/Jordan.png' },
+    'Qatar':     { flag: '🇶🇦', color: '#FEE2E2', flagImage: '300wflags/Qatar.png' },
+    'Saudi Arabia': { flag: '🇸🇦', color: '#D1FAE5', flagImage: '300wflags/Saudi%20Arabia.png' },
+    'South Korea': { flag: '🇰🇷', color: '#FEE2E2', flagImage: '300wflags/Korea%20Republic.png' },
+    'Uzbekistan': { flag: '🇺🇿', color: '#DBEAFE', flagImage: '300wflags/Uzbekistan.png' },
+    'Iraq':      { flag: '🇮🇶', color: '#D1FAE5', flagImage: '300wflags/Iraq.png' },
+    'Morocco':   { flag: '🇲🇦', color: '#FEE2E2', flagImage: '300wflags/Morocco.png' },
+    'Nigeria':   { flag: '🇳🇬', color: '#D1FAE5' },
+    'Senegal':   { flag: '🇸🇳', color: '#D1FAE5', flagImage: '300wflags/Senegal.png' },
+    'Tunisia':   { flag: '🇹🇳', color: '#FEE2E2', flagImage: '300wflags/Tunisia.png' },
+    'Egypt':     { flag: '🇪🇬', color: '#FEE2E2', flagImage: '300wflags/Egypt.png' },
+    'Ghana':     { flag: '🇬🇭', color: '#FEF3C7', flagImage: '300wflags/Ghana.png' },
+    'Ivory Coast': { flag: '🇨🇮', color: '#FEF3C7', flagImage: "300wflags/C%C3%B4te%20d'Ivoire.png" },
+    'DR Congo':  { flag: '🇨🇩', color: '#DBEAFE', flagImage: '300wflags/Congo%20DR.png' },
+    'Algeria':   { flag: '🇩🇿', color: '#D1FAE5', flagImage: '300wflags/Algeria.png' },
+    'Cape Verde': { flag: '🇨🇻', color: '#DBEAFE', flagImage: '300wflags/Cabo%20Verde.png' },
+    'Cameroon':  { flag: '🇨🇲', color: '#FEF3C7' },
+    'Curaçao':   { flag: '🇨🇼', color: '#DBEAFE', flagImage: '300wflags/Cura%C3%A7ao.png' },
+    'Haiti':     { flag: '🇭🇹', color: '#FEE2E2', flagImage: '300wflags/Haiti.png' },
+    'Panama':    { flag: '🇵🇦', color: '#FEE2E2', flagImage: '300wflags/Panama.png' },
+    'New Zealand': { flag: '🇳🇿', color: '#DBEAFE', flagImage: '300wflags/New%20Zealand.png' },
+    'Argentina': { flag: '🇦🇷', color: '#DBEAFE', flagImage: '300wflags/Argentina.png' },
+    'Brasil':    { flag: '🇧🇷', color: '#D1FAE5', flagImage: '300wflags/Brazil.png' },
+    'Uruguay':   { flag: '🇺🇾', color: '#DBEAFE', flagImage: '300wflags/Uruguay.png' },
+    'Colombia':  { flag: '🇨🇴', color: '#FEF3C7', flagImage: '300wflags/Colombia.png' },
+    'Chile':     { flag: '🇨🇱', color: '#FEE2E2' },
+    'Ecuador':   { flag: '🇪🇨', color: '#FEF3C7', flagImage: '300wflags/Ecuador.png' },
+    'Peru':      { flag: '🇵🇪', color: '#FEE2E2' },
+    'Venezuela': { flag: '🇻🇪', color: '#FEF3C7' },
+    'Paraguay':  { flag: '🇵🇾', color: '#FEE2E2', flagImage: '300wflags/Paraguay.png' },
+    'Vietnam':   { flag: '🇻🇳', color: '#FEE2E2' },
+    'South Africa': { flag: '🇿🇦', color: '#FEF3C7', flagImage: '300wflags/South%20Africa.png' },
+    'Czech Republic': { flag: '🇨🇿', color: '#FEE2E2', flagImage: '300wflags/Czechia.png' }
+};
+function getFlagHTML(team, sz) {
+    const c = countries[team];
+    if (!c) return '';
+    if (c.flagImage) return `<img class="flag-circle-img" src="${c.flagImage}" alt="${team}" width="${sz}" height="${sz}">`;
+    return c.flag || '';
+}
+const countryAbbr = {
+    'Canada':'CAN','Mexico':'MEX','USA':'USA','Austria':'AUT','Belgium':'BEL','Croatia':'CRO',
+    'England':'ENG','France':'FRA','Germany':'GER','Netherlands':'NED','Norway':'NOR',
+    'Portugal':'POR','Scotland':'SCO','Spain':'ESP','Switzerland':'SUI','Italy':'ITA',
+    'Poland':'POL','Ukraine':'UKR','Sweden':'SWE','Turkey':'TUR','Romania':'ROU',
+    'Bosnia & Herzegovina':'BIH','Australia':'AUS','Iran':'IRN','Japan':'JPN','Jordan':'JOR',
+    'Qatar':'QAT','Saudi Arabia':'KSA','South Korea':'KOR','Uzbekistan':'UZB','Iraq':'IRQ',
+    'Cape Verde':'CPV','Morocco':'MAR','Nigeria':'NGA','Senegal':'SEN','Tunisia':'TUN',
+    'Egypt':'EGY','Ghana':'GHA','Cameroon':'CMR','Ivory Coast':'CIV','DR Congo':'COD',
+    'Algeria':'ALG','Curaçao':'CUW','Haiti':'HAI','Panama':'PAN','New Zealand':'NZL',
+    'Argentina':'ARG','Brasil':'BRA','Uruguay':'URU','Colombia':'COL','Chile':'CHI',
+    'Ecuador':'ECU','Peru':'PER','Venezuela':'VEN','Paraguay':'PAR',
+    'South Africa':'RSA','Czech Republic':'CZE'
+};
+function getCountryCode(name) { return countryAbbr[name] || name.substring(0, 3).toUpperCase(); }
+
+// Modal stubs — bracket clicks will open prediction view
+function openModal(match) {
+    const num = match.match_number || parseInt(match.id);
+    if (num) expandMatchPred(num);
+}
+function openResultsModal(match) { openModal(match); }
+function openLoginModal() {}
+
+// ================================================================
+// SUPABASE — lazy init
+// ================================================================
+let _sb = null;
+function getSB() {
+    if (_sb) return _sb;
+    try {
+        if (window.supabase && typeof SUPABASE_CONFIG !== 'undefined')
+            _sb = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    } catch(e) { console.warn('Supabase init failed:', e); }
+    return _sb;
+}
+
+// ================================================================
+// APP STATE
+// ================================================================
+let currentTournamentId = null;
+let archivePlayers  = [];
+let archivePredictions = [];
+let predLoaded = false;
+let predGroups = [];
+let currentGroup = null;
+let currentTab = 'schedule';
+
+// ================================================================
+// ROUND LABELS
+// ================================================================
+const ROUND_ORDER  = ['A','B','C','D','E','F','G','H','I','J','K','L','R32','R16','QF','SF','3RD','FINAL'];
+const ROUND_LABELS = {
+    A:'Bảng A',B:'Bảng B',C:'Bảng C',D:'Bảng D',E:'Bảng E',F:'Bảng F',
+    G:'Bảng G',H:'Bảng H',I:'Bảng I',J:'Bảng J',K:'Bảng K',L:'Bảng L',
+    R32:'Vòng 32',R16:'Vòng 16',QF:'Tứ kết',SF:'Bán kết','3RD':'Hạng ba',FINAL:'Chung kết'
+};
+const ROUND_EMOJIS = {
+    A:'🏟️',B:'🏟️',C:'🏟️',D:'🏟️',E:'🏟️',F:'🏟️',G:'🏟️',H:'🏟️',I:'🏟️',J:'🏟️',K:'🏟️',L:'🏟️',
+    R32:'⚔️',R16:'⚡',QF:'🔥',SF:'💥','3RD':'🥉',FINAL:'🏆'
+};
+
+// ================================================================
+// TABS
+// ================================================================
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.arc-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
+    document.querySelector(`.arc-tab[onclick="switchTab('${tab}')"]`)?.classList.add('active');
+    const panel = document.getElementById('tab-' + tab);
+    if (panel) { panel.style.display = 'block'; panel.classList.add('active'); }
+
+    // Group bar visibility
+    const gb = document.getElementById('arcGroupBar');
+    if (gb) gb.style.display = ['predictions','leaderboard','chart'].includes(tab) && predGroups.length > 1 ? 'flex' : 'none';
+
+    if (tab === 'schedule')     renderSchedule();
+    else if (tab === 'standings') setTimeout(renderGroupStandings, 10);
+    else if (tab === 'bracket')   renderBracketTab();
+    else if (tab === 'predictions') renderPredictionsTab();
+    else if (tab === 'leaderboard') renderLeaderboard();
+    else if (tab === 'chart')       renderChartTab();
+}
+
+// ================================================================
+// GROUP FILTER
+// ================================================================
+function renderGroupBar() {
+    const bar = document.getElementById('arcGroupBar');
+    if (!bar) return;
+    const allBtn = `<button class="arc-group-btn${currentGroup === null ? ' active' : ''}" onclick="selectGroup(null)">Tất cả</button>`;
+    bar.innerHTML = '<span class="arc-group-label">Nhóm:</span>' + allBtn +
+        predGroups.map(g => `<button class="arc-group-btn${g === currentGroup ? ' active' : ''}" onclick="selectGroup('${g.replace(/'/g,"\\'")}')"> ${g}</button>`).join('');
+}
+function selectGroup(g) {
+    currentGroup = g;
+    renderGroupBar();
+    if (currentTab === 'predictions') renderPredictionsTab();
+    else if (currentTab === 'leaderboard') renderLeaderboard();
+    else if (currentTab === 'chart') renderChartTab();
+    else if (currentTab === 'bracket' && predLoaded) injectBracketPredStats();
+}
+
+// ================================================================
+// LAZY LOAD PREDICTIONS
+// ================================================================
+async function ensurePredictions(container) {
+    if (predLoaded) return true;
+    if (currentTournamentId === 'demo') return true;
+    const sb = getSB();
+    if (!sb) {
+        if (container) container.innerHTML = '<div class="arc-loading">Không thể kết nối database.</div>';
+        return false;
+    }
+    if (container) container.innerHTML = '<div class="arc-loading"><div class="arc-spinner"></div>Đang tải dữ đoán...</div>';
+    const { data, error } = await sb
+        .from('archive_predictions').select('*').eq('tournament_id', currentTournamentId);
+    if (error) {
+        if (container) container.innerHTML = `<div class="arc-loading">Lỗi: ${error.message}</div>`;
+        return false;
+    }
+    archivePredictions = data || [];
+    predLoaded = true;
+    return true;
+}
+
+// ================================================================
+// INIT
+// ================================================================
+async function init() {
+    const t = new URLSearchParams(window.location.search).get('t');
+    if (t) await loadTournament(t);
+    else await showPicker();
+}
+
+async function showPicker() {
+    document.getElementById('arcLoading').style.display = 'none';
+    const demoCard = `
+        <div class="arc-picker-card" onclick="window.location.href='?t=demo'" style="border-style:dashed;opacity:.75;">
+            <div class="arc-picker-card-icon">🧪</div>
+            <div class="arc-picker-card-name">Demo (data ảo)</div>
+            <div class="arc-picker-card-meta">3 nhóm · 9 người chơi · 19 trận</div>
+        </div>`;
+    const picker = document.getElementById('arcPicker');
+    picker.style.display = 'block';
+    const sb = getSB();
+    if (!sb) {
+        document.getElementById('arcPickerGrid').innerHTML =
+            '<div style="text-align:center;grid-column:1/-1;padding:40px;color:var(--text-secondary);">Không thể kết nối database.</div>' + demoCard;
+        return;
+    }
+    const { data, error } = await sb
+        .from('archive_tournaments').select('*').eq('is_public', true).order('archived_at', { ascending: false });
+    if (error || !data || data.length === 0) {
+        document.getElementById('arcPickerGrid').innerHTML =
+            '<div style="text-align:center;grid-column:1/-1;padding:40px;color:var(--text-secondary);">Chưa có giải đấu nào được công bố.</div>' + demoCard;
+        return;
+    }
+    document.getElementById('arcPickerGrid').innerHTML = data.map(t => `
+        <div class="arc-picker-card" onclick="window.location.href='?t=${t.id}'">
+            <div class="arc-picker-card-icon">🏆</div>
+            <div class="arc-picker-card-name">${t.name}</div>
+            <div class="arc-picker-card-meta">Lưu: ${new Date(t.archived_at).toLocaleDateString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</div>
+        </div>`).join('') + demoCard;
+}
+
+// ================================================================
+// MOCK DATA (demo mode)
+// ================================================================
+function generateMockData() {
+    const PLAYERS = [
+        {id:'p1',name:'Nhân Lưu',fav:'France',favPts:10},
+        {id:'p2',name:'Tú Phạm',fav:'Brasil',favPts:0},
+        {id:'p3',name:'Phong Trần',fav:'Spain',favPts:20},
+        {id:'p4',name:'Khoa Nguyễn',fav:null,favPts:0},
+        {id:'p5',name:'Linh Võ',fav:'Germany',favPts:0},
+        {id:'p6',name:'An Lê',fav:'USA',favPts:0},
+        {id:'p7',name:'Bình Đào',fav:'Japan',favPts:0},
+        {id:'p8',name:'Cường Hồ',fav:'Morocco',favPts:0},
+        {id:'p9',name:'Minh Hoàng',fav:'Spain',favPts:20},
+    ];
+    const GROUPS = [{id:'g1',name:'Đánh bắt cá độ xa bờ'},{id:'g2',name:'Bạn bè FC'},{id:'g3',name:'Văn phòng xanh'}];
+    const MEM = {p1:['g1','g2'],p2:['g1','g3'],p3:['g1'],p4:['g1'],p5:['g1'],p6:['g2'],p7:['g2'],p8:['g3'],p9:['g3']};
+    const MATCHES = [
+        {match_number:1, match_group:'A',home_team:'USA',away_team:'Mexico',match_date:'2026-06-11T19:00:00Z',status:'finished',home_score:2,away_score:1,minute:null},
+        {match_number:2, match_group:'A',home_team:'Canada',away_team:'Colombia',match_date:'2026-06-11T22:00:00Z',status:'finished',home_score:1,away_score:1,minute:null},
+        {match_number:3, match_group:'A',home_team:'Mexico',away_team:'Canada',match_date:'2026-06-15T19:00:00Z',status:'finished',home_score:0,away_score:2,minute:null},
+        {match_number:4, match_group:'A',home_team:'Colombia',away_team:'USA',match_date:'2026-06-15T22:00:00Z',status:'finished',home_score:1,away_score:3,minute:null},
+        {match_number:5, match_group:'A',home_team:'USA',away_team:'Canada',match_date:'2026-06-19T22:00:00Z',status:'finished',home_score:2,away_score:0,minute:null},
+        {match_number:6, match_group:'A',home_team:'Mexico',away_team:'Colombia',match_date:'2026-06-19T22:00:00Z',status:'finished',home_score:1,away_score:2,minute:null},
+        {match_number:7, match_group:'B',home_team:'Spain',away_team:'Morocco',match_date:'2026-06-12T16:00:00Z',status:'finished',home_score:3,away_score:0,minute:null},
+        {match_number:8, match_group:'B',home_team:'Japan',away_team:'Ecuador',match_date:'2026-06-12T19:00:00Z',status:'finished',home_score:2,away_score:2,minute:null},
+        {match_number:9, match_group:'B',home_team:'Spain',away_team:'Japan',match_date:'2026-06-16T19:00:00Z',status:'finished',home_score:2,away_score:1,minute:null},
+        {match_number:10,match_group:'B',home_team:'Morocco',away_team:'Ecuador',match_date:'2026-06-16T22:00:00Z',status:'finished',home_score:1,away_score:1,minute:null},
+        {match_number:11,match_group:'B',home_team:'Spain',away_team:'Ecuador',match_date:'2026-06-20T22:00:00Z',status:'finished',home_score:1,away_score:0,minute:null},
+        {match_number:12,match_group:'B',home_team:'Japan',away_team:'Morocco',match_date:'2026-06-20T22:00:00Z',status:'finished',home_score:2,away_score:0,minute:null},
+        {match_number:73,match_group:'R32',home_team:'USA',away_team:'Japan',match_date:'2026-06-29T20:00:00Z',status:'finished',home_score:2,away_score:1,minute:null},
+        {match_number:74,match_group:'R32',home_team:'Spain',away_team:'Colombia',match_date:'2026-06-29T23:00:00Z',status:'finished',home_score:4,away_score:0,minute:null},
+        {match_number:89,match_group:'R16',home_team:'USA',away_team:'Spain',match_date:'2026-07-03T23:00:00Z',status:'finished',home_score:1,away_score:2,minute:null},
+        {match_number:97,match_group:'QF',home_team:'Spain',away_team:'France',match_date:'2026-07-07T23:00:00Z',status:'finished',home_score:2,away_score:1,minute:null},
+        {match_number:101,match_group:'SF',home_team:'Spain',away_team:'Brasil',match_date:'2026-07-14T23:00:00Z',status:'finished',home_score:3,away_score:1,minute:null},
+        {match_number:103,match_group:'3RD',home_team:'Brasil',away_team:'France',match_date:'2026-07-17T19:00:00Z',status:'finished',home_score:2,away_score:1,minute:null},
+        {match_number:104,match_group:'FINAL',home_team:'Spain',away_team:'Argentina',match_date:'2026-07-19T20:00:00Z',status:'finished',home_score:3,away_score:2,minute:null},
+    ];
+    const PTS = {
+        p1:[10,5,0,5,10,0, 5,10,5,0,10,5, 10,5, 5, 0, 0,5, 0],
+        p2:[5,10,5,0,5,10, 0,5,10,5,5,10, 5,10, 0, 5, 5,0, 5],
+        p3:[10,5,10,5,10,5, 10,5,10,5,10,5, 10,10,10,10,10,0,10],
+        p4:[5,0,5,0,5,5,   5,0,5,0,0,5,   5,0, 5, 5, 0,0, 5],
+        p5:[0,5,0,5,0,5,   0,5,0,5,5,0,   0,5, 0, 0, 5,5, 0],
+        p6:[10,10,5,10,5,5, 10,0,10,5,5,10, 5,5, 5, 5, 5,5, 5],
+        p7:[0,5,5,0,5,0,   5,5,0,10,0,5,  5,0, 5, 0, 0,0, 0],
+        p8:[5,5,5,5,5,5,   5,5,5,5,5,5,   5,5, 5, 5, 5,5, 5],
+        p9:[10,5,10,10,5,10, 5,10,10,5,10,10, 10,10,10,10,10,5,10],
+    };
+    const groupMap = {}; GROUPS.forEach(g => { groupMap[g.id] = g.name; });
+    const archivePlayers = [];
+    for (const [pid, gids] of Object.entries(MEM)) {
+        const pl = PLAYERS.find(p => p.id === pid);
+        const total = PTS[pid].reduce((a,b)=>a+b,0);
+        const exact = PTS[pid].filter(v=>v===10).length;
+        const top1  = PTS[pid].filter(v=>v>=8).length;
+        for (const gid of gids) {
+            archivePlayers.push({
+                tournament_id:'demo', player_id:pid, name:pl.name,
+                group_id:gid, group_name:groupMap[gid],
+                total_points: total + pl.favPts,
+                exact_score_count:exact, top1_count:top1,
+                favorite_team:pl.fav, favorite_points:pl.favPts
+            });
+        }
+    }
+    const archivePredictions = [];
+    MATCHES.forEach((m, mi) => {
+        for (const [pid, gids] of Object.entries(MEM)) {
+            const pl = PLAYERS.find(p => p.id === pid);
+            const pts = PTS[pid][mi] || 0;
+            // Give slight variation to predicted scores
+            const predH = m.home_score !== null ? (pts === 10 ? m.home_score : Math.max(0, m.home_score + (mi % 2 === 0 ? 1 : -1))) : null;
+            const predA = m.away_score !== null ? (pts === 10 ? m.away_score : Math.max(0, m.away_score + (mi % 3 === 0 ? -1 : 1))) : null;
+            for (const gid of gids) {
+                archivePredictions.push({
+                    tournament_id:'demo', player_id:pid, player_name:pl.name,
+                    group_id:gid, group_name:groupMap[gid],
+                    match_number:m.match_number,
+                    home_score:predH, away_score:predA, minute:null,
+                    points_exact_score:pts===10?10:0,
+                    points_rank:pts>0&&pts<10?pts:0,
+                    points_minute:0, total_points:pts
+                });
+            }
+        }
+    });
+    return {
+        tournament:{id:'demo',name:'FIFA World Cup 2026 (Demo)',archived_at:'2026-07-19T10:00:00Z',is_public:true},
+        matches:MATCHES, archivePlayers, archivePredictions
+    };
+}
+
+// ================================================================
+// LOAD TOURNAMENT
+// ================================================================
+async function loadTournament(id) {
+    currentTournamentId = id;
+    predLoaded = false;
+    archivePredictions = [];
+
+    const loading = document.getElementById('arcLoading');
+    loading.style.display = 'block';
+    loading.innerHTML = '<div class="arc-spinner"></div>Đang tải dữ liệu...';
+    document.getElementById('arcPicker').style.display = 'none';
+    document.getElementById('arcTabs').style.display = 'none';
+
+    try {
+        let tournament, rawMatches, players;
+
+        if (id === 'demo') {
+            const mock = generateMockData();
+            tournament = mock.tournament;
+            rawMatches = mock.matches;
+            players = mock.archivePlayers;
+            archivePredictions = mock.archivePredictions;
+            predLoaded = true;
+        } else {
+            const sb = getSB();
+            if (!sb) throw new Error('Không thể kết nối database. Vui lòng thử lại.');
+
+            const { data: t, error: tErr } = await sb
+                .from('archive_tournaments').select('*').eq('id', id).single();
+            if (tErr || !t) throw new Error('Không tìm thấy giải đấu này.');
+            tournament = t;
+
+            const { data: rm, error: mErr } = await sb
+                .from('archive_matches').select('*').eq('tournament_id', id).order('match_date');
+            if (mErr) throw mErr;
+            rawMatches = rm;
+
+            const { data: pl, error: pErr } = await sb
+                .from('archive_players').select('*').eq('tournament_id', id).order('total_points',{ascending:false});
+            if (pErr) throw pErr;
+            players = pl;
+        }
+
+        archivePlayers = players || [];
+        predGroups = [...new Set(archivePlayers.map(p=>p.group_name).filter(Boolean))].sort();
+        currentGroup = predGroups[0] || null;
+
+        // Map to bracket-render.js format
+        matches = (rawMatches || []).map(m => ({
+            ...m,
+            id: m.match_number != null ? String(m.match_number) : String(m.id || ''),
+            home: m.home_team, away: m.away_team, group: m.match_group,
+            date: m.match_date ? new Date(m.match_date) : new Date(),
+            actualScore: (m.home_score !== null && m.home_score !== undefined) ? {
+                homeScore: m.home_score, awayScore: m.away_score, minute: m.minute,
+                home_penalty: m.home_penalty, away_penalty: m.away_penalty
+            } : null
+        }));
+
+        // Header
+        document.getElementById('arcTitle').textContent = tournament.name;
+        const uniquePl = new Set(archivePlayers.map(p => p.player_id || p.name)).size;
+        const grpText  = predGroups.length > 0 ? ` · ${predGroups.length} nhóm dự đoán` : '';
+        document.getElementById('arcSub').textContent =
+            `Lưu: ${new Date(tournament.archived_at).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Asia/Ho_Chi_Minh'})} · ${matches.length} trận · ${uniquePl} người chơi${grpText}`;
+        document.title = tournament.name + ' — Archive';
+
+        if (predGroups.length > 1) renderGroupBar();
+
+        window.history.replaceState({}, '', `?t=${id}`);
+
+        loading.style.display = 'none';
+        document.getElementById('arcTabs').style.display = 'flex';
+
+        // Activate first tab
+        switchTab('schedule');
+
+    } catch(err) {
+        loading.style.display = 'block';
+        loading.innerHTML = `<div style="font-size:32px;margin-bottom:14px;">⚠️</div><div style="color:var(--text-secondary);">${err.message || String(err)}</div>`;
+    }
+}
+
+// ================================================================
+// TAB: LỊCH ĐẤU
+// ================================================================
+function renderSchedule() {
+    const container = document.getElementById('tab-schedule');
+    if (!container) return;
+
+    const byRound = {};
+    matches.forEach(m => {
+        const rnd = m.match_group || m.group || 'OTHER';
+        if (!byRound[rnd]) byRound[rnd] = [];
+        byRound[rnd].push(m);
+    });
+
+    const keys = ROUND_ORDER.filter(r => byRound[r]);
+    const extra = Object.keys(byRound).filter(r => !ROUND_ORDER.includes(r));
+    let html = '';
+    [...keys, ...extra].forEach(rnd => {
+        const rndMatches = byRound[rnd].sort((a,b) => new Date(a.match_date||a.date) - new Date(b.match_date||b.date));
+        const finished = rndMatches.filter(m => m.status === 'finished').length;
+        html += `<div class="arc-round-section">
+            <div class="arc-round-title">
+                ${ROUND_EMOJIS[rnd]||'⚽'} ${ROUND_LABELS[rnd]||rnd}
+                <span class="arc-round-count">${finished}/${rndMatches.length} kết quả</span>
+            </div>
+            <div class="arc-matches-grid" id="arc-grid-${rnd}"></div>
+        </div>`;
+    });
+    container.innerHTML = html || '<div class="arc-loading">Không có dữ liệu trận đấu.</div>';
+
+    [...keys, ...extra].forEach(rnd => {
+        const grid = document.getElementById(`arc-grid-${rnd}`);
+        if (!grid) return;
+        byRound[rnd].sort((a,b) => new Date(a.match_date||a.date) - new Date(b.match_date||b.date)).forEach(m => {
+            const card = renderMatchRowCard(m);
+            card.style.cursor = 'default';
+            card.onclick = null;
+            grid.appendChild(card);
+        });
+    });
+}
+
+// ================================================================
+// TAB: NHÁNH KO — bracket + prediction stats overlay
+// ================================================================
+function renderBracketTab() {
+    renderKnockoutBracket();
+    if (predLoaded && archivePredictions.length > 0) {
+        injectBracketPredStats();
+        overrideBracketClicks();
+    } else {
+        // Load predictions then inject
+        const ko = document.getElementById('scheduleKnockout');
+        ensurePredictions(null).then(ok => {
+            if (ok) {
+                injectBracketPredStats();
+                overrideBracketClicks();
+            }
+        });
+    }
+    setTimeout(drawBracketConnectors, 150);
+}
+
+function injectBracketPredStats() {
+    if (!archivePredictions.length) return;
+    document.querySelectorAll('.bracket-mini-card').forEach(card => {
+        // Remove previous stat rows
+        card.querySelectorAll('.bracket-pred-row').forEach(el => el.remove());
+
+        const matchId = card.getAttribute('data-match-id');
+        const matchNum = parseInt(matchId);
+        if (isNaN(matchNum)) return;
+
+        const pool = currentGroup
+            ? archivePredictions.filter(p => p.match_number === matchNum && p.group_name === currentGroup)
+            : archivePredictions.filter(p => p.match_number === matchNum);
+
+        // Deduplicate by player_id (or player_name) when showing "all groups"
+        const seen = new Set();
+        const unique = pool.filter(p => {
+            const k = (p.player_id || p.player_name) + '::' + (currentGroup ? p.group_id : 'all');
+            if (seen.has(k)) return false;
+            seen.add(k); return true;
+        });
+
+        if (unique.length === 0) return;
+
+        const exactN = unique.filter(p => (p.points_exact_score || 0) > 0).length;
+        const rankN  = unique.filter(p => (p.points_rank || 0) > 0 && !(p.points_exact_score > 0)).length;
+        const total  = unique.length;
+
+        const row = document.createElement('div');
+        row.className = 'bracket-pred-row';
+        let chips = '';
+        if (exactN > 0)
+            chips += `<span class="pred-stat-chip chip-exact">✓✓ ${exactN}/${total} tỉ số</span>`;
+        if (rankN > 0)
+            chips += `<span class="pred-stat-chip chip-rank">✓ ${rankN}/${total} kq</span>`;
+        if (exactN === 0 && rankN === 0)
+            chips += `<span class="pred-stat-chip chip-zero">0/${total} đúng</span>`;
+        row.innerHTML = chips;
+        card.appendChild(row);
+    });
+}
+
+function overrideBracketClicks() {
+    document.querySelectorAll('.bracket-mini-card').forEach(card => {
+        const matchId = card.getAttribute('data-match-id');
+        const matchNum = parseInt(matchId);
+        if (isNaN(matchNum)) { card.style.cursor = 'default'; return; }
+        card.style.cursor = 'pointer';
+        card.onclick = () => {
+            switchTab('predictions');
+            setTimeout(() => expandMatchPred(matchNum), 80);
+        };
+    });
+}
+
+// ================================================================
+// TAB: DỰ ĐOÁN — per-match prediction breakdown
+// ================================================================
+async function renderPredictionsTab() {
+    const container = document.getElementById('tab-predictions');
+    if (!container) return;
+
+    const ok = await ensurePredictions(container);
+    if (!ok) return;
+
+    const finishedMatches = matches.filter(m => m.status === 'finished')
+        .sort((a, b) => new Date(a.match_date || a.date) - new Date(b.match_date || b.date));
+
+    if (finishedMatches.length === 0) {
+        container.innerHTML = '<div class="arc-loading">Chưa có trận đấu kết thúc.</div>';
+        return;
+    }
+
+    const html = finishedMatches.map(m => {
+        const matchNum = m.match_number || parseInt(m.id);
+        const pool = archivePredictions.filter(p =>
+            p.match_number === matchNum && (!currentGroup || p.group_name === currentGroup)
+        );
+        const exactN = pool.filter(p => (p.points_exact_score||0) > 0).length;
+        const rankN  = pool.filter(p => (p.points_rank||0) > 0 && !((p.points_exact_score||0)>0)).length;
+        const scoreStr = `${m.home_score}–${m.away_score}`;
+        const chips = pool.length > 0
+            ? (exactN > 0 ? `<span class="pred-stat-chip chip-exact">✓✓ ${exactN}</span>` : '') +
+              (rankN  > 0 ? `<span class="pred-stat-chip chip-rank">✓ ${rankN}</span>`   : '') +
+              (exactN === 0 && rankN === 0 ? `<span class="pred-stat-chip chip-zero">0 đúng</span>` : '')
+            : `<span class="pred-stat-chip chip-zero">Chưa có dự đoán</span>`;
+        const rndLabel = ROUND_LABELS[m.match_group || m.group] || (m.match_group || m.group || '');
+        return `<div class="pred-match-item" id="pred-item-${matchNum}">
+            <div class="pred-match-hdr" onclick="toggleMatchPred(${matchNum})">
+                <div class="pred-match-teams">
+                    <div class="pred-match-name">${m.home_team||m.home} vs ${m.away_team||m.away}</div>
+                    <div class="pred-match-round">${rndLabel}${m.match_number ? ' · M'+m.match_number : ''}</div>
+                </div>
+                <div class="pred-match-result">${scoreStr}</div>
+                <div class="pred-stat-chips">${chips}</div>
+                <span class="pred-chevron" id="chev-${matchNum}">▶</span>
+            </div>
+            <div class="pred-body" id="pred-body-${matchNum}"></div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+function toggleMatchPred(matchNum) {
+    const body  = document.getElementById('pred-body-' + matchNum);
+    const chev  = document.getElementById('chev-' + matchNum);
+    if (!body) return;
+    const isOpen = body.classList.contains('open');
+    if (isOpen) {
+        body.classList.remove('open');
+        if (chev) chev.classList.remove('open');
+    } else {
+        body.classList.add('open');
+        if (chev) chev.classList.add('open');
+        if (!body.dataset.rendered) {
+            body.dataset.rendered = '1';
+            renderMatchPredTable(matchNum, body);
+        }
+    }
+}
+
+function expandMatchPred(matchNum) {
+    // Scroll to + open
+    const item = document.getElementById('pred-item-' + matchNum);
+    if (item) {
+        item.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => toggleMatchPred(matchNum), 100);
+    }
+}
+
+function renderMatchPredTable(matchNum, container) {
+    const m = matches.find(x => (x.match_number || parseInt(x.id)) === matchNum);
+    const actualH = m ? m.home_score : null;
+    const actualA = m ? m.away_score : null;
+
+    const pool = archivePredictions.filter(p =>
+        p.match_number === matchNum && (!currentGroup || p.group_name === currentGroup)
+    );
+
+    if (pool.length === 0) {
+        container.innerHTML = '<div style="padding:16px;font-size:13px;color:var(--text-secondary);">Không có dự đoán nào.</div>';
+        return;
+    }
+
+    const sorted = [...pool].sort((a,b) => (b.total_points||0) - (a.total_points||0));
+
+    const showGroup = !currentGroup && predGroups.length > 1;
+    const rows = sorted.map(p => {
+        const predStr = (p.home_score !== null && p.away_score !== null)
+            ? `${p.home_score}–${p.away_score}` : '–';
+        const isExact = (p.points_exact_score||0) > 0;
+        const isRank  = (p.points_rank||0) > 0 && !isExact;
+        const pts = p.total_points || 0;
+        const ptsClass = isExact ? 'pts-exact' : isRank ? 'pts-rank' : 'pts-zero';
+        const scoreClass = isExact ? 'pred-score-right' : isRank ? 'pred-score-right' : 'pred-score-wrong';
+        return `<tr>
+            <td style="font-weight:600;">${p.player_name}</td>
+            ${showGroup ? `<td style="font-size:11px;color:var(--text-secondary);">${p.group_name||''}</td>` : ''}
+            <td class="${scoreClass}">${predStr}</td>
+            <td><span class="pred-pts-badge ${ptsClass}">+${pts}</span></td>
+        </tr>`;
+    }).join('');
+
+    const resultStr = (actualH !== null && actualA !== null) ? `${actualH}–${actualA}` : '?';
+    container.innerHTML = `
+        <div style="padding:8px 14px;font-size:11px;color:var(--text-secondary);background:var(--bg);">
+            Kết quả thực tế: <strong style="color:var(--text-primary);font-size:13px;">${resultStr}</strong>
+            · ${sorted.length} dự đoán
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="pred-table">
+                <thead><tr>
+                    <th>Người chơi</th>
+                    ${showGroup ? '<th>Nhóm</th>' : ''}
+                    <th>Dự đoán</th>
+                    <th>Điểm</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+// ================================================================
+// TAB: BẢNG ĐIỂM
+// ================================================================
+function renderLeaderboard() {
+    const container = document.getElementById('tab-leaderboard');
+    if (!container) return;
+
+    if (archivePlayers.length === 0) {
+        container.innerHTML = '<div class="arc-loading">Không có dữ liệu người chơi.</div>';
+        return;
+    }
+
+    const groupsToShow = currentGroup ? [currentGroup] : predGroups;
+    let html = '';
+
+    groupsToShow.forEach(grp => {
+        const pool = archivePlayers.filter(p => !grp || p.group_name === grp);
+        if (pool.length === 0) return;
+
+        const sorted = [...pool].sort((a,b) =>
+            b.total_points - a.total_points ||
+            b.exact_score_count - a.exact_score_count ||
+            b.top1_count - a.top1_count
+        );
+
+        const rows = sorted.map((p, i) => {
+            const rankBadge = i < 3
+                ? `<span class="arc-rank-badge rank-${i+1}">${['🥇','🥈','🥉'][i]}</span>`
+                : `<span class="arc-rank-badge" style="color:var(--text-secondary);">${i+1}</span>`;
+            const flagHTML = p.favorite_team ? getFlagHTML(p.favorite_team, 18) : '';
+            return `<tr>
+                <td>${rankBadge}</td>
+                <td style="font-weight:600;">${p.name}</td>
+                <td><span class="arc-pts">${p.total_points}</span></td>
+                <td><span class="arc-badge" style="background:#FEF3C7;color:#92400E;">${p.exact_score_count}</span></td>
+                <td><span class="arc-badge" style="background:#EDE9FE;color:#5B21B6;">${p.top1_count}</span></td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:5px;">
+                        <span style="display:inline-flex;width:20px;height:20px;border-radius:50%;overflow:hidden;align-items:center;justify-content:center;">${flagHTML}</span>
+                        <span style="font-size:12px;color:var(--text-secondary);">${p.favorite_team||'—'}</span>
+                        ${p.favorite_points ? `<span class="arc-badge" style="background:#D1FAE5;color:#065F46;">+${p.favorite_points}</span>` : ''}
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        html += `<div class="arc-bxh-card">
+            <div class="arc-bxh-title">🏅 ${grp} — ${sorted.length} người chơi</div>
+            <div style="overflow-x:auto;">
+                <table class="arc-bxh-table">
+                    <thead><tr>
+                        <th style="width:36px;">#</th>
+                        <th>Tên</th><th>Điểm</th>
+                        <th>Đúng tỉ số</th><th>Đúng kq</th><th>Đội yêu thích</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html || '<div class="arc-loading">Không có dữ liệu.</div>';
+}
+
+// ================================================================
+// TAB: TIẾN ĐỘ — bar chart (final ranking) + line chart (progression)
+// ================================================================
+const CHART_COLORS = ['#6366F1','#F59E0B','#10B981','#EF4444','#8B5CF6','#EC4899','#3B82F6','#14B8A6','#F97316','#84CC16'];
+const BAR_COLORS   = ['#EAB308','#94A3B8','#F87171','#60A5FA','#A78BFA','#34D399','#F472B6','#2DD4BF','#FB923C','#A3E635'];
+const LINE_ROUNDS  = ['Vòng bảng','Vòng 32','Vòng 16','Tứ kết','Bán kết','Chung kết'];
+
+function getMatchRoundIdx(num) {
+    if (!num) return null;
+    if (num >= 1  && num <= 72)  return 0;
+    if (num >= 73 && num <= 88)  return 1;
+    if (num >= 89 && num <= 96)  return 2;
+    if (num >= 97 && num <= 100) return 3;
+    if (num >= 101&& num <= 102) return 4;
+    if (num >= 103&& num <= 104) return 5;
+    return null;
+}
+
+async function renderChartTab() {
+    const container = document.getElementById('tab-chart');
+    if (!container) return;
+
+    const ok = await ensurePredictions(container);
+    if (!ok) return;
+
+    const groupsToShow = currentGroup ? [currentGroup] : predGroups;
+    let html = '';
+
+    groupsToShow.forEach(grp => {
+        const playerPool = archivePlayers.filter(p => p.group_name === grp);
+        if (playerPool.length === 0) return;
+
+        const sorted = [...playerPool].sort((a,b) => b.total_points - a.total_points);
+        const maxPts = sorted[0]?.total_points || 1;
+
+        // Bar chart rows
+        const barRows = sorted.map((p, i) => {
+            const pct = Math.max(4, Math.round((p.total_points / maxPts) * 100));
+            const color = BAR_COLORS[i % BAR_COLORS.length];
+            return `<div class="arc-bar-row">
+                <span class="arc-bar-rank" style="color:${i<3?['#EAB308','#94A3B8','#F87171'][i]:'var(--text-secondary)'};">${i+1}</span>
+                <span class="arc-bar-label">${p.name}</span>
+                <div class="arc-bar-track">
+                    <div class="arc-bar-fill" style="width:${pct}%;background:${color};">
+                        <span class="arc-bar-val">${p.total_points}đ</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Line chart (SVG) for cumulative points
+        const top8 = sorted.slice(0, 8);
+        const keyOf = p => (p.player_id || p.name) + '::' + (p.group_id || grp);
+        const predKeyOf = pred => (pred.player_id || pred.player_name) + '::' + (pred.group_id || grp);
+        const playerSet = new Set(top8.map(keyOf));
+
+        const roundPts = {};
+        top8.forEach(p => { roundPts[keyOf(p)] = [0,0,0,0,0,0]; });
+
+        archivePredictions.filter(pred => pred.group_name === grp).forEach(pred => {
+            const k = predKeyOf(pred);
+            if (!playerSet.has(k)) return;
+            const ri = getMatchRoundIdx(pred.match_number);
+            if (ri === null) return;
+            roundPts[k][ri] += pred.total_points || 0;
+        });
+
+        // Cumulate
+        top8.forEach(p => {
+            const k = keyOf(p);
+            for (let i = 1; i < 6; i++) roundPts[k][i] += roundPts[k][i-1];
+        });
+
+        const W = 660, H = 280;
+        const PAD = { top: 18, right: 80, bottom: 38, left: 48 };
+        const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
+        const N = 6;
+        const maxV = Math.max(...top8.map(p => roundPts[keyOf(p)][5]), 10);
+        const xOf = i => PAD.left + (i / (N-1)) * cW;
+        const yOf = v => PAD.top + cH - (v / maxV) * cH;
+
+        let gridSvg = '';
+        for (let g = 0; g <= 4; g++) {
+            const v = Math.round(maxV / 4 * g);
+            const y = yOf(v);
+            gridSvg += `<line x1="${PAD.left}" y1="${y}" x2="${PAD.left+cW}" y2="${y}" stroke="var(--stroke)" stroke-width="1" ${g>0?'stroke-dasharray="3,3"':""}/>`;
+            gridSvg += `<text x="${PAD.left-6}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--text-secondary)">${v}</text>`;
+        }
+        LINE_ROUNDS.forEach((label, i) => {
+            gridSvg += `<text x="${xOf(i)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--text-secondary)">${label}</text>`;
+        });
+
+        const lineSvg = top8.map((p, pi) => {
+            const color = CHART_COLORS[pi % CHART_COLORS.length];
+            const k = keyOf(p);
+            const pts = roundPts[k];
+            const pathD = pts.map((v, i) => `${i===0?'M':'L'} ${xOf(i)} ${yOf(v)}`).join(' ');
+            const dots  = pts.map((v, i) => `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3.5" fill="${color}"/>`).join('');
+            const lastY = yOf(pts[N-1]);
+            return `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    ${dots}
+                    <text x="${xOf(N-1)+7}" y="${lastY+4}" font-size="10" fill="${color}" font-weight="700">${pts[N-1]}</text>`;
+        }).join('');
+
+        const legend = top8.map((p, pi) => {
+            const color = CHART_COLORS[pi % CHART_COLORS.length];
+            return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;margin-right:12px;margin-bottom:4px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>${p.name}
+            </span>`;
+        }).join('');
+
+        html += `<div class="arc-chart-section">
+            <div class="arc-chart-group-title">📊 ${grp}</div>
+            <div class="arc-bar-chart">${barRows}</div>
+            <div style="margin-top:20px;background:var(--surface);border:1px solid var(--stroke);border-radius:var(--border-radius);padding:16px;">
+                <div style="font-size:13px;font-weight:700;margin-bottom:4px;">📈 Tích lũy điểm theo vòng · Top ${top8.length}</div>
+                <div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">Điểm cộng dồn cuối mỗi vòng đấu</div>
+                <div style="overflow-x:auto;">
+                    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;min-width:${W}px;">
+                        ${gridSvg}${lineSvg}
+                    </svg>
+                </div>
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;">${legend}</div>
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html || '<div class="arc-loading">Không có dữ liệu.</div>';
+}
+
+// ================================================================
+// SHOW ERROR
+// ================================================================
+function showError(msg) {
+    const el = document.getElementById('arcLoading');
+    if (el) {
+        el.style.display = 'block';
+        el.innerHTML = `<div style="font-size:26px;margin-bottom:12px;">⚠️</div>
+            <div style="font-size:13px;color:var(--text-secondary);word-break:break-all;max-width:600px;margin:0 auto;">${msg}</div>`;
+    }
+}
+
+// ================================================================
+// START
+// ================================================================
+window.onerror = function(msg, src, line) { showError(msg + '<br><small>' + src + ':' + line + '</small>'); return true; };
+window.addEventListener('unhandledrejection', e => showError('Async error: ' + (e.reason?.message || String(e.reason))));
+init();
+</script>
+</body>
+</html>
