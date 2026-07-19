@@ -520,16 +520,17 @@
                 .from('archive_tournaments').select('*').eq('id', id).single();
             if (tErr || !tournament) throw new Error('Không tìm thấy giải đấu này hoặc chưa được công bố.');
 
-            // Load matches + players in parallel (predictions loaded lazily on demand)
-            const [matchRes, playerRes] = await Promise.all([
-                supabase.from('archive_matches').select('*').eq('tournament_id', id).order('match_date').then(r => r),
-                supabase.from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false }).then(r => r)
-            ]);
-            if (matchRes.error) throw matchRes.error;
-            if (playerRes.error) throw playerRes.error;
-            const rawMatches = matchRes.data;
+            // Load matches (predictions loaded lazily on demand)
+            const { data: rawMatches, error: mErr } = await supabase
+                .from('archive_matches').select('*').eq('tournament_id', id).order('match_date');
+            if (mErr) throw mErr;
 
-            archivePlayers = playerRes.data || [];
+            // Load players
+            const { data: players, error: pErr } = await supabase
+                .from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false });
+            if (pErr) throw pErr;
+
+            archivePlayers = players || [];
 
             // Transform matches to format bracket-render.js expects
             matches = (rawMatches || []).map(m => ({
@@ -568,8 +569,9 @@
             panel.classList.add('active');
 
         } catch (err) {
-            document.getElementById('historyLoading').innerHTML =
-                `<div style="font-size:36px;margin-bottom:16px;">⚠️</div><div style="color:var(--text-secondary);">${err.message}</div>`;
+            const el = document.getElementById('historyLoading');
+            el.style.display = 'block';
+            el.innerHTML = `<div style="font-size:36px;margin-bottom:16px;">⚠️</div><div style="color:var(--text-secondary);">${err.message || String(err)}</div>`;
         }
     }
 
@@ -806,6 +808,11 @@
     // =============================================
     // Start
     // =============================================
+    window.onerror = function(msg, src, line) {
+        const el = document.getElementById('historyLoading');
+        if (el) { el.style.display = 'block'; el.innerHTML = `<div style="font-size:24px;margin-bottom:12px;">⚠️ JS Error</div><div style="font-size:12px;color:var(--text-secondary);word-break:break-all;">${msg}<br>${src}:${line}</div>`; }
+        return true;
+    };
     init();
 </script>
 </body>
