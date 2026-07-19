@@ -6155,13 +6155,26 @@
 
                 status.innerHTML = '⏳ Copy người chơi...';
 
-                // 4. Load + insert players
+                // 4. Load players + resolve group names
                 const { data: allPlayers, error: pErr } = await supabase.from('players').select('*');
                 if (pErr) throw pErr;
+
+                // Build group name map: group_id → group name
+                const uniqueGroupIds = [...new Set(allPlayers.map(p => p.group_id).filter(Boolean))];
+                const groupMap = {};
+                if (uniqueGroupIds.length > 0) {
+                    const { data: groupsData } = await supabase.from('groups').select('id, name').in('id', uniqueGroupIds);
+                    (groupsData || []).forEach(g => { groupMap[g.id] = g.name; });
+                }
+                // Map player UUID → group name (used for predictions below)
+                const playerGroupMap = {};
+                allPlayers.forEach(p => { playerGroupMap[p.id] = groupMap[p.group_id] || null; });
 
                 const archivePlayers = allPlayers.map(p => ({
                     tournament_id: id,
                     name: p.name,
+                    group_id: p.group_id ? String(p.group_id) : null,
+                    group_name: groupMap[p.group_id] || null,
                     total_points: p.total_points || 0,
                     exact_score_count: p.exact_score_count || 0,
                     top1_count: p.top1_count || 0,
@@ -6173,7 +6186,7 @@
 
                 status.innerHTML = '⏳ Copy dự đoán...';
 
-                // 5. Load predictions with player name + match_number
+                // 5. Load predictions with player name + match_number + group
                 const matchNumMap = {};
                 allMatches.forEach(m => { matchNumMap[m.id] = m.match_number; });
 
@@ -6184,6 +6197,7 @@
                 const archivePreds = allPreds.map(pred => ({
                     tournament_id: id,
                     player_name: pred.players?.name || 'Unknown',
+                    group_name: playerGroupMap[pred.player_id] || null,
                     match_number: matchNumMap[pred.match_id] || null,
                     home_score: pred.home_score,
                     away_score: pred.away_score,
@@ -6201,8 +6215,9 @@
                     status.innerHTML = `⏳ Dự đoán ${Math.min(i + 500, archivePreds.length)}/${archivePreds.length}...`;
                 }
 
+                const uniqueGroupCount = Object.keys(groupMap).length;
                 const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
-                status.innerHTML = `<span style="color:#059669;">✅ Archive xong lúc ${timeStr} — ${allMatches.length} trận · ${allPlayers.length} người chơi · ${allPreds.length} dự đoán</span>`;
+                status.innerHTML = `<span style="color:#059669;">✅ Archive xong lúc ${timeStr} — ${allMatches.length} trận · ${uniqueGroupCount} nhóm · ${allPlayers.length} người chơi · ${allPreds.length} dự đoán</span>`;
                 loadArchiveList();
 
             } catch (err) {

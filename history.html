@@ -71,6 +71,43 @@
             border-bottom-color: var(--primary);
         }
 
+        /* Group filter bar */
+        .history-group-bar {
+            background: var(--bg);
+            border-bottom: 1px solid var(--stroke);
+            padding: 8px 24px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .history-group-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-right: 4px;
+        }
+        .group-filter-btn {
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1.5px solid var(--stroke);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .group-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .group-filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
         .history-body {
             max-width: 1200px;
             margin: 0 auto;
@@ -266,6 +303,9 @@
     <div class="history-tab" onclick="switchTab('progress')">📈 Tiến độ điểm</div>
 </div>
 
+<!-- Group filter bar (visible only when 2+ prediction groups exist) -->
+<div class="history-group-bar" id="historyGroupBar"></div>
+
 <!-- Body -->
 <div class="history-body">
     <!-- Loading state -->
@@ -419,6 +459,8 @@
     let currentTab = 'schedule';
     let currentTournamentId = null;
     let predictionsLoaded = false;
+    let currentGroup = null;   // null = all, string = group name
+    let archiveGroups = [];    // unique group names in this archive
 
     // =============================================
     // Tab switching
@@ -457,6 +499,26 @@
             } else {
                 renderProgressChart();
             }
+        }
+    }
+
+    // =============================================
+    // Group filter
+    // =============================================
+    function renderGroupFilter() {
+        const bar = document.getElementById('historyGroupBar');
+        if (!bar) return;
+        bar.innerHTML = `<span class="history-group-label">Nhóm:</span>` +
+            archiveGroups.map(g => `<button class="group-filter-btn${g === currentGroup ? ' active' : ''}" onclick="selectGroup('${g.replace(/'/g, "\\'")}')">${g}</button>`).join('');
+        bar.style.display = 'flex';
+    }
+
+    function selectGroup(groupName) {
+        currentGroup = groupName;
+        renderGroupFilter();
+        if (currentTab === 'leaderboard') renderLeaderboard();
+        else if (currentTab === 'progress') {
+            if (predictionsLoaded) renderProgressChart();
         }
     }
 
@@ -532,6 +594,13 @@
 
             archivePlayers = players || [];
 
+            // Extract unique prediction groups (ignore null = old archives without group info)
+            archiveGroups = [...new Set(archivePlayers.map(p => p.group_name).filter(Boolean))].sort();
+            currentGroup = archiveGroups.length > 0 ? archiveGroups[0] : null;
+            // Reset group bar
+            const groupBar = document.getElementById('historyGroupBar');
+            if (groupBar) groupBar.style.display = 'none';
+
             // Transform matches to format bracket-render.js expects
             matches = (rawMatches || []).map(m => ({
                 ...m,
@@ -551,9 +620,13 @@
 
             // Update header
             document.getElementById('headerTitle').textContent = tournament.name;
+            const groupSub = archiveGroups.length > 1 ? ` · ${archiveGroups.length} nhóm` : '';
             document.getElementById('headerSub').textContent =
-                `Lưu trữ ${new Date(tournament.archived_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })} · ${matches.length} trận · ${archivePlayers.length} người chơi`;
+                `Lưu trữ ${new Date(tournament.archived_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })} · ${matches.length} trận · ${archivePlayers.length} người chơi${groupSub}`;
             document.title = tournament.name + ' — Lịch sử';
+
+            // Show group filter bar if multiple groups exist
+            if (archiveGroups.length > 1) renderGroupFilter();
 
             // Update URL without reload
             window.history.replaceState({}, '', `?t=${id}`);
@@ -648,7 +721,17 @@
             return;
         }
 
-        const sorted = [...archivePlayers].sort((a, b) =>
+        // Filter by selected group (or all if no group data in this archive)
+        const pool = (currentGroup && archiveGroups.length > 0)
+            ? archivePlayers.filter(p => p.group_name === currentGroup)
+            : archivePlayers;
+
+        if (pool.length === 0) {
+            container.innerHTML = '<div class="history-loading">Không có người chơi trong nhóm này.</div>';
+            return;
+        }
+
+        const sorted = [...pool].sort((a, b) =>
             b.total_points - a.total_points ||
             b.exact_score_count - a.exact_score_count ||
             b.top1_count - a.top1_count
@@ -675,10 +758,11 @@
             </tr>`;
         }).join('');
 
+        const groupLabel = currentGroup ? ` · ${currentGroup}` : '';
         container.innerHTML = `
             <div style="background:var(--surface);border:1px solid var(--stroke);border-radius:var(--border-radius);overflow:hidden;">
                 <div style="padding:16px 20px;border-bottom:1px solid var(--stroke);font-weight:700;font-size:15px;">
-                    🏅 Bảng xếp hạng cuối giải — ${sorted.length} người chơi
+                    🏅 Bảng xếp hạng cuối giải${groupLabel} — ${sorted.length} người chơi
                 </div>
                 <div style="overflow-x:auto;">
                     <table class="history-bxh-table">
@@ -719,26 +803,44 @@
             return;
         }
 
-        const top10 = [...archivePlayers]
+        // Filter by selected group (or all if no group data)
+        const playerPool = (currentGroup && archiveGroups.length > 0)
+            ? archivePlayers.filter(p => p.group_name === currentGroup)
+            : archivePlayers;
+        const predPool = (currentGroup && archiveGroups.length > 0)
+            ? archivePredictions.filter(p => p.group_name === currentGroup)
+            : archivePredictions;
+
+        if (playerPool.length === 0) {
+            container.innerHTML = '<div class="history-loading">Không có dữ liệu cho nhóm này.</div>';
+            return;
+        }
+
+        const top10 = [...playerPool]
             .sort((a, b) => b.total_points - a.total_points)
             .slice(0, 10);
-        const playerSet = new Set(top10.map(p => p.name));
+        // Use "group::name" as key to avoid collisions when currentGroup is null (all groups)
+        const keyOf = (p) => (p.group_name || '') + '::' + p.name;
+        const predKeyOf = (pred) => (pred.group_name || '') + '::' + pred.player_name;
+        const playerSet = new Set(top10.map(keyOf));
 
         // Accumulate per-round points
         const roundPts = {};
-        top10.forEach(p => { roundPts[p.name] = [0, 0, 0, 0, 0, 0]; });
+        top10.forEach(p => { roundPts[keyOf(p)] = [0, 0, 0, 0, 0, 0]; });
 
-        archivePredictions.forEach(pred => {
-            if (!playerSet.has(pred.player_name)) return;
+        predPool.forEach(pred => {
+            const k = predKeyOf(pred);
+            if (!playerSet.has(k)) return;
             const ri = getMatchRoundIdx(pred.match_number);
             if (ri === null) return;
-            roundPts[pred.player_name][ri] += pred.total_points || 0;
+            roundPts[k][ri] += pred.total_points || 0;
         });
 
         // Cumulative
         top10.forEach(p => {
+            const k = keyOf(p);
             for (let i = 1; i < 6; i++) {
-                roundPts[p.name][i] += roundPts[p.name][i - 1];
+                roundPts[k][i] += roundPts[k][i - 1];
             }
         });
 
@@ -749,7 +851,7 @@
         const cH = H - PAD.top - PAD.bottom;
         const ROUNDS_N = 6;
 
-        const maxPts = Math.max(...top10.map(p => roundPts[p.name][5]), 10);
+        const maxPts = Math.max(...top10.map(p => roundPts[keyOf(p)][5]), 10);
         const xStep = cW / (ROUNDS_N - 1);
 
         const xOf = i => PAD.left + i * xStep;
@@ -773,7 +875,8 @@
         // Player lines
         const playerLines = top10.map((p, pi) => {
             const color = CHART_COLORS[pi % CHART_COLORS.length];
-            const pts = [0, ...roundPts[p.name]].slice(0, ROUNDS_N);
+            const k = keyOf(p);
+            const pts = [0, ...roundPts[k]].slice(0, ROUNDS_N);
             const path = pts.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(v)}`).join(' ');
             const dots = pts.map((v, i) => `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="4" fill="${color}"/>`).join('');
             const lastX = xOf(ROUNDS_N - 1);
@@ -785,6 +888,7 @@
             `;
         }).join('');
 
+        const groupLabel = currentGroup ? ` · ${currentGroup}` : '';
         const legend = top10.map((p, pi) => {
             const color = CHART_COLORS[pi % CHART_COLORS.length];
             return `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${p.name}</div>`;
@@ -792,7 +896,7 @@
 
         container.innerHTML = `
             <div class="chart-container">
-                <div class="chart-title">Tiến độ điểm tích lũy theo vòng đấu</div>
+                <div class="chart-title">Tiến độ điểm tích lũy theo vòng đấu${groupLabel}</div>
                 <div class="chart-sub">Top ${top10.length} người chơi · điểm cuối mỗi vòng</div>
                 <div style="overflow-x:auto;">
                     <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;min-width:${W}px;">
