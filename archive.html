@@ -710,11 +710,6 @@ function renderSchedule() {
             const card = renderMatchRowCard(m);
             card.style.cursor = 'default';
             card.onclick = null;
-            // DEBUG: hiện match_id để kiểm tra
-            const dbg = document.createElement('div');
-            dbg.style.cssText = 'font-size:10px;color:#888;padding:2px 8px 4px;word-break:break-all;font-family:monospace;';
-            dbg.textContent = `M#${m.match_number ?? 'null'} | id: ${m.match_id ? m.match_id.slice(0,8)+'…' : 'null'}`;
-            card.appendChild(dbg);
             grid.appendChild(card);
         });
     });
@@ -831,6 +826,7 @@ async function renderPredictionsTab() {
                 <div class="pred-match-teams">
                     <div class="pred-match-name">${m.home_team||m.home} vs ${m.away_team||m.away}</div>
                     <div class="pred-match-round">${rndLabel}${m.match_number ? ' · M'+m.match_number : ''}</div>
+                    <div style="font-size:10px;color:#aaa;font-family:monospace;margin-top:2px;">id: ${m.match_id ? m.match_id.slice(0,8)+'…' : 'null'}</div>
                 </div>
                 <div class="pred-match-result">${scoreStr}</div>
                 <div class="pred-stat-chips">${chips}</div>
