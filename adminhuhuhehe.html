@@ -6153,60 +6153,94 @@
                 const { error: amErr } = await supabase.from('archive_matches').insert(archiveMatches);
                 if (amErr) throw amErr;
 
-                status.innerHTML = '⏳ Copy người chơi...';
-
-                // 4. Load players + resolve group names
-                const { data: allPlayers, error: pErr } = await supabase.from('players').select('*');
-                if (pErr) throw pErr;
-
-                // Build group name map: group_id → group name
-                const uniqueGroupIds = [...new Set(allPlayers.map(p => p.group_id).filter(Boolean))];
+                // 4. Load all groups
+                const { data: allGroups, error: gErr } = await supabase.from('groups').select('id, name');
+                if (gErr) throw gErr;
                 const groupMap = {};
-                if (uniqueGroupIds.length > 0) {
-                    const { data: groupsData } = await supabase.from('groups').select('id, name').in('id', uniqueGroupIds);
-                    (groupsData || []).forEach(g => { groupMap[g.id] = g.name; });
-                }
-                // Map player UUID → group name (used for predictions below)
-                const playerGroupMap = {};
-                allPlayers.forEach(p => { playerGroupMap[p.id] = groupMap[p.group_id] || null; });
+                allGroups.forEach(g => { groupMap[g.id] = g.name; });
 
-                const archivePlayers = allPlayers.map(p => ({
-                    tournament_id: id,
-                    name: p.name,
-                    group_id: p.group_id ? String(p.group_id) : null,
-                    group_name: groupMap[p.group_id] || null,
-                    total_points: p.total_points || 0,
-                    exact_score_count: p.exact_score_count || 0,
-                    top1_count: p.top1_count || 0,
-                    favorite_team: p.favorite_team || null,
-                    favorite_points: p.favorite_points || 0
-                }));
-                const { error: apErr } = await supabase.from('archive_players').insert(archivePlayers);
-                if (apErr) throw apErr;
+                // 5. Load player_groups with player data (all groups × all members)
+                status.innerHTML = '⏳ Copy người chơi...';
+                const { data: playerGroupRows, error: pgErr } = await supabase
+                    .from('player_groups').select('player_id, group_id, players(id, name, favorite_team, favorite_points)');
+                if (pgErr) throw pgErr;
 
-                status.innerHTML = '⏳ Copy dự đoán...';
+                // 6. Load all predictions (score predictions + exact_score bonus)
+                const { data: allPreds, error: prErr } = await supabase
+                    .from('predictions').select('id, player_id, match_id, home_score, away_score, minute, points_exact_score, players(name)');
+                if (prErr) throw prErr;
 
-                // 5. Load predictions with player name + match_number + group
+                // 7. Load all per-group scores (source of truth for per-group points)
+                status.innerHTML = '⏳ Copy điểm số theo nhóm...';
+                const { data: allGroupScores, error: gsErr } = await supabase
+                    .from('prediction_group_scores').select('prediction_id, group_id, points_rank, points_minute, total_points');
+                if (gsErr) throw gsErr;
+
+                // Build lookup maps
                 const matchNumMap = {};
                 allMatches.forEach(m => { matchNumMap[m.id] = m.match_number; });
 
-                const { data: allPreds, error: prErr } = await supabase
-                    .from('predictions').select('*, players(name)');
-                if (prErr) throw prErr;
+                const predMap = {};
+                allPreds.forEach(p => { predMap[p.id] = p; });
 
-                const archivePreds = allPreds.map(pred => ({
-                    tournament_id: id,
-                    player_name: pred.players?.name || 'Unknown',
-                    group_name: playerGroupMap[pred.player_id] || null,
-                    match_number: matchNumMap[pred.match_id] || null,
-                    home_score: pred.home_score,
-                    away_score: pred.away_score,
-                    minute: pred.minute,
-                    points_rank: pred.total_points - (pred.points_exact_score || 0) - (pred.points_minute || 0),
-                    points_exact_score: pred.points_exact_score || 0,
-                    points_minute: pred.points_minute || 0,
-                    total_points: pred.total_points || 0
-                }));
+                // Aggregate per-(player, group) from prediction_group_scores
+                const pgAgg = {}; // `${player_id}::${group_id}` → { total, exact, top1 }
+                allGroupScores.forEach(gs => {
+                    const pred = predMap[gs.prediction_id];
+                    if (!pred) return;
+                    const key = `${pred.player_id}::${gs.group_id}`;
+                    if (!pgAgg[key]) pgAgg[key] = { total: 0, exact: 0, top1: 0 };
+                    pgAgg[key].total += gs.total_points || 0;
+                    if ((pred.points_exact_score || 0) > 0) pgAgg[key].exact++;
+                    if ((gs.points_rank || 0) > 0) pgAgg[key].top1++;
+                });
+
+                // Build archive_players — one row per (player × group) membership
+                const archivePlayers = playerGroupRows
+                    .filter(pg => pg.players)
+                    .map(pg => {
+                        const player = pg.players;
+                        const key = `${pg.player_id}::${pg.group_id}`;
+                        const agg = pgAgg[key] || { total: 0, exact: 0, top1: 0 };
+                        return {
+                            tournament_id: id,
+                            player_id: String(pg.player_id),
+                            name: player.name,
+                            group_id: String(pg.group_id),
+                            group_name: groupMap[pg.group_id] || null,
+                            total_points: agg.total + (player.favorite_points || 0),
+                            exact_score_count: agg.exact,
+                            top1_count: agg.top1,
+                            favorite_team: player.favorite_team || null,
+                            favorite_points: player.favorite_points || 0
+                        };
+                    });
+                const { error: apErr } = await supabase.from('archive_players').insert(archivePlayers);
+                if (apErr) throw apErr;
+
+                // Build archive_predictions — one row per (prediction × group)
+                status.innerHTML = '⏳ Copy dự đoán...';
+                const archivePreds = allGroupScores
+                    .map(gs => {
+                        const pred = predMap[gs.prediction_id];
+                        if (!pred) return null;
+                        return {
+                            tournament_id: id,
+                            player_id: String(pred.player_id),
+                            player_name: pred.players?.name || 'Unknown',
+                            group_id: String(gs.group_id),
+                            group_name: groupMap[gs.group_id] || null,
+                            match_number: matchNumMap[pred.match_id] || null,
+                            home_score: pred.home_score,
+                            away_score: pred.away_score,
+                            minute: pred.minute,
+                            points_exact_score: pred.points_exact_score || 0,
+                            points_rank: gs.points_rank || 0,
+                            points_minute: gs.points_minute || 0,
+                            total_points: gs.total_points || 0
+                        };
+                    })
+                    .filter(Boolean);
 
                 // Insert in batches of 500
                 for (let i = 0; i < archivePreds.length; i += 500) {
@@ -6215,9 +6249,8 @@
                     status.innerHTML = `⏳ Dự đoán ${Math.min(i + 500, archivePreds.length)}/${archivePreds.length}...`;
                 }
 
-                const uniqueGroupCount = Object.keys(groupMap).length;
                 const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
-                status.innerHTML = `<span style="color:#059669;">✅ Archive xong lúc ${timeStr} — ${allMatches.length} trận · ${uniqueGroupCount} nhóm · ${allPlayers.length} người chơi · ${allPreds.length} dự đoán</span>`;
+                status.innerHTML = `<span style="color:#059669;">✅ Archive xong lúc ${timeStr} — ${allMatches.length} trận · ${allGroups.length} nhóm · ${archivePlayers.length} lượt người chơi · ${archivePreds.length} dự đoán</span>`;
                 loadArchiveList();
 
             } catch (err) {
