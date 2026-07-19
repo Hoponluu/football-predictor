@@ -6138,7 +6138,6 @@
 
                 const archiveMatches = allMatches.map(m => ({
                     tournament_id: id,
-                    orig_id: m.id,
                     match_number: m.match_number,
                     match_group: m.match_group,
                     home_team: m.home_team,
@@ -6162,7 +6161,6 @@
 
                 const archivePlayers = allPlayers.map(p => ({
                     tournament_id: id,
-                    orig_id: p.id,
                     name: p.name,
                     total_points: p.total_points || 0,
                     exact_score_count: p.exact_score_count || 0,
