@@ -1136,6 +1136,14 @@
                         <span>Mô phỏng nhánh đấu</span>
                     </a>
                 </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Lưu trữ</div>
+                    <a class="nav-item" onclick="switchAdminPage('archive')">
+                        <span class="nav-item-icon">📦</span>
+                        <span>Archive giải đấu</span>
+                    </a>
+                </div>
             </nav>
 
             <div class="sidebar-footer">
@@ -1571,6 +1579,46 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- Archive Page -->
+            <div id="archive" class="page-content">
+                <div class="page-header">
+                    <h1 class="page-title">Archive giải đấu</h1>
+                    <p class="page-subtitle">Lưu trữ data sau khi kết thúc giải — có thể publish cho user xem lại lịch sử</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">📦 Tạo / Cập nhật archive</div>
+                    <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Tên giải đấu</label>
+                                <input id="archiveName" type="text" class="form-input" placeholder="FIFA World Cup 2026" value="FIFA World Cup 2026">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">ID (dùng trong URL: /history?t=ID)</label>
+                                <input id="archiveId" type="text" class="form-input" placeholder="wc2026" value="wc2026">
+                            </div>
+                        </div>
+                        <div class="alert info" style="margin:0;">
+                            <span class="alert-icon">ℹ️</span>
+                            <div class="alert-content"><div class="alert-text">Copy toàn bộ matches + predictions + players vào archive. Có thể chạy lại nhiều lần để cập nhật data mới nhất — data cũ cùng ID sẽ bị ghi đè.</div></div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <button class="btn btn-primary" id="archiveBtn" onclick="archiveTournament()">📦 Archive Tournament</button>
+                            <span id="archiveStatus" style="font-size:13px;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:16px;">
+                    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>📚 Danh sách archives</span>
+                        <button class="btn btn-secondary" style="padding:6px 14px;font-size:12px;" onclick="loadArchiveList()">↻ Làm mới</button>
+                    </div>
+                    <div id="archiveList" style="padding:16px;color:var(--text-light);font-size:13px;">Đang tải...</div>
                 </div>
             </div>
 
@@ -2819,6 +2867,7 @@
             document.getElementById(pageId).classList.add('active');
             document.querySelector(`[onclick="switchAdminPage('${pageId}')"]`)?.classList.add('active');
             closeMobileSidebar();
+            if (pageId === 'archive') loadArchiveList();
         }
 
         function toggleMobileSidebar() {
@@ -6048,6 +6097,156 @@
                 btn.disabled = false;
                 btn.textContent = '📤 Publish';
             }
+        }
+
+        // ============================================================
+        // ARCHIVE FUNCTIONS
+        // ============================================================
+
+        async function archiveTournament() {
+            const id = document.getElementById('archiveId').value.trim().replace(/\s+/g, '-').toLowerCase();
+            const name = document.getElementById('archiveName').value.trim();
+            const status = document.getElementById('archiveStatus');
+            const btn = document.getElementById('archiveBtn');
+
+            if (!id || !name) { alert('Vui lòng nhập ID và tên giải đấu'); return; }
+
+            if (!confirm(`Archive "${name}" (ID: ${id})?\n\nSẽ copy:\n• Tất cả trận đấu\n• Tất cả dự đoán\n• Tất cả người chơi\n\nData cũ cùng ID sẽ bị ghi đè.`)) return;
+
+            btn.disabled = true;
+            status.innerHTML = '⏳ Đang archive...';
+
+            try {
+                // 1. Upsert tournament record (preserve is_public)
+                const { error: tErr } = await supabase.from('archive_tournaments').upsert({
+                    id, name, archived_at: new Date().toISOString()
+                }, { onConflict: 'id', ignoreDuplicates: false });
+                if (tErr) throw tErr;
+
+                status.innerHTML = '⏳ Xoá data cũ...';
+
+                // 2. Delete existing data for this id so we can re-insert fresh
+                await supabase.from('archive_predictions').delete().eq('tournament_id', id);
+                await supabase.from('archive_players').delete().eq('tournament_id', id);
+                await supabase.from('archive_matches').delete().eq('tournament_id', id);
+
+                status.innerHTML = '⏳ Copy trận đấu...';
+
+                // 3. Load + insert matches
+                const { data: allMatches, error: mErr } = await supabase.from('matches').select('*');
+                if (mErr) throw mErr;
+
+                const archiveMatches = allMatches.map(m => ({
+                    tournament_id: id,
+                    orig_id: m.id,
+                    match_number: m.match_number,
+                    match_group: m.match_group,
+                    home_team: m.home_team,
+                    away_team: m.away_team,
+                    match_date: m.match_date,
+                    status: m.status,
+                    home_score: m.home_score,
+                    away_score: m.away_score,
+                    minute: m.minute,
+                    home_penalty: m.home_penalty,
+                    away_penalty: m.away_penalty
+                }));
+                const { error: amErr } = await supabase.from('archive_matches').insert(archiveMatches);
+                if (amErr) throw amErr;
+
+                status.innerHTML = '⏳ Copy người chơi...';
+
+                // 4. Load + insert players
+                const { data: allPlayers, error: pErr } = await supabase.from('players').select('*');
+                if (pErr) throw pErr;
+
+                const archivePlayers = allPlayers.map(p => ({
+                    tournament_id: id,
+                    orig_id: p.id,
+                    name: p.name,
+                    total_points: p.total_points || 0,
+                    exact_score_count: p.exact_score_count || 0,
+                    top1_count: p.top1_count || 0,
+                    favorite_team: p.favorite_team || null,
+                    favorite_points: p.favorite_points || 0
+                }));
+                const { error: apErr } = await supabase.from('archive_players').insert(archivePlayers);
+                if (apErr) throw apErr;
+
+                status.innerHTML = '⏳ Copy dự đoán...';
+
+                // 5. Load predictions with player name + match_number
+                const matchNumMap = {};
+                allMatches.forEach(m => { matchNumMap[m.id] = m.match_number; });
+
+                const { data: allPreds, error: prErr } = await supabase
+                    .from('predictions').select('*, players(name)');
+                if (prErr) throw prErr;
+
+                const archivePreds = allPreds.map(pred => ({
+                    tournament_id: id,
+                    orig_player_id: pred.player_id,
+                    player_name: pred.players?.name || 'Unknown',
+                    match_number: matchNumMap[pred.match_id] || null,
+                    home_score: pred.home_score,
+                    away_score: pred.away_score,
+                    minute: pred.minute,
+                    points_rank: pred.total_points - (pred.points_exact_score || 0) - (pred.points_minute || 0),
+                    points_exact_score: pred.points_exact_score || 0,
+                    points_minute: pred.points_minute || 0,
+                    total_points: pred.total_points || 0
+                }));
+
+                // Insert in batches of 500
+                for (let i = 0; i < archivePreds.length; i += 500) {
+                    const { error: bErr } = await supabase.from('archive_predictions').insert(archivePreds.slice(i, i + 500));
+                    if (bErr) throw bErr;
+                    status.innerHTML = `⏳ Dự đoán ${Math.min(i + 500, archivePreds.length)}/${archivePreds.length}...`;
+                }
+
+                const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+                status.innerHTML = `<span style="color:#059669;">✅ Archive xong lúc ${timeStr} — ${allMatches.length} trận · ${allPlayers.length} người chơi · ${allPreds.length} dự đoán</span>`;
+                loadArchiveList();
+
+            } catch (err) {
+                console.error('Archive error:', err);
+                status.innerHTML = `<span style="color:#EF4444;">❌ Lỗi: ${err.message}</span>`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function loadArchiveList() {
+            const container = document.getElementById('archiveList');
+            if (!container) return;
+            container.innerHTML = 'Đang tải...';
+
+            const { data, error } = await supabase.from('archive_tournaments')
+                .select('*').order('archived_at', { ascending: false });
+
+            if (error) { container.innerHTML = `<span style="color:#EF4444;">Lỗi: ${error.message}</span>`; return; }
+            if (!data || data.length === 0) { container.innerHTML = 'Chưa có archive nào.'; return; }
+
+            container.innerHTML = data.map(t => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--stroke);flex-wrap:wrap;gap:8px;">
+                    <div>
+                        <div style="font-weight:700;font-size:14px;">${t.name}</div>
+                        <div style="font-size:11px;color:var(--text-light);margin-top:2px;">ID: <code>${t.id}</code> · Lưu: ${new Date(t.archived_at).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;background:${t.is_public ? '#D1FAE5' : '#F3F4F6'};color:${t.is_public ? '#059669' : '#6B7280'};">${t.is_public ? '🌐 Public' : '🔒 Private'}</span>
+                        <button class="btn btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="toggleArchivePublish('${t.id}', ${t.is_public})">${t.is_public ? 'Ẩn' : 'Publish'}</button>
+                        <a href="/history?t=${t.id}" target="_blank" class="btn btn-secondary" style="padding:5px 12px;font-size:12px;">Xem →</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function toggleArchivePublish(id, currentPublic) {
+            const newVal = !currentPublic;
+            const { error } = await supabase.from('archive_tournaments').update({ is_public: newVal }).eq('id', id);
+            if (error) { alert('Lỗi: ' + error.message); return; }
+            loadArchiveList();
         }
 
         console.log('✅ Admin panel script loaded');

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch sử giải đấu</title>
+    <link rel="icon" type="image/png" href="Favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="bracket.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        .history-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--stroke);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .history-header-logo { font-size: 28px; }
+        .history-header-info { flex: 1; min-width: 0; }
+        .history-header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-header-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .history-tournament-select {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--stroke);
+            background: var(--bg);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .history-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--stroke);
+            background: var(--surface);
+            padding: 0 24px;
+            overflow-x: auto;
+        }
+        .history-tab {
+            padding: 12px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .history-tab:hover { color: var(--text-primary); }
+        .history-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .history-body {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Lịch đấu: grouped by round */
+        .round-section { margin-bottom: 28px; }
+        .round-section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .round-section-count {
+            font-size: 11px;
+            background: var(--stroke);
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .round-matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 8px;
+        }
+
+        /* BXH table */
+        .history-bxh-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .history-bxh-table th {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--stroke);
+            white-space: nowrap;
+        }
+        .history-bxh-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--stroke);
+        }
+        .history-bxh-table tr:first-child td { font-weight: 700; color: var(--primary); }
+        .bxh-rank {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-secondary);
+            min-width: 28px;
+        }
+        .bxh-rank.top1 { color: #F59E0B; }
+        .bxh-rank.top2 { color: #94A3B8; }
+        .bxh-rank.top3 { color: #CD7F32; }
+        .bxh-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .bxh-pts {
+            font-weight: 800;
+            font-size: 16px;
+            color: var(--primary);
+        }
+        .bxh-badge {
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Progress chart */
+        .chart-container {
+            background: var(--surface);
+            border: 1px solid var(--stroke);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            overflow-x: auto;
+        }
+        .chart-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .chart-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Loading / empty states */
+        .history-loading {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .history-loading-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--stroke);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .tournament-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            max-width: 800px;
+            margin: 40px auto;
+        }
+        .tournament-card {
+            background: var(--surface);
+            border: 1px solid var(--stroke);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            cursor: pointer;
+            transition: box-shadow 0.15s, transform 0.15s;
+        }
+        .tournament-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        .tournament-card-icon { font-size: 36px; margin-bottom: 10px; }
+        .tournament-card-name { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        .tournament-card-date { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+        @media (max-width: 600px) {
+            .history-header { padding: 12px 16px; }
+            .history-tabs { padding: 0 12px; }
+            .history-tab { padding: 10px 14px; font-size: 12px; }
+            .history-body { padding: 16px 12px; }
+            .round-matches-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="history-header">
+    <div class="history-header-logo">🏆</div>
+    <div class="history-header-info">
+        <div class="history-header-title" id="headerTitle">Lịch sử giải đấu</div>
+        <div class="history-header-sub" id="headerSub">World Cup Prediction Game</div>
+    </div>
+    <select class="history-tournament-select" id="tournamentSelect" onchange="loadTournament(this.value)" style="display:none;">
+        <option value="">-- Chọn giải đấu --</option>
+    </select>
+    <a href="/" style="font-size:13px;color:var(--text-secondary);text-decoration:none;">← Trang chủ</a>
+</div>
+
+<!-- Tabs -->
+<div class="history-tabs" id="historyTabs" style="display:none;">
+    <div class="history-tab active" onclick="switchTab('schedule')">📅 Lịch đấu</div>
+    <div class="history-tab" onclick="switchTab('standings')">📊 Bảng đấu</div>
+    <div class="history-tab" onclick="switchTab('bracket')">🏆 Nhánh KO</div>
+    <div class="history-tab" onclick="switchTab('leaderboard')">🥇 Bảng điểm</div>
+    <div class="history-tab" onclick="switchTab('progress')">📈 Tiến độ điểm</div>
+</div>
+
+<!-- Body -->
+<div class="history-body">
+    <!-- Loading state -->
+    <div id="historyLoading" class="history-loading">
+        <div class="history-loading-spinner"></div>
+        Đang tải dữ liệu...
+    </div>
+
+    <!-- Tournament picker (when no ?t= param) -->
+    <div id="tournamentPicker" style="display:none;">
+        <div style="text-align:center;padding:40px 0 16px;font-size:22px;font-weight:700;color:var(--text-primary);">Chọn giải đấu để xem lại</div>
+        <div class="tournament-list" id="tournamentList"></div>
+    </div>
+
+    <!-- Tab: Lịch đấu -->
+    <div id="tab-schedule" class="tab-panel active" style="display:none;"></div>
+
+    <!-- Tab: Bảng đấu -->
+    <div id="tab-standings" class="tab-panel" style="display:none;">
+        <div id="scheduleGroupStandings"></div>
+    </div>
+
+    <!-- Tab: Nhánh KO -->
+    <div id="tab-bracket" class="tab-panel" style="display:none;">
+        <div id="scheduleKnockout"></div>
+    </div>
+
+    <!-- Tab: Bảng điểm -->
+    <div id="tab-leaderboard" class="tab-panel" style="display:none;"></div>
+
+    <!-- Tab: Tiến độ điểm -->
+    <div id="tab-progress" class="tab-panel" style="display:none;"></div>
+</div>
+
+<script src="bracket-render.js"></script>
+<script>
+    // =============================================
+    // Globals required by bracket-render.js
+    // =============================================
+    var matches = [];
+    var currentPlayer = { id: 'history', name: 'History View' };
+
+    const countries = {
+        'TBU': { flag: '🏴', color: '#E5E7EB' },
+        'Canada': { flag: '🇨🇦', color: '#FEE2E2', flagImage: '300wflags/Canada.png' },
+        'Mexico': { flag: '🇲🇽', color: '#D1FAE5', flagImage: '300wflags/Mexico.png' },
+        'USA': { flag: '🇺🇸', color: '#DBEAFE', flagImage: '300wflags/USA.png' },
+        'Austria': { flag: '🇦🇹', color: '#FEE2E2', flagImage: '300wflags/Austria.png' },
+        'Belgium': { flag: '🇧🇪', color: '#FEF3C7', flagImage: '300wflags/Belgium.png' },
+        'Croatia': { flag: '🇭🇷', color: '#FEE2E2', flagImage: '300wflags/Croatia.png' },
+        'England': { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', color: '#E0E0E0', flagImage: '300wflags/England.png' },
+        'France': { flag: '🇫🇷', color: '#DBEAFE', flagImage: '300wflags/France.png' },
+        'Germany': { flag: '🇩🇪', color: '#FEF3C7', flagImage: '300wflags/Germany.png' },
+        'Netherlands': { flag: '🇳🇱', color: '#FEE2E2', flagImage: '300wflags/Netherlands.png' },
+        'Norway': { flag: '🇳🇴', color: '#FEE2E2', flagImage: '300wflags/Norway.png' },
+        'Portugal': { flag: '🇵🇹', color: '#D1FAE5', flagImage: '300wflags/Portugal.png' },
+        'Scotland': { flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', color: '#DBEAFE', flagImage: '300wflags/Scotland.png' },
+        'Spain': { flag: '🇪🇸', color: '#FEF3C7', flagImage: '300wflags/Spain.png' },
+        'Switzerland': { flag: '🇨🇭', color: '#FEE2E2', flagImage: '300wflags/Switzerland.png' },
+        'Italy': { flag: '🇮🇹', color: '#D1FAE5' },
+        'Poland': { flag: '🇵🇱', color: '#FEE2E2' },
+        'Ukraine': { flag: '🇺🇦', color: '#FEF3C7' },
+        'Sweden': { flag: '🇸🇪', color: '#DBEAFE', flagImage: '300wflags/Sweden.png' },
+        'Albania': { flag: '🇦🇱', color: '#FEE2E2' },
+        'Wales': { flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', color: '#D1FAE5' },
+        'Turkey': { flag: '🇹🇷', color: '#FEE2E2', flagImage: '300wflags/T%C3%BCrkiye.png' },
+        'Romania': { flag: '🇷🇴', color: '#DBEAFE' },
+        'Bosnia & Herzegovina': { flag: '🇧🇦', color: '#DBEAFE', flagImage: '300wflags/Bosnia%20and%20Herzegovina.png' },
+        'Australia': { flag: '🇦🇺', color: '#DBEAFE', flagImage: '300wflags/Australia.png' },
+        'Iran': { flag: '🇮🇷', color: '#D1FAE5', flagImage: '300wflags/IR%20Iran.png' },
+        'Japan': { flag: '🇯🇵', color: '#FEE2E2', flagImage: '300wflags/Japan.png' },
+        'Jordan': { flag: '🇯🇴', color: '#FEE2E2', flagImage: '300wflags/Jordan.png' },
+        'Qatar': { flag: '🇶🇦', color: '#FEE2E2', flagImage: '300wflags/Qatar.png' },
+        'Saudi Arabia': { flag: '🇸🇦', color: '#D1FAE5', flagImage: '300wflags/Saudi%20Arabia.png' },
+        'South Korea': { flag: '🇰🇷', color: '#FEE2E2', flagImage: '300wflags/Korea%20Republic.png' },
+        'Uzbekistan': { flag: '🇺🇿', color: '#DBEAFE', flagImage: '300wflags/Uzbekistan.png' },
+        'Iraq': { flag: '🇮🇶', color: '#D1FAE5', flagImage: '300wflags/Iraq.png' },
+        'Cape Verde': { flag: '🇨🇻', color: '#DBEAFE', flagImage: '300wflags/Cabo%20Verde.png' },
+        'Morocco': { flag: '🇲🇦', color: '#FEE2E2', flagImage: '300wflags/Morocco.png' },
+        'Nigeria': { flag: '🇳🇬', color: '#D1FAE5' },
+        'Senegal': { flag: '🇸🇳', color: '#D1FAE5', flagImage: '300wflags/Senegal.png' },
+        'Tunisia': { flag: '🇹🇳', color: '#FEE2E2', flagImage: '300wflags/Tunisia.png' },
+        'Egypt': { flag: '🇪🇬', color: '#FEE2E2', flagImage: '300wflags/Egypt.png' },
+        'Ghana': { flag: '🇬🇭', color: '#FEF3C7', flagImage: '300wflags/Ghana.png' },
+        'Cameroon': { flag: '🇨🇲', color: '#FEF3C7' },
+        'Ivory Coast': { flag: '🇨🇮', color: '#FEF3C7', flagImage: "300wflags/C%C3%B4te%20d'Ivoire.png" },
+        'DR Congo': { flag: '🇨🇩', color: '#DBEAFE', flagImage: '300wflags/Congo%20DR.png' },
+        'Algeria': { flag: '🇩🇿', color: '#D1FAE5', flagImage: '300wflags/Algeria.png' },
+        'Curaçao': { flag: '🇨🇼', color: '#DBEAFE', flagImage: '300wflags/Cura%C3%A7ao.png' },
+        'Haiti': { flag: '🇭🇹', color: '#FEE2E2', flagImage: '300wflags/Haiti.png' },
+        'Panama': { flag: '🇵🇦', color: '#FEE2E2', flagImage: '300wflags/Panama.png' },
+        'New Zealand': { flag: '🇳🇿', color: '#DBEAFE', flagImage: '300wflags/New%20Zealand.png' },
+        'Argentina': { flag: '🇦🇷', color: '#DBEAFE', flagImage: '300wflags/Argentina.png' },
+        'Brasil': { flag: '🇧🇷', color: '#D1FAE5', flagImage: '300wflags/Brazil.png' },
+        'Uruguay': { flag: '🇺🇾', color: '#DBEAFE', flagImage: '300wflags/Uruguay.png' },
+        'Colombia': { flag: '🇨🇴', color: '#FEF3C7', flagImage: '300wflags/Colombia.png' },
+        'Chile': { flag: '🇨🇱', color: '#FEE2E2' },
+        'Ecuador': { flag: '🇪🇨', color: '#FEF3C7', flagImage: '300wflags/Ecuador.png' },
+        'Peru': { flag: '🇵🇪', color: '#FEE2E2' },
+        'Venezuela': { flag: '🇻🇪', color: '#FEF3C7' },
+        'Paraguay': { flag: '🇵🇾', color: '#FEE2E2', flagImage: '300wflags/Paraguay.png' },
+        'Vietnam': { flag: '🇻🇳', color: '#FEE2E2' },
+        'South Africa': { flag: '🇿🇦', color: '#FEF3C7', flagImage: '300wflags/South%20Africa.png' },
+        'Czech Republic': { flag: '🇨🇿', color: '#FEE2E2', flagImage: '300wflags/Czechia.png' }
+    };
+
+    function getFlagHTML(teamName, sizePx) {
+        const c = countries[teamName];
+        if (!c) return '';
+        if (c.flagImage) return `<img class="flag-circle-img" src="${c.flagImage}" alt="${teamName}" width="${sizePx}" height="${sizePx}">`;
+        return c.flag || '';
+    }
+
+    const countryAbbr = {
+        'Canada': 'CAN', 'Mexico': 'MEX', 'USA': 'USA',
+        'Austria': 'AUT', 'Belgium': 'BEL', 'Croatia': 'CRO', 'England': 'ENG',
+        'France': 'FRA', 'Germany': 'GER', 'Netherlands': 'NED', 'Norway': 'NOR',
+        'Portugal': 'POR', 'Scotland': 'SCO', 'Spain': 'ESP', 'Switzerland': 'SUI',
+        'Italy': 'ITA', 'Poland': 'POL', 'Ukraine': 'UKR', 'Sweden': 'SWE',
+        'Turkey': 'TUR', 'Romania': 'ROU', 'Bosnia & Herzegovina': 'BIH',
+        'Australia': 'AUS', 'Iran': 'IRN', 'Japan': 'JPN', 'Jordan': 'JOR',
+        'Qatar': 'QAT', 'Saudi Arabia': 'KSA', 'South Korea': 'KOR', 'Uzbekistan': 'UZB', 'Iraq': 'IRQ',
+        'Cape Verde': 'CPV', 'Morocco': 'MAR', 'Nigeria': 'NGA', 'Senegal': 'SEN',
+        'Tunisia': 'TUN', 'Egypt': 'EGY', 'Ghana': 'GHA', 'Cameroon': 'CMR',
+        'Ivory Coast': 'CIV', 'DR Congo': 'COD', 'Algeria': 'ALG',
+        'Curaçao': 'CUW', 'Haiti': 'HAI', 'Panama': 'PAN',
+        'New Zealand': 'NZL',
+        'Argentina': 'ARG', 'Brasil': 'BRA', 'Uruguay': 'URU', 'Colombia': 'COL',
+        'Chile': 'CHI', 'Ecuador': 'ECU', 'Peru': 'PER', 'Venezuela': 'VEN', 'Paraguay': 'PAR',
+        'South Africa': 'RSA', 'Czech Republic': 'CZE'
+    };
+    function getCountryCode(name) {
+        return countryAbbr[name] || name.substring(0, 3).toUpperCase();
+    }
+
+    // Stub modal functions — archive is read-only
+    function openModal() {}
+    function openResultsModal() {}
+    function openLoginModal() {}
+
+    // =============================================
+    // Supabase init
+    // =============================================
+    const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+
+    // =============================================
+    // State
+    // =============================================
+    let archivePlayers = [];
+    let archivePredictions = [];
+    let currentTab = 'schedule';
+
+    // =============================================
+    // Tab switching
+    // =============================================
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+        document.querySelector(`[onclick="switchTab('${tab}')"]`)?.classList.add('active');
+        const panel = document.getElementById(`tab-${tab}`);
+        if (panel) { panel.classList.add('active'); panel.style.display = 'block'; }
+
+        if (tab === 'standings') {
+            setTimeout(() => { renderGroupStandings(); }, 10);
+        } else if (tab === 'bracket') {
+            setTimeout(() => {
+                renderKnockoutBracket();
+                setTimeout(drawBracketConnectors, 100);
+            }, 10);
+        } else if (tab === 'leaderboard') {
+            renderLeaderboard();
+        } else if (tab === 'progress') {
+            renderProgressChart();
+        }
+    }
+
+    // =============================================
+    // Init on page load
+    // =============================================
+    async function init() {
+        const params = new URLSearchParams(window.location.search);
+        const tournamentId = params.get('t');
+
+        if (tournamentId) {
+            await loadTournament(tournamentId);
+        } else {
+            await showTournamentPicker();
+        }
+    }
+
+    async function showTournamentPicker() {
+        document.getElementById('historyLoading').style.display = 'none';
+        const { data, error } = await supabase
+            .from('archive_tournaments')
+            .select('*')
+            .eq('is_public', true)
+            .order('archived_at', { ascending: false });
+
+        const picker = document.getElementById('tournamentPicker');
+
+        if (error || !data || data.length === 0) {
+            picker.style.display = 'block';
+            document.getElementById('tournamentList').innerHTML = `
+                <div style="text-align:center;grid-column:1/-1;padding:40px;color:var(--text-secondary);font-size:14px;">
+                    Chưa có giải đấu nào được công bố.
+                </div>`;
+            return;
+        }
+
+        picker.style.display = 'block';
+        document.getElementById('tournamentList').innerHTML = data.map(t => `
+            <div class="tournament-card" onclick="window.location.href='?t=${t.id}'">
+                <div class="tournament-card-icon">🏆</div>
+                <div class="tournament-card-name">${t.name}</div>
+                <div class="tournament-card-date">Lưu trữ: ${new Date(t.archived_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })}</div>
+            </div>
+        `).join('');
+    }
+
+    async function loadTournament(id) {
+        if (!id) return;
+        document.getElementById('historyLoading').style.display = 'block';
+        document.getElementById('historyLoading').innerHTML = '<div class="history-loading-spinner"></div>Đang tải dữ liệu...';
+        document.getElementById('tournamentPicker').style.display = 'none';
+        document.getElementById('historyTabs').style.display = 'none';
+        document.querySelectorAll('.tab-panel').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
+
+        try {
+            // Load tournament meta
+            const { data: tournament, error: tErr } = await supabase
+                .from('archive_tournaments').select('*').eq('id', id).single();
+            if (tErr || !tournament) throw new Error('Không tìm thấy giải đấu này hoặc chưa được công bố.');
+
+            // Load matches
+            const { data: rawMatches, error: mErr } = await supabase
+                .from('archive_matches').select('*').eq('tournament_id', id).order('match_date');
+            if (mErr) throw mErr;
+
+            // Load players
+            const { data: players, error: pErr } = await supabase
+                .from('archive_players').select('*').eq('tournament_id', id).order('total_points', { ascending: false });
+            if (pErr) throw pErr;
+
+            // Load predictions
+            const { data: preds, error: prErr } = await supabase
+                .from('archive_predictions').select('*').eq('tournament_id', id);
+            if (prErr) throw prErr;
+
+            archivePlayers = players || [];
+            archivePredictions = preds || [];
+
+            // Transform matches to format bracket-render.js expects
+            matches = (rawMatches || []).map(m => ({
+                ...m,
+                id: String(m.orig_id),
+                home: m.home_team,
+                away: m.away_team,
+                group: m.match_group,
+                date: m.match_date ? new Date(m.match_date) : new Date(),
+                actualScore: (m.home_score !== null && m.home_score !== undefined) ? {
+                    homeScore: m.home_score,
+                    awayScore: m.away_score,
+                    minute: m.minute,
+                    home_penalty: m.home_penalty,
+                    away_penalty: m.away_penalty
+                } : null
+            }));
+
+            // Update header
+            document.getElementById('headerTitle').textContent = tournament.name;
+            document.getElementById('headerSub').textContent =
+                `Lưu trữ ${new Date(tournament.archived_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })} · ${matches.length} trận · ${archivePlayers.length} người chơi`;
+            document.title = tournament.name + ' — Lịch sử';
+
+            // Update URL without reload
+            window.history.replaceState({}, '', `?t=${id}`);
+
+            // Show UI
+            document.getElementById('historyLoading').style.display = 'none';
+            document.getElementById('historyTabs').style.display = 'flex';
+
+            // Render first tab (schedule)
+            renderSchedule();
+            const panel = document.getElementById('tab-schedule');
+            panel.style.display = 'block';
+            panel.classList.add('active');
+
+        } catch (err) {
+            document.getElementById('historyLoading').innerHTML =
+                `<div style="font-size:36px;margin-bottom:16px;">⚠️</div><div style="color:var(--text-secondary);">${err.message}</div>`;
+        }
+    }
+
+    // =============================================
+    // Tab: Lịch đấu
+    // =============================================
+    const ROUND_ORDER = ['A','B','C','D','E','F','G','H','I','J','K','L','R32','R16','QF','SF','3RD','FINAL'];
+    const ROUND_LABELS = {
+        A:'Bảng A', B:'Bảng B', C:'Bảng C', D:'Bảng D', E:'Bảng E', F:'Bảng F',
+        G:'Bảng G', H:'Bảng H', I:'Bảng I', J:'Bảng J', K:'Bảng K', L:'Bảng L',
+        R32:'Vòng 32', R16:'Vòng 16', QF:'Tứ kết', SF:'Bán kết', '3RD':'Hạng ba', FINAL:'Chung kết'
+    };
+    const ROUND_EMOJIS = {
+        A:'🏟️', B:'🏟️', C:'🏟️', D:'🏟️', E:'🏟️', F:'🏟️',
+        G:'🏟️', H:'🏟️', I:'🏟️', J:'🏟️', K:'🏟️', L:'🏟️',
+        R32:'⚔️', R16:'⚡', QF:'🔥', SF:'💥', '3RD':'🥉', FINAL:'🏆'
+    };
+
+    function renderSchedule() {
+        const container = document.getElementById('tab-schedule');
+        if (!container) return;
+
+        const byRound = {};
+        matches.forEach(m => {
+            const rnd = m.match_group || m.group || 'OTHER';
+            if (!byRound[rnd]) byRound[rnd] = [];
+            byRound[rnd].push(m);
+        });
+
+        const roundKeys = ROUND_ORDER.filter(r => byRound[r]);
+        const otherKeys = Object.keys(byRound).filter(r => !ROUND_ORDER.includes(r));
+
+        let html = '';
+        [...roundKeys, ...otherKeys].forEach(rnd => {
+            const rndMatches = byRound[rnd].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+            const label = ROUND_LABELS[rnd] || rnd;
+            const emoji = ROUND_EMOJIS[rnd] || '⚽';
+            const finished = rndMatches.filter(m => m.status === 'finished').length;
+
+            html += `
+                <div class="round-section">
+                    <div class="round-section-title">
+                        ${emoji} ${label}
+                        <span class="round-section-count">${finished}/${rndMatches.length} kết quả</span>
+                    </div>
+                    <div class="round-matches-grid" id="grid-${rnd}"></div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html || '<div class="history-loading">Không có dữ liệu trận đấu.</div>';
+
+        // Render match cards into grids
+        [...roundKeys, ...otherKeys].forEach(rnd => {
+            const grid = document.getElementById(`grid-${rnd}`);
+            if (!grid) return;
+            const rndMatches = byRound[rnd].sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+            rndMatches.forEach(m => {
+                const card = renderMatchRowCard(m);
+                card.style.cursor = 'default';
+                card.onclick = null;
+                grid.appendChild(card);
+            });
+        });
+    }
+
+    // =============================================
+    // Tab: Bảng điểm
+    // =============================================
+    function renderLeaderboard() {
+        const container = document.getElementById('tab-leaderboard');
+        if (!container || archivePlayers.length === 0) {
+            if (container) container.innerHTML = '<div class="history-loading">Không có dữ liệu người chơi.</div>';
+            return;
+        }
+
+        const sorted = [...archivePlayers].sort((a, b) =>
+            b.total_points - a.total_points ||
+            b.exact_score_count - a.exact_score_count ||
+            b.top1_count - a.top1_count
+        );
+
+        const rankClass = (i) => i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+        const rankEmoji = (i) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+
+        const rows = sorted.map((p, i) => {
+            const flagHTML = p.favorite_team ? getFlagHTML(p.favorite_team, 18) : '';
+            return `<tr>
+                <td><span class="bxh-rank ${rankClass(i)}">${rankEmoji(i) || (i + 1)}</span></td>
+                <td><span class="bxh-name">${p.name}</span></td>
+                <td class="bxh-pts">${p.total_points}</td>
+                <td><span class="bxh-badge" style="background:#FEF3C7;color:#92400E;">${p.exact_score_count}</span></td>
+                <td><span class="bxh-badge" style="background:#EDE9FE;color:#5B21B6;">${p.top1_count}</span></td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="display:inline-flex;width:20px;height:20px;border-radius:50%;overflow:hidden;align-items:center;justify-content:center;">${flagHTML}</span>
+                        <span style="font-size:12px;color:var(--text-secondary);">${p.favorite_team || '—'}</span>
+                        ${p.favorite_points ? `<span class="bxh-badge" style="background:#D1FAE5;color:#065F46;">+${p.favorite_points}</span>` : ''}
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div style="background:var(--surface);border:1px solid var(--stroke);border-radius:var(--border-radius);overflow:hidden;">
+                <div style="padding:16px 20px;border-bottom:1px solid var(--stroke);font-weight:700;font-size:15px;">
+                    🏅 Bảng xếp hạng cuối giải — ${sorted.length} người chơi
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="history-bxh-table">
+                        <thead><tr>
+                            <th>#</th><th>Tên</th><th>Điểm</th>
+                            <th>Đúng tỉ số</th><th>Top 1</th><th>Đội yêu thích</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    // =============================================
+    // Tab: Tiến độ điểm (SVG line chart)
+    // =============================================
+    const CHART_ROUNDS = ['Vòng bảng', 'Vòng 32', 'Vòng 16', 'Tứ kết', 'Bán kết', 'Chung kết'];
+    const CHART_COLORS = ['#6366F1','#F59E0B','#10B981','#EF4444','#8B5CF6','#EC4899','#3B82F6','#14B8A6','#F97316','#84CC16'];
+
+    function getMatchRoundIdx(matchNum) {
+        if (!matchNum) return null;
+        if (matchNum >= 1 && matchNum <= 72) return 0;
+        if (matchNum >= 73 && matchNum <= 88) return 1;
+        if (matchNum >= 89 && matchNum <= 96) return 2;
+        if (matchNum >= 97 && matchNum <= 100) return 3;
+        if (matchNum >= 101 && matchNum <= 102) return 4;
+        if (matchNum >= 103 && matchNum <= 104) return 5;
+        return null;
+    }
+
+    function renderProgressChart() {
+        const container = document.getElementById('tab-progress');
+        if (!container) return;
+
+        if (archivePlayers.length === 0 || archivePredictions.length === 0) {
+            container.innerHTML = '<div class="history-loading">Không có dữ liệu để vẽ đồ thị.</div>';
+            return;
+        }
+
+        const top10 = [...archivePlayers]
+            .sort((a, b) => b.total_points - a.total_points)
+            .slice(0, 10);
+        const playerSet = new Set(top10.map(p => p.name));
+
+        // Accumulate per-round points
+        const roundPts = {};
+        top10.forEach(p => { roundPts[p.name] = [0, 0, 0, 0, 0, 0]; });
+
+        archivePredictions.forEach(pred => {
+            if (!playerSet.has(pred.player_name)) return;
+            const ri = getMatchRoundIdx(pred.match_number);
+            if (ri === null) return;
+            roundPts[pred.player_name][ri] += pred.total_points || 0;
+        });
+
+        // Cumulative
+        top10.forEach(p => {
+            for (let i = 1; i < 6; i++) {
+                roundPts[p.name][i] += roundPts[p.name][i - 1];
+            }
+        });
+
+        // SVG dimensions
+        const W = 680, H = 320;
+        const PAD = { top: 20, right: 20, bottom: 40, left: 50 };
+        const cW = W - PAD.left - PAD.right;
+        const cH = H - PAD.top - PAD.bottom;
+        const ROUNDS_N = 6;
+
+        const maxPts = Math.max(...top10.map(p => roundPts[p.name][5]), 10);
+        const xStep = cW / (ROUNDS_N - 1);
+
+        const xOf = i => PAD.left + i * xStep;
+        const yOf = v => PAD.top + cH - (v / maxPts) * cH;
+
+        // Grid lines
+        const gridCount = 5;
+        let svgLines = '';
+        for (let g = 0; g <= gridCount; g++) {
+            const v = Math.round((maxPts / gridCount) * g);
+            const y = yOf(v);
+            svgLines += `<line x1="${PAD.left}" y1="${y}" x2="${PAD.left + cW}" y2="${y}" stroke="var(--stroke)" stroke-width="1" stroke-dasharray="${g === 0 ? '' : '3,3'}"/>`;
+            svgLines += `<text x="${PAD.left - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="var(--text-secondary)">${v}</text>`;
+        }
+
+        // X axis labels
+        CHART_ROUNDS.forEach((label, i) => {
+            svgLines += `<text x="${xOf(i)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="var(--text-secondary)">${label}</text>`;
+        });
+
+        // Player lines
+        const playerLines = top10.map((p, pi) => {
+            const color = CHART_COLORS[pi % CHART_COLORS.length];
+            const pts = [0, ...roundPts[p.name]].slice(0, ROUNDS_N);
+            const path = pts.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xOf(i)} ${yOf(v)}`).join(' ');
+            const dots = pts.map((v, i) => `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="4" fill="${color}"/>`).join('');
+            const lastX = xOf(ROUNDS_N - 1);
+            const lastY = yOf(pts[ROUNDS_N - 1]);
+            return `
+                <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                ${dots}
+                <text x="${lastX + 6}" y="${lastY + 4}" font-size="10" fill="${color}" font-weight="600">${pts[ROUNDS_N - 1]}</text>
+            `;
+        }).join('');
+
+        const legend = top10.map((p, pi) => {
+            const color = CHART_COLORS[pi % CHART_COLORS.length];
+            return `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${p.name}</div>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="chart-container">
+                <div class="chart-title">Tiến độ điểm tích lũy theo vòng đấu</div>
+                <div class="chart-sub">Top ${top10.length} người chơi · điểm cuối mỗi vòng</div>
+                <div style="overflow-x:auto;">
+                    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;min-width:${W}px;">
+                        ${svgLines}
+                        ${playerLines}
+                    </svg>
+                </div>
+                <div class="chart-legend">${legend}</div>
+            </div>
+        `;
+    }
+
+    // =============================================
+    // Start
+    // =============================================
+    init();
+</script>
+</body>
+</html>
