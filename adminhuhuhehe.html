@@ -6136,9 +6136,19 @@
                 const { data: allMatches, error: mErr } = await supabase.from('matches').select('*');
                 if (mErr) throw mErr;
 
+                // Build matchNumMap trước — group stage thường không có match_number trong DB
+                // → tự gán số thứ tự 1..N theo ngày, knockout giữ nguyên 73-104
+                const matchNumMap = {};
+                const noNum = allMatches.filter(m => m.match_number == null)
+                    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
+                const hasNum = allMatches.filter(m => m.match_number != null);
+                let autoSeq = 1;
+                noNum.forEach(m => { matchNumMap[m.id] = autoSeq++; });
+                hasNum.forEach(m => { matchNumMap[m.id] = m.match_number; });
+
                 const archiveMatches = allMatches.map(m => ({
                     tournament_id: id,
-                    match_number: matchNumMap[m.id],   // đã bao gồm auto-assign cho group stage
+                    match_number: matchNumMap[m.id],
                     match_group: m.match_group,
                     home_team: m.home_team,
                     away_team: m.away_team,
@@ -6175,17 +6185,6 @@
                 const { data: allGroupScores, error: gsErr } = await supabase
                     .from('prediction_group_scores').select('prediction_id, group_id, points_rank, points_minute, total_points');
                 if (gsErr) throw gsErr;
-
-                // Build lookup maps
-                // Group stage matches thường không có match_number trong DB → tự gán số thứ tự 1..N
-                // Knockout matches giữ nguyên match_number (73-104)
-                const matchNumMap = {};
-                const noNum = allMatches.filter(m => m.match_number == null)
-                    .sort((a, b) => new Date(a.match_date) - new Date(b.match_date));
-                const hasNum = allMatches.filter(m => m.match_number != null);
-                let autoSeq = 1;
-                noNum.forEach(m => { matchNumMap[m.id] = autoSeq++; });
-                hasNum.forEach(m => { matchNumMap[m.id] = m.match_number; });
 
                 const predMap = {};
                 allPreds.forEach(p => { predMap[p.id] = p; });
